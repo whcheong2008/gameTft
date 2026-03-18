@@ -2411,7 +2411,7 @@ function calculateMissionRewards(saveData, mission, starRating) {
             milestoneItem = { id: generateItemId(), type: 'ability', key: milestone.abilityItemKey, rarity: 'rare', equipped: null };
         }
     }
-    return { gold: gold, xp: xp, starRating: starRating, unitCopies: unitCopies, itemDrops: itemDrops, essenceDrops: essenceDrops, milestoneItem: milestoneItem };
+    return { gold: gold, xp: xp, starRating: starRating, unitCopies: unitCopies, itemDrops: itemDrops, essenceDrops: essenceDrops, milestoneItem: milestoneItem, missionId: mission.id || null };
 }
 
 function applyMissionRewards(saveData, rewards) {
@@ -2437,6 +2437,45 @@ function applyMissionRewards(saveData, rewards) {
         if (!saveData.missions.milestonesClaimed) saveData.missions.milestonesClaimed = [];
         if (milestoneAdded) saveData.missions.milestonesClaimed.push(rewards.milestoneItem.key === 'zhonyas_hourglass' ? 'story_10' : 'story_13');
     }
+    // Grant unit XP to deployed team members
+    if (typeof grantUnitXP === 'function' && typeof getMissionUnitXP === 'function') {
+        var activeTeam = getActiveTeam(saveData);
+        if (activeTeam && activeTeam.slots) {
+            // Determine region number from mission
+            var regionNum = 1;
+            var isBoss = false;
+            if (rewards.missionId) {
+                var rmatch = rewards.missionId.match(/r(\d+)/);
+                if (rmatch) regionNum = parseInt(rmatch[1]);
+                isBoss = rewards.missionId.indexOf('boss') !== -1;
+            }
+            var unitXPAmount = getMissionUnitXP(regionNum, isBoss);
+            rewards.unitLevelUps = [];
+            for (var ui = 0; ui < activeTeam.slots.length; ui++) {
+                var teamSlot = activeTeam.slots[ui];
+                if (!teamSlot) continue;
+                // Find the collection entry for this unit
+                var collEntry = saveData.collection[teamSlot.key];
+                if (collEntry) {
+                    if (typeof collEntry.level === 'undefined') { collEntry.level = 1; collEntry.xp = 0; }
+                    var oldLevel = collEntry.level;
+                    // Grant XP using a temp object then sync back
+                    var tempUnit = { level: collEntry.level, xp: collEntry.xp || 0, ascensionTier: collEntry.ascensionTier || null, key: teamSlot.key, evolved: !!EVOLVED_TEMPLATES[teamSlot.key], stars: collEntry.stars || 1 };
+                    var gained = grantUnitXP(tempUnit, unitXPAmount);
+                    collEntry.level = tempUnit.level;
+                    collEntry.xp = tempUnit.xp;
+                    // Sync team slot
+                    teamSlot.level = tempUnit.level;
+                    teamSlot.xp = tempUnit.xp;
+                    if (gained > 0) {
+                        var tmplName = (UNIT_TEMPLATES[teamSlot.key] || EVOLVED_TEMPLATES[teamSlot.key] || {}).name || teamSlot.key;
+                        rewards.unitLevelUps.push({ key: teamSlot.key, name: tmplName, oldLevel: oldLevel, newLevel: tempUnit.level });
+                    }
+                }
+            }
+        }
+    }
+
     saveData.stats.totalMissionsCompleted++;
     autoSave(saveData);
     return leveled;

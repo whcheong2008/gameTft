@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unit Benchmark Tool</title>
+    <style>
+        body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; padding: 20px; }
+        h1 { color: #e2b714; }
+        .controls { display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap; }
+        button { background: #e2b714; color: #1a1a2e; border: none; border-radius: 6px; padding: 10px 20px; font-size: 14px; font-weight: bold; cursor: pointer; }
+        button:hover { background: #f0c830; }
+        select { background: #16213e; color: #e0e0e0; border: 1px solid #2a3a5e; border-radius: 6px; padding: 8px 12px; font-size: 14px; }
+        #results { margin-top: 20px; overflow-x: auto; }
+        table { color: #e0e0e0; }
+        th { text-align: left; }
+        td { padding: 4px 8px; }
+        .info { color: #888; font-size: 13px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Unit Benchmark Tool</h1>
+    <p class="info">Developer tool for comparing unit power ratings and estimated combat performance. Uses the same data as the game.</p>
+
+    <div class="controls">
+        <button onclick="runAndRenderFull()">Run Full Benchmark (All 60 Units)</button>
+        <select id="archetype-select">
+            <option value="">-- Select Archetype --</option>
+        </select>
+        <button onclick="runAndRenderArchetype()">Benchmark Archetype</button>
+    </div>
+
+    <div id="results"></div>
+
+    <!-- Load game JS files in same order as game-v2.html -->
+    <script src="js/units-core.js"></script>
+    <script src="js/units-templates.js"></script>
+    <script src="js/units-abilities.js"></script>
+    <script src="js/units-bonds.js"></script>
+    <script src="js/units-ascension.js"></script>
+    <script src="js/combat-benchmark.js"></script>
+    <script>
+        // Populate archetype dropdown
+        var select = document.getElementById('archetype-select');
+        var archKeys = Object.keys(ARCHETYPES);
+        for (var i = 0; i < archKeys.length; i++) {
+            var opt = document.createElement('option');
+            opt.value = archKeys[i];
+            opt.textContent = ARCHETYPES[archKeys[i]].name;
+            select.appendChild(opt);
+        }
+
+        function runAndRenderFull() {
+            var results = runFullBenchmark();
+            renderBenchmarkTable(results, 'results');
+        }
+
+        function runAndRenderArchetype() {
+            var arch = document.getElementById('archetype-select').value;
+            if (!arch) { alert('Select an archetype first'); return; }
+            var results = runArchetypeBenchmark(arch);
+            // Convert to full format for table
+            var full = [];
+            for (var i = 0; i < results.length; i++) {
+                var r = results[i];
+                full.push({
+                    unitName: r.unitName,
+                    tier: UNIT_TEMPLATES[r.unitKey] ? UNIT_TEMPLATES[r.unitKey].cost : '?',
+                    archetype: (UNIT_TEMPLATES[r.unitKey] || {}).archetype || '?',
+                    element: (UNIT_TEMPLATES[r.unitKey] || {}).element || '?',
+                    singleDPS: r.dps,
+                    aoeDPS: null,
+                    survivalTime: r.survivalTime,
+                    powerRating: r.powerRating,
+                    combatRating: Math.floor((r.dps * 0.4) + (r.dps * 0.3) + ((r.survivalTime / 30 * 1000) * 0.3)),
+                    healingDone: r.healingDone || 0
+                });
+            }
+            renderBenchmarkTable(full, 'results');
+        }
+
+        // Run integrity check on load
+        console.log('Running roster integrity check...');
+        verifyRosterIntegrity();
+    </script>
+</body>
+</html>

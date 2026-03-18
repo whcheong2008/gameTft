@@ -479,6 +479,17 @@ function addStatus(unit, type, duration, value, source) {
             return;
         }
 
+        // Warden full CC immunity (8-threshold)
+        if (unit.wardenCcImmune) {
+            return;
+        }
+
+        // Warden first CC immunity (4-threshold)
+        if (unit.wardenFirstCcImmune && !unit._wardenFirstCcUsed) {
+            unit._wardenFirstCcUsed = true;
+            return;
+        }
+
         // Apply tenacity
         var tenacity = unit.tenacity || 0;
         if (tenacity > 0) {
@@ -521,7 +532,10 @@ function addStatus(unit, type, duration, value, source) {
         return; // fortress immune to slow
     }
 
-    // --- Slow immunity for units with slowImmune flag (world_sentinel) ---
+    // --- Slow immunity for units with slowImmune flag (world_sentinel, Vanguard synergy) ---
+    if (type === 'slow' && unit.slowImmune) {
+        return;
+    }
     if (type === 'slow' && unit.passiveState && unit.passiveState.customData && unit.passiveState.customData.slowImmune) {
         return;
     }
@@ -558,6 +572,26 @@ function addStatus(unit, type, duration, value, source) {
     if (type === 'silence') addCombatLog(unit.name + ' is Silenced!');
     if (type === 'burn' && stackCount === 0) addCombatLog(unit.name + ' is Burning!');
     if (type === 'taunt') addCombatLog(unit.name + ' is Taunted!');
+
+    // --- Warden CC-triggered effects ---
+    if (hardCC.indexOf(type) >= 0 && source && combatState && !source._wardenCcProcessing) {
+        source._wardenCcProcessing = true;
+        // Warden 6: CC applies ATK speed slow to target
+        if (source.ccAppliesAtkSpdSlow && source.ccAtkSpdSlowDuration) {
+            addStatus(unit, 'spdMod', source.ccAtkSpdSlowDuration, -source.ccAppliesAtkSpdSlow, source);
+        }
+        // Warden 8: CC spreads root to nearby enemies
+        if (source.ccSpreadRoot && typeof getUnitsInRadius === 'function') {
+            var ccEnemyPool = source.side === 'player' ? combatState.enemyUnits : combatState.playerUnits;
+            var ccNearby = getUnitsInRadius(unit.gridRow, unit.gridCol, source.ccSpreadRadius, ccEnemyPool);
+            for (var ccn = 0; ccn < ccNearby.length; ccn++) {
+                if (ccNearby[ccn] !== unit && ccNearby[ccn].hp > 0) {
+                    addStatus(ccNearby[ccn], 'root', source.ccSpreadDuration, 0, source);
+                }
+            }
+        }
+        source._wardenCcProcessing = false;
+    }
 }
 
 function clearDebuffs(unit, count) {
@@ -5246,6 +5280,23 @@ function combatTick(dt) {
         }
     }
 
+    // --- Synergy per-second effects (Duelist ramping ATK, Sage passive mana) ---
+    for (var syn = 0; syn < players.length; syn++) {
+        var su = players[syn];
+        if (su.hp <= 0) continue;
+        // Duelist ramping ATK per second
+        if (su.rampingAtkPctPerSec && su.rampingAtkCap !== undefined) {
+            if (!su._baseAttack) su._baseAttack = su.attack;
+            var newAccum = Math.min(su.rampingAtkAccumulated + su.rampingAtkPctPerSec * dt, su.rampingAtkCap);
+            su.rampingAtkAccumulated = newAccum;
+            su.attack = Math.floor(su._baseAttack * (1 + newAccum));
+        }
+        // Sage passive mana per second
+        if (su.passiveManaPerSec && su.maxMana > 0) {
+            su.currentMana = Math.min(su.maxMana, su.currentMana + su.passiveManaPerSec * dt);
+        }
+    }
+
     // Assassin dash on first tick
     if (!combatState.assassinsDashed) {
         combatState.assassinsDashed = true;
@@ -5367,8 +5418,22 @@ function combatTick(dt) {
         if (unit.isCasting) {
             unit.castTimer -= dt;
             if (unit.castTimer <= 0) {
+                // Sorcerer first-cast double damage: temporarily double abilityDmgBonus
+                var origAbilityDmg = unit.abilityDmgBonus || 0;
+                if (unit.firstCastDoubleDamage && !unit._firstCastDone) {
+                    unit.abilityDmgBonus = (unit.abilityDmgBonus || 0) + 1.0; // +100% = double
+                }
                 executeAbility(unit);
-                unit.currentMana = 0;
+                // Restore abilityDmgBonus after first-cast double
+                if (unit.firstCastDoubleDamage && !unit._firstCastDone) {
+                    unit.abilityDmgBonus = origAbilityDmg;
+                }
+                // Sorcerer mana refund
+                var manaRefund = 0;
+                if (unit.abilityManaRefund) {
+                    manaRefund = Math.floor(unit.maxMana * unit.abilityManaRefund);
+                }
+                unit.currentMana = manaRefund;
                 unit.isCasting = false;
                 unit._firstCastDone = true;
                 unit.attackCooldown = unit.attackSpd || 1.0;
@@ -5378,6 +5443,10 @@ function combatTick(dt) {
                 }
                 if (unit.passiveState && unit.passiveState.customData.postCastAtkSpeed) {
                     addStatus(unit, 'spdMod', unit.passiveState.customData.postCastDuration || 3, unit.passiveState.customData.postCastAtkSpeed, unit);
+                }
+                // Sorcerer post-cast ATK speed buff (Arcane Surge)
+                if (unit.postCastAtkSpdBuff) {
+                    addStatus(unit, 'spdMod', unit.postCastAtkSpdDuration || 3, unit.postCastAtkSpdBuff, unit);
                 }
             }
             continue; // skip movement and attacking while casting
@@ -5586,6 +5655,7 @@ function dealHealing(source, target, amount) {
     if (reduction > 0) amount = Math.floor(amount * (1 - Math.min(reduction, 0.9)));
 
     var actualHeal = Math.min(amount, target.maxHp - target.hp);
+    var overheal = amount - actualHeal;
     target.hp += actualHeal;
     if (source && source.combatStats) {
         source.combatStats.healingDone += actualHeal;
@@ -5593,6 +5663,25 @@ function dealHealing(source, target, amount) {
     if (typeof spawnDamageNumber === 'function' && (!combatState || !combatState.autoBattle) && actualHeal > 0) {
         spawnDamageNumber(target.gridRow, target.gridCol, '+' + actualHeal, 'heal');
     }
+
+    // Sage heal-shield: when a Sage heals, target gains shield equal to % of heal
+    if (source && source.healShieldPct && actualHeal > 0) {
+        var healShield = Math.floor(actualHeal * source.healShieldPct);
+        if (healShield > 0) {
+            target.shield = (target.shield || 0) + healShield;
+            // Shield decays after duration (tracked as status)
+            // For simplicity, shield persists until broken (no decay tracking)
+        }
+    }
+
+    // Sage overheal-to-shield: excess healing converts to permanent shield
+    if (source && source.overhealToShieldPct && overheal > 0) {
+        var overhealShield = Math.floor(overheal * source.overhealToShieldPct);
+        if (overhealShield > 0) {
+            target.shield = (target.shield || 0) + overhealShield;
+        }
+    }
+
     return { healed: actualHeal };
 }
 
@@ -5623,13 +5712,17 @@ function dealDamage(source, target, rawDamage, options) {
             }
         }
         if (target.elemResist && elemMult > 1.0) {
-            elemMult = 1.0 + (elemMult - 1.0) * (1 - target.elemResist);
+            var effectiveElemResist = target.elemResist;
+            // Mystic shred reduces element resist
+            var shredVal = getStatusValue(target, 'elemResistShred');
+            if (shredVal > 0) effectiveElemResist = Math.max(0, effectiveElemResist - shredVal);
+            elemMult = 1.0 + (elemMult - 1.0) * (1 - effectiveElemResist);
         }
         dmg = Math.floor(dmg * elemMult);
     }
 
     // Step 3: Critical Strike
-    if (canCrit && source.critChance && Math.random() < source.critChance) {
+    if (options.forceCrit || (canCrit && source.critChance && Math.random() < source.critChance)) {
         dmg = Math.floor(dmg * 1.5);
         wasCrit = true;
     }
@@ -5641,6 +5734,14 @@ function dealDamage(source, target, rawDamage, options) {
     // AoE DR for golem/iron_colossus
     if (options && options.isAbility && target.passiveState && target.passiveState.customData && target.passiveState.customData.aoeDR) {
         totalDR += target.passiveState.customData.aoeDR;
+    }
+    // Sorcerer spell penetration: ability damage ignores % of DR
+    if (options && options.isAbility && source.spellPenetration && totalDR > 0) {
+        totalDR = totalDR * (1 - source.spellPenetration);
+    }
+    // Ranger focused shot: ignores % of DR
+    if (options && options.focusedShotIgnoreDR && totalDR > 0) {
+        totalDR = totalDR * (1 - options.focusedShotIgnoreDR);
     }
     totalDR = Math.min(totalDR, 0.75);
     if (!isTrueDamage && totalDR > 0) {
@@ -5655,6 +5756,11 @@ function dealDamage(source, target, rawDamage, options) {
     // Vulnerability status
     var vulnPct = getStatusValue(target, 'vulnerability');
     if (vulnPct > 0) dmg = Math.floor(dmg * (1 + vulnPct));
+
+    // Ranger mark: marked target takes more damage from all sources
+    if (target._rangerMarked && target._rangerMarkAmp) {
+        dmg = Math.floor(dmg * (1 + target._rangerMarkAmp));
+    }
 
     // Step 5: Dodge Check (highest value wins between base and buff)
     var totalDodge = Math.max(target.dodgeChance || 0, getStatusValue(target, 'dodgeBuff'));
@@ -5674,10 +5780,16 @@ function dealDamage(source, target, rawDamage, options) {
     }
 
     // Step 6: Shield Absorption
-    if (target.shield && target.shield > 0) {
+    var hadShield = target.shield && target.shield > 0;
+    if (hadShield) {
         shieldAbsorbed = Math.min(target.shield, dmg);
         target.shield -= shieldAbsorbed;
         dmg -= shieldAbsorbed;
+    }
+    // Guardian shield-break tenacity: when shield fully breaks, grant tenacity boost
+    if (hadShield && target.shield <= 0 && target.shieldBreakTenacity && !target._shieldBreakTriggered) {
+        target._shieldBreakTriggered = true;
+        target.tenacity = (target.tenacity || 0) + target.shieldBreakTenacity;
     }
 
     // Process on-hit passive (with reentry guard)
@@ -5687,6 +5799,27 @@ function dealDamage(source, target, rawDamage, options) {
 
     // Step 7: Apply to HP
     target.hp -= dmg;
+
+    // Guardian Last Stand: first time dropping below threshold, become invulnerable + taunt
+    if (target.hp > 0 && target.lastStandThreshold && !target._lastStandUsed) {
+        if (target.hp / target.maxHp < target.lastStandThreshold) {
+            target._lastStandUsed = true;
+            target.stasis = target.lastStandInvulnDuration;
+            if (target.lastStandTaunt && combatState) {
+                var lastStandEnemies = target.side === 'player' ? combatState.enemyUnits : combatState.playerUnits;
+                var nearbyForTaunt = typeof getUnitsInRadius === 'function' ? getUnitsInRadius(target.gridRow, target.gridCol, 2, lastStandEnemies) : [];
+                for (var lst = 0; lst < nearbyForTaunt.length; lst++) {
+                    if (nearbyForTaunt[lst].hp > 0) {
+                        addStatus(nearbyForTaunt[lst], 'taunt', target.lastStandInvulnDuration, 0, target);
+                    }
+                }
+            }
+            if (typeof spawnDamageNumber === 'function' && (!combatState || !combatState.autoBattle)) {
+                spawnDamageNumber(target.gridRow, target.gridCol, 'LAST STAND!', 'crit');
+            }
+        }
+    }
+
     if (target.hp < 0) target.hp = 0;
     if (target.combatStats) target.combatStats.damageTaken += (dmg + shieldAbsorbed);
     if (source.combatStats) source.combatStats.damageDealt += (dmg + shieldAbsorbed);
@@ -5738,6 +5871,25 @@ function dealDamage(source, target, rawDamage, options) {
     var burnDmg = source.burnDps || source.burnDamage || 0;
     if (triggerOnHit && isAutoAttack && burnDmg > 0 && target.hp > 0) {
         dealDamage(source, target, burnDmg, {isTrueDamage: true, canCrit: false, canDodge: false, applyElement: false, triggerOnHit: false});
+    }
+
+    // Mystic ability-triggered effects (on ability damage)
+    if (triggerOnHit && options.isAbility && target.hp > 0 && source) {
+        // Mystic element resist shred: reduce target's element resist
+        if (source.elemResistShred && source.elemResistShredDuration) {
+            addStatus(target, 'elemResistShred', source.elemResistShredDuration, source.elemResistShred, source);
+        }
+        // Mystic random element proc: chance to apply additional element effect
+        if (source.randomElementProcChance && Math.random() < source.randomElementProcChance) {
+            var elemEffects = ['burn', 'freeze', 'root'];
+            var randEffect = elemEffects[Math.floor(Math.random() * elemEffects.length)];
+            var procDur = source.randomElementProcDuration || 2;
+            if (randEffect === 'burn') {
+                addStatus(target, 'burn', procDur, Math.floor(source.attack * 0.15), source);
+            } else {
+                addStatus(target, randEffect, procDur, 0, source);
+            }
+        }
     }
 
     // Lifesteal on auto-attack
@@ -5793,6 +5945,22 @@ function dealDamage(source, target, rawDamage, options) {
             }
         }
 
+        // Sage death-save: strongest Sage prevents one lethal hit per combat
+        if (target.hp <= 0 && combatState && !combatState._deathSaveUsed) {
+            var allies = target.side === 'player' ? combatState.playerUnits : combatState.enemyUnits;
+            for (var ds = 0; ds < allies.length; ds++) {
+                if (allies[ds].isDeathSaver && allies[ds].hp > 0 && allies[ds].deathSaveHealPct) {
+                    combatState._deathSaveUsed = true;
+                    target.hp = Math.floor(target.maxHp * allies[ds].deathSaveHealPct);
+                    if (typeof spawnDamageNumber === 'function' && (!combatState || !combatState.autoBattle)) {
+                        spawnDamageNumber(target.gridRow, target.gridCol, 'SAVED!', 'heal');
+                    }
+                    addCombatLog(allies[ds].name + ' saves ' + target.name + ' from death!');
+                    break;
+                }
+            }
+        }
+
         if (target.hp <= 0) {
             target.hp = 0;
 
@@ -5832,6 +6000,15 @@ function dealDamage(source, target, rawDamage, options) {
                         dealHealing(source, source, Math.floor(source.maxHp * specK.healPct));
                     }
                 }
+            }
+
+            // Predator on-kill ATK buff (stacking)
+            if (source.onKillAtkBuff && source.onKillAtkBuffDuration) {
+                addStatus(source, 'atkBuff', source.onKillAtkBuffDuration, source.onKillAtkBuff, source);
+            }
+            // Predator on-kill mana refund
+            if (source.onKillManaRefundPct && source.maxMana > 0) {
+                source.currentMana = Math.min(source.maxMana, source.currentMana + Math.floor(source.maxMana * source.onKillManaRefundPct));
             }
 
             // Frenzy stacks on kill
@@ -5953,14 +6130,74 @@ function performAttack(attacker, target) {
         delete attacker.abilityBuffs.firstStrikeBonusDmg;
     }
 
+    // Vanguard charge bonus: extra damage during first N seconds of combat
+    if (attacker.chargeDmgBonus && combatState && combatState.elapsed <= (attacker.chargeDuration || 5)) {
+        rawDmg = Math.floor(rawDmg * (1 + attacker.chargeDmgBonus));
+    }
+
+    // Execute damage (Predator): bonus damage to low-HP targets
+    if (attacker.executeDamageBonus && attacker.executeThreshold && target.hp / target.maxHp < attacker.executeThreshold) {
+        rawDmg = Math.floor(rawDmg * (1 + attacker.executeDamageBonus));
+    }
+
+    // Track attack counter for Duelist guaranteed crit and Ranger focused shot
+    if (attacker.guaranteedCritEveryN || attacker.focusedShotEveryN) {
+        attacker.attackCounter = (attacker.attackCounter || 0) + 1;
+    }
+
+    // Ranger mark: apply mark to current target (takes more damage from all sources)
+    if (attacker.markTargetDmgAmp && target) {
+        target._rangerMarked = true;
+        target._rangerMarkAmp = attacker.markTargetDmgAmp;
+    }
+
+    // Build attack options
+    var atkOpts = {isAutoAttack: true, canCrit: true, canDodge: true, applyElement: true, triggerOnHit: true};
+
+    // Duelist guaranteed crit every N attacks
+    if (attacker.guaranteedCritEveryN && attacker.attackCounter % attacker.guaranteedCritEveryN === 0) {
+        atkOpts.forceCrit = true;
+    }
+
+    // Ranger focused shot every N attacks
+    var isFocusedShot = false;
+    if (attacker.focusedShotEveryN && attacker.attackCounter % attacker.focusedShotEveryN === 0) {
+        atkOpts.forceCrit = true;
+        atkOpts.focusedShotIgnoreDR = attacker.focusedShotIgnoreDR || 0.30;
+        isFocusedShot = true;
+    }
+
+    // Vanguard charge stun: during charge window, attacks stun
+    var chargeStun = false;
+    if (attacker.chargeStunDuration && combatState && combatState.elapsed <= (attacker.chargeDuration || 5)) {
+        chargeStun = true;
+    }
+
     // Frost Shot buff check
     if (attacker.abilityBuffs && attacker.abilityBuffs.frostShot && attacker.abilityBuffs.frostShot > 0) {
         var boostedDmg = Math.floor(rawDmg * 1.3);
-        dealDamage(attacker, target, boostedDmg, {isAutoAttack: true, canCrit: true, canDodge: true, applyElement: true, triggerOnHit: true});
+        dealDamage(attacker, target, boostedDmg, atkOpts);
         addStatus(target, 'slow', 2, 0.2, attacker);
         attacker.abilityBuffs.frostShot--;
     } else {
+        dealDamage(attacker, target, rawDmg, atkOpts);
+    }
+
+    // Vanguard charge stun after attack
+    if (chargeStun && target.hp > 0) {
+        addStatus(target, 'stun', attacker.chargeStunDuration, 0, attacker);
+    }
+
+    // Double-strike check
+    if (attacker.doubleStrikeChance && Math.random() < attacker.doubleStrikeChance && target.hp > 0) {
         dealDamage(attacker, target, rawDmg, {isAutoAttack: true, canCrit: true, canDodge: true, applyElement: true, triggerOnHit: true});
+    }
+
+    // Lifesteal from synergy
+    if (attacker.lifesteal && attacker.lifesteal > 0) {
+        var lsDmg = rawDmg;
+        var lsHeal = Math.floor(lsDmg * attacker.lifesteal);
+        if (lsHeal > 0) dealHealing(attacker, attacker, lsHeal);
     }
 }
 
@@ -6222,92 +6459,141 @@ function updateActiveSynergies(gs) {
 }
 
 function applySynergyBonuses(units, synergies, combatState) {
-    // Apply archetype bonuses to all player units based on their archetype
-    var archKeys = Object.keys(synergies);
+    // Apply archetype bonuses to units that have the archetype (primary or secondary)
+    var archKeys = Object.keys(ARCHETYPES);
     for (var i = 0; i < archKeys.length; i++) {
         var archKey = archKeys[i];
         var arch = ARCHETYPES[archKey];
         if (!arch) continue;
 
-        var count = synergies[archKey];
+        var count = synergies[archKey] || 0;
         var tierReached = -1;
         for (var t = 0; t < arch.thresholds.length; t++) {
             if (count >= arch.thresholds[t]) tierReached = t;
         }
-
         if (tierReached < 0) continue;
         var bonus = arch.bonuses[tierReached];
         if (!bonus) continue;
 
         for (var u = 0; u < units.length; u++) {
             var unit = units[u];
+            if (!unitHasArchetype(unit, archKey)) continue;
 
-            // Guardian: HP + DR (applies to all)
+            // Guardian: HP + DR + start shield + last stand
             if (archKey === 'guardian') {
-                if (bonus.hpBonus) { unit.hp += bonus.hpBonus; unit.maxHp += bonus.hpBonus; }
+                if (bonus.hpBonus) { unit.maxHp += bonus.hpBonus; unit.hp += bonus.hpBonus; }
                 if (bonus.damageReduction) unit.damageReduction = (unit.damageReduction || 0) + bonus.damageReduction;
+                if (bonus.startShieldPct) unit.shield = (unit.shield || 0) + Math.floor(unit.maxHp * bonus.startShieldPct);
+                if (bonus.shieldBreakTenacity) { unit.shieldBreakTenacity = bonus.shieldBreakTenacity; unit.shieldBreakTenacityDuration = bonus.shieldBreakTenacityDuration; }
+                if (bonus.lastStandThreshold) { unit.lastStandThreshold = bonus.lastStandThreshold; unit.lastStandInvulnDuration = bonus.lastStandInvulnDuration; unit.lastStandTaunt = bonus.lastStandTaunt; }
             }
 
-            // Warden: CC duration + tenacity + first CC immune
+            // Warden: CC duration + tenacity + CC immunity + CC effects
             if (archKey === 'warden') {
                 if (bonus.ccDurationBonus) unit.ccDurationBonus = (unit.ccDurationBonus || 0) + bonus.ccDurationBonus;
                 if (bonus.tenacity) unit.tenacity = (unit.tenacity || 0) + bonus.tenacity;
-                if (bonus.wardenFirstCcImmune && unit.archetype === 'warden') unit.wardenFirstCcImmune = true;
+                if (bonus.wardenFirstCcImmune) unit.wardenFirstCcImmune = true;
+                if (bonus.wardenCcImmune) unit.wardenCcImmune = true;
+                if (bonus.ccAppliesAtkSpdSlow) { unit.ccAppliesAtkSpdSlow = bonus.ccAppliesAtkSpdSlow; unit.ccAtkSpdSlowDuration = bonus.ccAtkSpdSlowDuration; }
+                if (bonus.ccSpreadRoot) { unit.ccSpreadRoot = true; unit.ccSpreadRadius = bonus.ccSpreadRadius; unit.ccSpreadDuration = bonus.ccSpreadDuration; }
             }
 
-            // Vanguard: Front-row only (cy >= 5 for player side front row)
+            // Vanguard: HP + ATK (with front-row multiplier) + charge + lifesteal + slow immune
             if (archKey === 'vanguard') {
-                if (unit.cy >= 5) {
-                    if (bonus.frontHpBonus) { unit.maxHp += bonus.frontHpBonus; unit.hp += bonus.frontHpBonus; }
-                    if (bonus.frontAtkBonus) unit.attack += bonus.frontAtkBonus;
-                    if (bonus.lifestealPct) unit.lifesteal = (unit.lifesteal || 0) + bonus.lifestealPct;
-                }
+                var isFrontRow = unit.gridRow >= 6;
+                var mult = (isFrontRow && bonus.frontRowMultiplier) ? bonus.frontRowMultiplier : 1;
+                if (bonus.hpBonus) { var hpAdd = bonus.hpBonus * mult; unit.maxHp += hpAdd; unit.hp += hpAdd; }
+                if (bonus.atkBonus) unit.attack += bonus.atkBonus * mult;
+                if (bonus.lifestealPct) unit.lifesteal = (unit.lifesteal || 0) + bonus.lifestealPct;
+                if (bonus.chargeDmgBonus) { unit.chargeDmgBonus = bonus.chargeDmgBonus; unit.chargeDuration = bonus.chargeDuration; }
+                if (bonus.chargeStunDuration) unit.chargeStunDuration = bonus.chargeStunDuration;
+                if (bonus.slowImmune) unit.slowImmune = true;
             }
 
-            // Duelist: Double-strike + lifesteal + can't miss (applies to duelists only)
-            if (archKey === 'duelist' && unit.archetype === 'duelist') {
+            // Duelist: Double-strike + lifesteal + can't miss + crit every N + ramping ATK
+            if (archKey === 'duelist') {
                 if (bonus.doubleStrikeChance) unit.doubleStrikeChance = bonus.doubleStrikeChance;
                 if (bonus.lifestealPct) unit.lifesteal = (unit.lifesteal || 0) + bonus.lifestealPct;
                 if (bonus.cantMissAttacks) unit.cantMissAttacks = true;
+                if (bonus.guaranteedCritEveryN) { unit.guaranteedCritEveryN = bonus.guaranteedCritEveryN; unit.attackCounter = 0; }
+                if (bonus.rampingAtkPctPerSec) { unit.rampingAtkPctPerSec = bonus.rampingAtkPctPerSec; unit.rampingAtkCap = bonus.rampingAtkCap; unit.rampingAtkAccumulated = 0; }
             }
 
-            // Predator: ATK speed + execute damage (applies to predators only)
-            if (archKey === 'predator' && unit.archetype === 'predator') {
+            // Predator: ATK speed + execute damage + on-kill effects
+            if (archKey === 'predator') {
                 if (bonus.atkSpdBoost) unit.attackSpd = unit.attackSpd / (1 + bonus.atkSpdBoost);
                 if (bonus.executeDamageBonus) unit.executeDamageBonus = bonus.executeDamageBonus;
                 if (bonus.executeThreshold) unit.executeThreshold = bonus.executeThreshold;
                 if (bonus.dashResetOnKill) unit.dashResetOnKill = true;
+                if (bonus.onKillAtkBuff) { unit.onKillAtkBuff = bonus.onKillAtkBuff; unit.onKillAtkBuffDuration = bonus.onKillAtkBuffDuration; }
+                if (bonus.onKillManaRefundPct) unit.onKillManaRefundPct = bonus.onKillManaRefundPct;
             }
 
-            // Ranger: Range + furthest damage + pierce (applies to rangers only)
-            if (archKey === 'ranger' && unit.archetype === 'ranger') {
+            // Ranger: Range + furthest damage + pierce + focused shot + mark
+            if (archKey === 'ranger') {
                 if (bonus.rangeBonus) unit.range += bonus.rangeBonus;
                 if (bonus.furthestDmgBonus) unit.furthestDmgBonus = bonus.furthestDmgBonus;
                 if (bonus.atkSpdBoost) unit.attackSpd = unit.attackSpd / (1 + bonus.atkSpdBoost);
                 if (bonus.pierceCount) unit.pierceCount = bonus.pierceCount;
+                if (bonus.pierceAll) unit.pierceAll = true;
+                if (bonus.focusedShotEveryN) { unit.focusedShotEveryN = bonus.focusedShotEveryN; unit.focusedShotIgnoreDR = bonus.focusedShotIgnoreDR; unit.attackCounter = unit.attackCounter || 0; }
+                if (bonus.markTargetDmgAmp) unit.markTargetDmgAmp = bonus.markTargetDmgAmp;
             }
 
-            // Sorcerer: Ability damage + starting mana + mana refund (applies to sorcerers only)
-            if (archKey === 'sorcerer' && unit.archetype === 'sorcerer') {
+            // Sorcerer: Ability damage + starting mana + mana refund + spell pen + post-cast + first cast x2
+            if (archKey === 'sorcerer') {
                 if (bonus.abilityDmgBonus) unit.abilityDmgBonus = (unit.abilityDmgBonus || 0) + bonus.abilityDmgBonus;
-                if (bonus.startingManaBonus) unit.mana = (unit.mana || 0) + bonus.startingManaBonus;
+                if (bonus.startingManaBonus) unit.currentMana = (unit.currentMana || 0) + bonus.startingManaBonus;
                 if (bonus.abilityManaRefund) unit.abilityManaRefund = bonus.abilityManaRefund;
+                if (bonus.spellPenetration) unit.spellPenetration = bonus.spellPenetration;
+                if (bonus.postCastAtkSpdBuff) { unit.postCastAtkSpdBuff = bonus.postCastAtkSpdBuff; unit.postCastAtkSpdDuration = bonus.postCastAtkSpdDuration; }
+                if (bonus.firstCastDoubleDamage) unit.firstCastDoubleDamage = true;
             }
 
-            // Mystic: Element damage + element resist (applies to all)
+            // Mystic: Element resist + status duration + resist shred + ability per element + random proc
             if (archKey === 'mystic') {
-                if (bonus.elemDmgBonus) unit.elemDmgBonus = (unit.elemDmgBonus || 0) + bonus.elemDmgBonus;
                 if (bonus.elemResist) unit.elemResist = (unit.elemResist || 0) + bonus.elemResist;
-                if (bonus.enemyElemDmgDebuff && combatState) combatState.enemyElemDmgDebuff = bonus.enemyElemDmgDebuff;
+                if (bonus.elemStatusDurationBonus) unit.elemStatusDurationBonus = (unit.elemStatusDurationBonus || 0) + bonus.elemStatusDurationBonus;
+                if (bonus.elemResistShred) { unit.elemResistShred = bonus.elemResistShred; unit.elemResistShredDuration = bonus.elemResistShredDuration; }
+                if (bonus.abilityDmgPerElement) unit.abilityDmgPerElement = bonus.abilityDmgPerElement;
+                if (bonus.randomElementProcChance) { unit.randomElementProcChance = bonus.randomElementProcChance; unit.randomElementProcDuration = bonus.randomElementProcDuration; }
             }
 
-            // Sage: Healing bonus + team regen + overheal→shield (applies to all)
+            // Sage: Healing bonus + heal shield + passive mana + overheal + death save
             if (archKey === 'sage') {
                 if (bonus.healBonus) unit.healBonus = (unit.healBonus || 0) + bonus.healBonus;
-                if (bonus.teamRegenPct) unit.regenPct = (unit.regenPct || 0) + bonus.teamRegenPct;
+                if (bonus.healShieldPct) { unit.healShieldPct = bonus.healShieldPct; unit.healShieldDuration = bonus.healShieldDuration; }
+                if (bonus.passiveManaPerSec) unit.passiveManaPerSec = bonus.passiveManaPerSec;
                 if (bonus.overhealToShieldPct) unit.overhealToShieldPct = bonus.overhealToShieldPct;
+                if (bonus.deathSaveOnce) unit.deathSaveOnce = true;
             }
         }
+    }
+
+    // Mystic abilityDmgPerElement: count unique elements on team and apply bonus
+    var uniqueElements = {};
+    for (var ei = 0; ei < units.length; ei++) {
+        if (units[ei].element) uniqueElements[units[ei].element] = true;
+    }
+    var uniqueElemCount = Object.keys(uniqueElements).length;
+    for (var mi = 0; mi < units.length; mi++) {
+        if (units[mi].abilityDmgPerElement && uniqueElemCount > 0) {
+            units[mi].abilityDmgBonus = (units[mi].abilityDmgBonus || 0) + units[mi].abilityDmgPerElement * uniqueElemCount;
+        }
+    }
+
+    // Sage deathSaveOnce: find the strongest Sage and mark them as the death saver
+    var strongestSage = null;
+    var strongestSageAtk = -1;
+    for (var si = 0; si < units.length; si++) {
+        if (units[si].deathSaveOnce && units[si].attack > strongestSageAtk) {
+            strongestSageAtk = units[si].attack;
+            strongestSage = units[si];
+        }
+    }
+    if (strongestSage) {
+        strongestSage.isDeathSaver = true;
+        strongestSage.deathSaveHealPct = 0.25;
     }
 }
 

@@ -1,0 +1,190 @@
+// =============================================================================
+// units-bonds.js — Unit bond definitions and bond detection
+// =============================================================================
+
+var UNIT_BONDS = {
+    // --- 6 Elemental Duos (one per element) ---
+    fire_duo: {
+        name: 'Blazing Partners',
+        type: 'duo',
+        units: ['flame_warrior', 'pyromancer'],
+        bonus: { atkPct: 0.08 },
+        description: '+8% ATK for both'
+    },
+    water_duo: {
+        name: 'Frozen Harmony',
+        type: 'duo',
+        units: ['frost_archer', 'tidal_shaman'],
+        bonus: { healPowerPct: 0.08 },
+        description: '+8% healing power'
+    },
+    earth_duo: {
+        name: 'Earthen Bond',
+        type: 'duo',
+        units: ['stone_guard', 'golem'],
+        bonus: { hpPct: 0.10 },
+        description: '+10% max HP'
+    },
+    wind_duo: {
+        name: 'Gale Force',
+        type: 'duo',
+        units: ['zephyr_scout', 'wind_duelist'],
+        bonus: { atkSpdPct: 0.10 },
+        description: '+10% ATK speed'
+    },
+    lightning_duo: {
+        name: 'Thunderstrike',
+        type: 'duo',
+        units: ['spark_fencer', 'thunder_archer'],
+        bonus: { critChance: 0.08 },
+        description: '+8% crit chance'
+    },
+    force_duo: {
+        name: 'Ironclad Alliance',
+        type: 'duo',
+        units: ['gladiator', 'shield_bearer'],
+        bonus: { atkPct: 0.06, hpPct: 0.06 },
+        description: '+6% ATK and +6% HP'
+    },
+
+    // --- 4 Cross-Element Duos ---
+    fire_and_ice: {
+        name: 'Fire & Ice',
+        type: 'duo',
+        units: ['flame_warrior', 'frost_archer'],
+        bonus: { abilityDmgPct: 0.12 },
+        description: '+12% ability damage'
+    },
+    silent_storm: {
+        name: 'Silent Storm',
+        type: 'duo',
+        units: ['shadow_blade', 'zephyr_scout'],
+        bonus: { moveSpdPct: 0.15 },
+        description: '+15% move speed'
+    },
+    immovable_object: {
+        name: 'Immovable Object',
+        type: 'duo',
+        units: ['magma_knight', 'shell_knight'],
+        bonus: { drPct: 0.12 },
+        description: '+12% DR'
+    },
+    conductor: {
+        name: 'Conductor',
+        type: 'duo',
+        units: ['shock_mage', 'hydro_mage'],
+        bonus: { manaGenPct: 0.15 },
+        description: '+15% mana gen'
+    },
+
+    // --- 6 Trios (gated behind Bond Hall L5) ---
+    elemental_trinity: {
+        name: 'Elemental Trinity',
+        type: 'trio',
+        units: ['phoenix', 'leviathan', 'world_tree'],
+        bonus: { allStatsPct: 0.15 },
+        description: '+15% all stats'
+    },
+    arcane_circle: {
+        name: 'Arcane Circle',
+        type: 'trio',
+        units: ['pyromancer', 'monsoon_caller', 'terra_sage'],
+        bonus: { abilityDmgPct: 0.20 },
+        description: '+20% ability damage'
+    },
+    shadow_pack: {
+        name: 'Shadow Pack',
+        type: 'trio',
+        units: ['ember_scout', 'reef_stalker', 'zephyr_scout'],
+        bonus: { atkPct: 0.12, atkSpdPct: 0.10 },
+        description: '+12% ATK, +10% ATK speed'
+    },
+    iron_wall: {
+        name: 'Iron Wall',
+        type: 'trio',
+        units: ['magma_knight', 'golem', 'tesla_knight'],
+        bonus: { hpPct: 0.15, drPct: 0.08 },
+        description: '+15% HP, +8% DR'
+    },
+    healing_light: {
+        name: 'Healing Light',
+        type: 'trio',
+        units: ['fire_acolyte', 'coral_priest', 'gale_dancer'],
+        bonus: { healPowerPct: 0.25 },
+        description: '+25% healing power'
+    },
+    legendary_convergence: {
+        name: 'Legendary Convergence',
+        type: 'trio',
+        units: ['storm_dragon', 'void_wyrm', 'titan_lord'],
+        bonus: { allStatsPct: 0.10, archetypeCountBonus: 1 },
+        description: '+10% all stats, primary archetype +1 count'
+    }
+};
+
+// Detect which bonds are active for a deployed team
+// team: array of unit keys (base form keys)
+// saveData: for checking Bond Hall level
+// Returns array of active bond objects with applied bonuses
+function detectActiveBonds(teamKeys, saveData) {
+    var activeBonds = [];
+    var bondHallLevel = (saveData && saveData.buildings && saveData.buildings.bond_hall) || 0;
+    var bondBonusMult = 1.0 + (bondHallLevel * 0.05); // 5% per Bond Hall level
+    var trioBondsUnlocked = bondHallLevel >= 5;
+
+    // Resolve base keys for evolved units
+    var resolvedKeys = [];
+    for (var i = 0; i < teamKeys.length; i++) {
+        var key = teamKeys[i];
+        // If it's an evolved key, find the base key
+        var tmpl = EVOLVED_TEMPLATES[key];
+        if (tmpl && tmpl.baseKey) {
+            resolvedKeys.push(tmpl.baseKey);
+        } else {
+            resolvedKeys.push(key);
+        }
+    }
+
+    var bondKeys = Object.keys(UNIT_BONDS);
+    for (var b = 0; b < bondKeys.length; b++) {
+        var bondId = bondKeys[b];
+        var bond = UNIT_BONDS[bondId];
+
+        // Skip trios if not unlocked
+        if (bond.type === 'trio' && !trioBondsUnlocked) continue;
+
+        // Check if all required units are deployed
+        var allPresent = true;
+        for (var u = 0; u < bond.units.length; u++) {
+            if (resolvedKeys.indexOf(bond.units[u]) === -1) {
+                allPresent = false;
+                break;
+            }
+        }
+
+        if (allPresent) {
+            // Scale bonuses by bond hall multiplier
+            var scaledBonus = {};
+            var bonusKeys = Object.keys(bond.bonus);
+            for (var bk = 0; bk < bonusKeys.length; bk++) {
+                var key = bonusKeys[bk];
+                if (key === 'archetypeCountBonus') {
+                    scaledBonus[key] = bond.bonus[key]; // don't scale count bonuses
+                } else {
+                    scaledBonus[key] = bond.bonus[key] * bondBonusMult;
+                }
+            }
+
+            activeBonds.push({
+                id: bondId,
+                name: bond.name,
+                type: bond.type,
+                units: bond.units,
+                bonus: scaledBonus,
+                description: bond.description
+            });
+        }
+    }
+
+    return activeBonds;
+}

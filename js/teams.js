@@ -204,6 +204,7 @@ function deployTeam(saveData) {
 
         var unit = createUnit(slot.key, entry.stars);
         if (unit) {
+            unit.ascensionTier = slot.ascensionTier || null;
             board[slot.row][slot.col] = unit;
         }
     }
@@ -224,6 +225,7 @@ function createUnit(templateKey, stars) {
         name: tmpl.name,
         type: tmpl.type,
         archetype: tmpl.archetype,
+        secondaryArchetype: tmpl.secondaryArchetype || null,
         element: tmpl.element,
         cost: tmpl.cost || tmpl.baseCost || 1,
         stars: stars,
@@ -255,9 +257,19 @@ function previewTeamSynergies(saveData) {
         var tmpl = UNIT_TEMPLATES[team.slots[i].key] || EVOLVED_TEMPLATES[team.slots[i].key];
         if (!tmpl) continue;
 
-        // Count archetypes
-        if (!archetypeCounts[tmpl.archetype]) archetypeCounts[tmpl.archetype] = 0;
-        archetypeCounts[tmpl.archetype]++;
+        // Count archetypes (with ascension-aware contribution)
+        if (typeof getUnitArchetypeContribution === 'function') {
+            var slot = team.slots[i];
+            var fakeUnit = { key: slot.key, evolved: !!EVOLVED_TEMPLATES[slot.key] && !UNIT_TEMPLATES[slot.key], archetype: tmpl.archetype, ascensionTier: slot.ascensionTier || null };
+            var contrib = getUnitArchetypeContribution(fakeUnit);
+            archetypeCounts[contrib.primary] = (archetypeCounts[contrib.primary] || 0) + contrib.primaryCount;
+            if (contrib.secondary && contrib.secondaryCount > 0) {
+                archetypeCounts[contrib.secondary] = (archetypeCounts[contrib.secondary] || 0) + contrib.secondaryCount;
+            }
+        } else {
+            if (!archetypeCounts[tmpl.archetype]) archetypeCounts[tmpl.archetype] = 0;
+            archetypeCounts[tmpl.archetype]++;
+        }
 
         // Count elements
         if (!elementCounts[tmpl.element]) elementCounts[tmpl.element] = 0;

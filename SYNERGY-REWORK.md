@@ -109,9 +109,9 @@
   ```js
   { desc: 'Duelists 40% double-strike, 15% lifesteal, can\'t miss', doubleStrikeChance: 0.40, lifestealPct: 0.15, cantMissAttacks: true, scope: 'archetype' }
   ```
-- **8**: Duelist units gain 55% double-strike, 20% lifesteal, can't miss. Every 3rd attack is a guaranteed critical strike. Duelists gain +1% ATK per second of combat (stacking, uncapped).
+- **8**: Duelist units gain 55% double-strike, 20% lifesteal, can't miss. Every 3rd attack is a guaranteed critical strike. Duelists gain +1% ATK per second of combat (capped at +40%).
   ```js
-  { desc: 'Duelists 55% double-strike, 20% lifesteal, can\'t miss. Every 3rd: crit. +1% ATK/s', doubleStrikeChance: 0.55, lifestealPct: 0.20, cantMissAttacks: true, guaranteedCritEveryN: 3, rampingAtkPctPerSec: 0.01, scope: 'archetype' }
+  { desc: 'Duelists 55% double-strike, 20% lifesteal, can\'t miss. Every 3rd: crit. +1% ATK/s (cap 40%)', doubleStrikeChance: 0.55, lifestealPct: 0.20, cantMissAttacks: true, guaranteedCritEveryN: 3, rampingAtkPctPerSec: 0.01, rampingAtkCap: 0.40, scope: 'archetype' }
   ```
 
 ### Predator (2/4/6/8)

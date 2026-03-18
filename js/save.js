@@ -3,7 +3,7 @@
 // =============================================================================
 
 var SAVE_KEY = 'autobattler_v2_save';
-var SAVE_VERSION = 6;
+var SAVE_VERSION = 7;
 
 // ---- Default State Factory ----
 
@@ -309,6 +309,40 @@ function migrateSave(data) {
 
         data.version = 6;
         console.log('Migration v5→v6 complete.');
+    }
+
+    if (data.version < 7) {
+        console.log('Migrating save from v6 to v7 (Unit progression)');
+
+        // Add level, xp, ascensionTier to all units in collection
+        if (data.collection) {
+            var collKeys = Object.keys(data.collection);
+            for (var ci = 0; ci < collKeys.length; ci++) {
+                var entry = data.collection[collKeys[ci]];
+                if (typeof entry.level === 'undefined') entry.level = 1;
+                if (typeof entry.xp === 'undefined') entry.xp = 0;
+                if (typeof entry.ascensionTier === 'undefined') entry.ascensionTier = null;
+            }
+        }
+
+        // Add level, xp, ascensionTier to all units in team slots
+        if (data.teams && Array.isArray(data.teams)) {
+            for (var ti = 0; ti < data.teams.length; ti++) {
+                if (data.teams[ti] && data.teams[ti].slots) {
+                    for (var si = 0; si < data.teams[ti].slots.length; si++) {
+                        var slot = data.teams[ti].slots[si];
+                        if (slot) {
+                            if (typeof slot.level === 'undefined') slot.level = 1;
+                            if (typeof slot.xp === 'undefined') slot.xp = 0;
+                            if (typeof slot.ascensionTier === 'undefined') slot.ascensionTier = null;
+                        }
+                    }
+                }
+            }
+        }
+
+        data.version = 7;
+        console.log('Migration v6\u2192v7 complete.');
     }
 
     // Phase 5 graceful migration: add new fields if missing (version-agnostic)

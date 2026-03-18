@@ -4166,8 +4166,17 @@ function updateSynergySidebar() {
         }
         elementCounts[unit.element] = (elementCounts[unit.element] || 0) + elementCount;
 
-        // Archetype counting
-        archetypeCounts[unit.archetype] = (archetypeCounts[unit.archetype] || 0) + 1;
+        // Archetype counting (with ascension-aware contribution)
+        if (typeof getUnitArchetypeContribution === 'function') {
+            var fakeUnit = { key: slot.key, evolved: isEvolved, archetype: unit.archetype, ascensionTier: slot.ascensionTier || null };
+            var contrib = getUnitArchetypeContribution(fakeUnit);
+            archetypeCounts[contrib.primary] = (archetypeCounts[contrib.primary] || 0) + contrib.primaryCount;
+            if (contrib.secondary && contrib.secondaryCount > 0) {
+                archetypeCounts[contrib.secondary] = (archetypeCounts[contrib.secondary] || 0) + contrib.secondaryCount;
+            }
+        } else {
+            archetypeCounts[unit.archetype] = (archetypeCounts[unit.archetype] || 0) + 1;
+        }
     }
 
     if (team.slots.length === 0) {
@@ -4347,7 +4356,17 @@ function calculateTeamSynergies(team) {
         var unit = team[i];
         if (!unit || unit.hp <= 0) continue;
         elementCounts[unit.element] = (elementCounts[unit.element] || 0) + 1;
-        archetypeCounts[unit.archetype] = (archetypeCounts[unit.archetype] || 0) + 1;
+
+        // Ascension-aware archetype counting
+        if (typeof getUnitArchetypeContribution === 'function') {
+            var contrib = getUnitArchetypeContribution(unit);
+            archetypeCounts[contrib.primary] = (archetypeCounts[contrib.primary] || 0) + contrib.primaryCount;
+            if (contrib.secondary && contrib.secondaryCount > 0) {
+                archetypeCounts[contrib.secondary] = (archetypeCounts[contrib.secondary] || 0) + contrib.secondaryCount;
+            }
+        } else {
+            archetypeCounts[unit.archetype] = (archetypeCounts[unit.archetype] || 0) + 1;
+        }
     }
 
     return { elements: elementCounts, archetypes: archetypeCounts };
