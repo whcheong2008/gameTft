@@ -129,6 +129,8 @@ function removeFromTeam(saveData, templateKey) {
     for (var i = 0; i < team.slots.length; i++) {
         if (team.slots[i].key === templateKey) {
             team.slots.splice(i, 1);
+            // Unequip all items from the removed unit
+            unequipAllItemsFromUnit(saveData, templateKey);
             autoSave(saveData);
             return true;
         }

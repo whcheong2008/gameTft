@@ -2658,11 +2658,7 @@ function uiSelectBenchItem(item) {
     if (item.equipped) {
         var eqUnitName = UNIT_TEMPLATES[item.equipped.unitKey] ? UNIT_TEMPLATES[item.equipped.unitKey].name : (EVOLVED_TEMPLATES[item.equipped.unitKey] ? EVOLVED_TEMPLATES[item.equipped.unitKey].name : item.equipped.unitKey);
         html += '<div style="margin-top:6px; color:#6bcb77;">Equipped on: ' + eqUnitName + '</div>';
-        if (item.type === 'component') {
-            html += '<button onclick="uiUnequipItem(\'' + item.id + '\')" style="margin-top:4px; font-size:11px; padding:2px 8px; background:#553333; color:#fff; border:1px solid #884444; border-radius:4px; cursor:pointer;">Unequip</button>';
-        } else {
-            html += '<div style="font-size:10px; color:#888; margin-top:4px;">This item cannot be unequipped</div>';
-        }
+        html += '<button onclick="uiUnequipItem(\'' + item.id + '\')" style="margin-top:4px; font-size:11px; padding:2px 8px; background:#553333; color:#fff; border:1px solid #884444; border-radius:4px; cursor:pointer;">Unequip</button>';
     } else {
         html += '<div style="margin-top:6px; font-size:11px; color:#e2b714;">Go to Team Builder to equip this item</div>';
     }
