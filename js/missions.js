@@ -99,7 +99,7 @@ var STORY_MISSIONS = [
         waves: [
             { budget: 18, maxCost: 4, count: 5, elementBias: 'fire', synergyBias: 'duelist' },
             { budget: 22, maxCost: 4, count: 6, elementBias: 'fire', synergyBias: 'duelist' },
-            { budget: 25, maxCost: 4, count: 6, elementBias: 'fire', synergyBias: 'guardian' }
+            { budget: 25, maxCost: 4, count: 6, elementBias: 'fire', synergyBias: 'guardian', captain: 'pyra' }
         ],
         rewards: { gold: 280, xp: 600 }
     },
@@ -113,7 +113,7 @@ var STORY_MISSIONS = [
         waves: [
             { budget: 20, maxCost: 4, count: 5, elementBias: 'water', synergyBias: 'mystic' },
             { budget: 24, maxCost: 4, count: 6, elementBias: 'water', synergyBias: 'sage' },
-            { budget: 28, maxCost: 5, count: 6, elementBias: 'water' }
+            { budget: 28, maxCost: 5, count: 6, elementBias: 'water', captain: 'nereus' }
         ],
         rewards: { gold: 320, xp: 700 }
     },
@@ -127,7 +127,7 @@ var STORY_MISSIONS = [
         waves: [
             { budget: 22, maxCost: 4, count: 5, elementBias: 'earth', synergyBias: 'guardian' },
             { budget: 26, maxCost: 4, count: 6, elementBias: 'earth', synergyBias: 'vanguard' },
-            { budget: 30, maxCost: 5, count: 7, elementBias: 'earth', synergyBias: 'guardian' }
+            { budget: 30, maxCost: 5, count: 7, elementBias: 'earth', synergyBias: 'guardian', captain: 'gorath' }
         ],
         rewards: { gold: 360, xp: 800 }
     },
@@ -141,7 +141,7 @@ var STORY_MISSIONS = [
         waves: [
             { budget: 24, maxCost: 4, count: 6, elementBias: 'wind', synergyBias: 'predator' },
             { budget: 28, maxCost: 5, count: 6, elementBias: 'wind', synergyBias: 'duelist' },
-            { budget: 32, maxCost: 5, count: 7, elementBias: 'wind', synergyBias: 'predator' }
+            { budget: 32, maxCost: 5, count: 7, elementBias: 'wind', synergyBias: 'predator', captain: 'sylph' }
         ],
         rewards: { gold: 400, xp: 900 }
     },
@@ -156,7 +156,7 @@ var STORY_MISSIONS = [
             { budget: 28, maxCost: 5, count: 6, synergyBias: 'duelist', enemySynergies: true },
             { budget: 32, maxCost: 5, count: 7, synergyBias: 'guardian', enemySynergies: true },
             { budget: 36, maxCost: 5, count: 7, enemySynergies: true },
-            { budget: 40, maxCost: 5, count: 7, enemySynergies: true }
+            { budget: 40, maxCost: 5, count: 7, enemySynergies: true, captain: 'arbiter' }
         ],
         rewards: { gold: 480, xp: 1100 }
     },
@@ -171,7 +171,7 @@ var STORY_MISSIONS = [
             { budget: 32, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
             { budget: 36, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
             { budget: 40, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 45, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+            { budget: 45, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true, captain: 'voidborn_champion' }
         ],
         rewards: { gold: 560, xp: 1300 }
     },
@@ -934,6 +934,188 @@ function generateGrindMission(playerLevel) {
     };
 }
 
+// ---- Named Enemy Captains ----
+// Special enemy units with unique abilities that appear in mid/late story missions.
+// Captains are visually distinct, have fixed grid positions, and grant bonus rewards on kill.
+
+var ENEMY_CAPTAINS = {
+    pyra: {
+        name: 'Pyra, Ember General',
+        emoji: '🔥⚔️',
+        element: 'fire',
+        type: 'warrior',
+        hp: 2500,
+        attack: 120,
+        attackSpd: 0.8,
+        range: 1,
+        moveSpd: 1.8,
+        dr: 0.15,
+        fixedRow: 1,    // row on enemy grid (0-3)
+        fixedCol: 3,    // center
+        specialAbility: {
+            name: 'Rallying Cry',
+            effect: 'rally',
+            cooldown: 15,
+            desc: '+20% ATK to all fire allies for 10s',
+            atkBuff: 0.20,
+            duration: 10,
+            targetElement: 'fire'
+        },
+        bonusReward: { goldMult: 1.25, guaranteedRare: true }
+    },
+    nereus: {
+        name: 'Nereus, Tidal Oracle',
+        emoji: '🌊🔮',
+        element: 'water',
+        type: 'healer',
+        hp: 2000,
+        attack: 60,
+        attackSpd: 1.1,
+        range: 2,
+        moveSpd: 1.5,
+        dr: 0.10,
+        fixedRow: 0,
+        fixedCol: 3,
+        specialAbility: {
+            name: 'Tidal Blessing',
+            effect: 'massHeal',
+            cooldown: 18,
+            desc: 'Heal all allies for 20% max HP',
+            healPct: 0.20
+        },
+        bonusReward: { goldMult: 1.25, guaranteedRare: true }
+    },
+    gorath: {
+        name: 'Gorath, Stone King',
+        emoji: '🪨👑',
+        element: 'earth',
+        type: 'tank',
+        hp: 3500,
+        attack: 80,
+        attackSpd: 1.0,
+        range: 1,
+        moveSpd: 1.3,
+        dr: 0.30,
+        fixedRow: 2,
+        fixedCol: 3,
+        specialAbility: {
+            name: 'Earthquake',
+            effect: 'aoeStun',
+            cooldown: 20,
+            desc: 'Stun all player units for 1.5s',
+            stunDuration: 1.5
+        },
+        bonusReward: { goldMult: 1.25, guaranteedRare: true }
+    },
+    sylph: {
+        name: 'Sylph, Storm Blade',
+        emoji: '🌪️⚡',
+        element: 'wind',
+        type: 'assassin',
+        hp: 1800,
+        attack: 150,
+        attackSpd: 0.5,
+        range: 1,
+        moveSpd: 3.5,
+        dr: 0.05,
+        fixedRow: 1,
+        fixedCol: 5,
+        specialAbility: {
+            name: 'Wind Walk',
+            effect: 'teleportStrike',
+            cooldown: 12,
+            desc: 'Teleport behind weakest enemy, deal 200% ATK',
+            damageMultiplier: 2.0
+        },
+        bonusReward: { goldMult: 1.25, guaranteedRare: true }
+    },
+    arbiter: {
+        name: 'The Arbiter',
+        emoji: '⚖️✨',
+        element: 'force',
+        type: 'mage',
+        hp: 2800,
+        attack: 100,
+        attackSpd: 0.9,
+        range: 3,
+        moveSpd: 1.5,
+        dr: 0.20,
+        fixedRow: 0,
+        fixedCol: 3,
+        specialAbility: {
+            name: 'Elemental Shift',
+            effect: 'elementShift',
+            cooldown: 10,
+            desc: 'Change element every 10s, immune to that element',
+            elements: ['fire', 'water', 'earth', 'wind']
+        },
+        bonusReward: { goldMult: 1.25, guaranteedRare: true }
+    },
+    voidborn_champion: {
+        name: 'Voidborn Champion',
+        emoji: '🕳️⚔️',
+        element: 'force', // void is force-type (neutral)
+        type: 'warrior',
+        hp: 3000,
+        attack: 130,
+        attackSpd: 0.8,
+        range: 1,
+        moveSpd: 2.0,
+        dr: 0.20,
+        fixedRow: 1,
+        fixedCol: 3,
+        specialAbility: {
+            name: 'Void Drain',
+            effect: 'manaDrain',
+            cooldown: 8,
+            desc: 'Steal 20% of target\'s current mana',
+            manaDrainPct: 0.20
+        },
+        bonusReward: { goldMult: 1.25, guaranteedRare: true }
+    }
+};
+
+// Create a captain unit instance from captain data
+function createCaptainUnit(captainKey) {
+    var captainDef = ENEMY_CAPTAINS[captainKey];
+    if (!captainDef) return null;
+
+    var unit = {
+        key: 'captain_' + captainKey,
+        name: captainDef.name,
+        emoji: captainDef.emoji,
+        element: captainDef.element,
+        type: captainDef.type,
+        hp: captainDef.hp,
+        maxHp: captainDef.hp,
+        attack: captainDef.attack,
+        attackSpd: captainDef.attackSpd,
+        range: captainDef.range,
+        moveSpd: captainDef.moveSpd,
+        damageReduction: captainDef.dr || 0,
+        isEnemy: true,
+        isCaptain: true,
+        captainKey: captainKey,
+        specialAbility: captainDef.specialAbility,
+        specialAbilityCooldown: 0,
+        fixedRow: captainDef.fixedRow,
+        fixedCol: captainDef.fixedCol,
+        stars: 1,
+        alive: true,
+        mana: 0,
+        maxMana: 100
+    };
+
+    return unit;
+}
+
+// Check if killing a captain should grant bonus rewards
+function getCaptainBonusReward(captainKey) {
+    var captainDef = ENEMY_CAPTAINS[captainKey];
+    if (!captainDef) return null;
+    return captainDef.bonusReward;
+}
+
 // ---- Wave Enemy Generation ----
 // Generates an array of enemy unit instances from a wave config
 
@@ -942,6 +1124,16 @@ function generateMissionWave(waveConfig) {
     var remaining = waveConfig.budget;
     var targetCount = waveConfig.count;
     var maxCost = waveConfig.maxCost;
+
+    // Inject captain if wave config specifies one
+    if (waveConfig.captain) {
+        var captain = createCaptainUnit(waveConfig.captain);
+        if (captain) {
+            enemies.push(captain);
+            remaining -= 3; // Captains cost ~3 budget
+            targetCount--; // One fewer regular enemy
+        }
+    }
 
     // Build pool — apply element and synergy biases
     var pool = [];
