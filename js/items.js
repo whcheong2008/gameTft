@@ -716,6 +716,10 @@ function forgeCraftMythic(saveData, mythicKey) {
         equipped: null
     };
     saveData.items.bench.push(mythicItem);
+
+    // Discover recipe in recipe book
+    discoverRecipe(saveData, 'mythic', mythicKey);
+
     autoSave(saveData);
     return { success: true, item: mythicItem };
 }
@@ -849,6 +853,9 @@ function equipItem(saveData, itemId, unitKey) {
                 removeItemFromBench(saveData, item.id);
                 // Add combined item to bench (equipped)
                 saveData.items.bench.push(combined);
+
+                // Discover recipe in recipe book
+                discoverRecipe(saveData, 'combined', recipeKey);
 
                 autoSave(saveData);
                 return 'combined';
@@ -1053,6 +1060,9 @@ function forgeCraftSetItem(saveData, setRecipeKey) {
     removeItemFromBench(saveData, sourceItem.id);
     saveData.items.bench.push(setItem);
 
+    // Discover recipe in recipe book
+    discoverRecipe(saveData, 'set', setRecipeKey);
+
     autoSave(saveData);
     return { success: true, item: setItem };
 }
@@ -1116,6 +1126,10 @@ function forgeCraftAbilityItem(saveData, abilityItemKey) {
     };
 
     saveData.items.bench.push(abilityItem);
+
+    // Discover recipe in recipe book
+    discoverRecipe(saveData, 'ability', abilityItemKey);
+
     autoSave(saveData);
     return { success: true, item: abilityItem };
 }
@@ -1186,6 +1200,9 @@ function forgeEnhance(saveData, itemId) {
     var entry = ENHANCEMENT_TABLE[targetLevel - 1];
     var cost = entry.goldCost;
     if (item.type === 'mythic') cost = Math.floor(cost * 1.5);
+    // Apply forge cost reduction from collection bonuses
+    var forgeCostReduce = getActiveCollectionBonuses(saveData).forgeCostReduction || 0;
+    if (forgeCostReduce > 0) cost = Math.floor(cost * (1 - forgeCostReduce));
     if (saveData.player.gold < cost) return { success: false, reason: 'Not enough gold (' + cost + 'g)' };
 
     spendGold(saveData, cost);
@@ -1197,10 +1214,8 @@ function forgeEnhance(saveData, itemId) {
     }
 
     // Check collection bonus: Grand Artificer reduces pity threshold
-    var pityThreshold = ENHANCEMENT_PITY_THRESHOLD;
-    if (saveData.items && saveData.items.collectionBonuses && saveData.items.collectionBonuses.grandArtificer) {
-        pityThreshold = 2;
-    }
+    var collBonuses = getActiveCollectionBonuses(saveData);
+    var pityThreshold = collBonuses.pityThreshold || ENHANCEMENT_PITY_THRESHOLD;
 
     // Roll for success
     var isPityGuaranteed = item.enhancePity.failures >= pityThreshold;
@@ -1501,13 +1516,22 @@ function applySetBonuses(playerUnits, setCounts) {
 
 // ---- Item Drop Rolling ----
 
-function rollItemRarity(missionLevel, starRating) {
+function rollItemRarity(missionLevel, starRating, rarityBonus) {
     var weights = {
         standard: BASE_RARITY_WEIGHTS.standard,
         uncommon: BASE_RARITY_WEIGHTS.uncommon,
         rare: BASE_RARITY_WEIGHTS.rare,
         epic: BASE_RARITY_WEIGHTS.epic
     };
+
+    // Apply collection bonus (shifts weight from standard to higher tiers)
+    if (rarityBonus && rarityBonus > 0) {
+        var shift = weights.standard * rarityBonus;
+        weights.standard -= shift;
+        weights.uncommon += shift * 0.5;
+        weights.rare += shift * 0.35;
+        weights.epic += shift * 0.15;
+    }
 
     // Mission difficulty bonus: per 2 levels, shift weights
     var diffBonus = Math.floor(missionLevel / 2);
@@ -1541,12 +1565,130 @@ function rollItemRarity(missionLevel, starRating) {
     return 'epic';
 }
 
-function rollItemDrop(missionLevel, starRating) {
-    var rarity = rollItemRarity(missionLevel, starRating);
+function rollItemDrop(missionLevel, starRating, saveData) {
+    // Apply collection bonus to rarity if available
+    var rarityBonus = 0;
+    if (saveData) {
+        var bonuses = getActiveCollectionBonuses(saveData);
+        rarityBonus = bonuses.dropRarityBonus || 0;
+    }
+    var rarity = rollItemRarity(missionLevel, starRating, rarityBonus);
     // Use expanded pool for missions 10+, base pool otherwise
     var compKeys = missionLevel >= 10 ? ALL_COMPONENT_KEYS : BASE_COMPONENT_KEYS;
     var key = compKeys[Math.floor(Math.random() * compKeys.length)];
     return createItemInstance('component', key, rarity);
+}
+
+// Generate all mission rewards (components + gems + essences + mythic mats)
+function generateMissionRewards(missionLevel, starRating, isBoss, saveData) {
+    var rewards = {
+        items: [],      // component item instances
+        gems: [],       // gem instances
+        essences: {},   // { essenceType: amount }
+        mythicMaterials: {} // { materialKey: amount }
+    };
+
+    // --- Component drops ---
+    // Always 1 component drop
+    rewards.items.push(rollItemDrop(missionLevel, starRating, saveData));
+    // 3-star bonus: +1 component
+    if (starRating >= 3) {
+        rewards.items.push(rollItemDrop(missionLevel, starRating, saveData));
+    }
+
+    // Boss: guaranteed rare+ component
+    if (isBoss) {
+        var bossRarity = Math.random() < 0.3 ? 'epic' : 'rare';
+        var compKeys = missionLevel >= 10 ? ALL_COMPONENT_KEYS : BASE_COMPONENT_KEYS;
+        var bossKey = compKeys[Math.floor(Math.random() * compKeys.length)];
+        rewards.items.push(createItemInstance('component', bossKey, bossRarity));
+    }
+
+    // --- Gem drops ---
+    var gemDropBonus = saveData ? (getActiveCollectionBonuses(saveData).gemDropRateBonus || 0) : 0;
+
+    if (missionLevel >= 5) {
+        // 1 gem drop at mission 5+
+        rewards.gems.push(rollGemDrop(missionLevel));
+        // 3-star: 50% chance for +1 gem (boosted by collection bonus)
+        if (starRating >= 3 && Math.random() < (0.5 + gemDropBonus)) {
+            rewards.gems.push(rollGemDrop(missionLevel));
+        }
+    }
+    // Boss: 1 gem (50% chance Prismatic)
+    if (isBoss) {
+        rewards.gems.push(rollBossGemDrop());
+    }
+
+    // --- Essence drops ---
+    var elements = ['fire', 'water', 'earth', 'wind', 'lightning', 'force'];
+    if (missionLevel >= 8 && missionLevel <= 10) {
+        if (Math.random() < 0.10) {
+            var elem = elements[Math.floor(Math.random() * elements.length)];
+            rewards.essences[elem] = (rewards.essences[elem] || 0) + 1;
+        }
+    } else if (missionLevel >= 11 && missionLevel <= 13) {
+        if (Math.random() < 0.20) {
+            var elem2 = elements[Math.floor(Math.random() * elements.length)];
+            rewards.essences[elem2] = (rewards.essences[elem2] || 0) + 1;
+        }
+    } else if (missionLevel >= 14) {
+        if (Math.random() < 0.30) {
+            var elem3 = elements[Math.floor(Math.random() * elements.length)];
+            rewards.essences[elem3] = (rewards.essences[elem3] || 0) + 1;
+        }
+    }
+    // Boss: guaranteed 1 arcane essence
+    if (isBoss) {
+        rewards.essences.arcane = (rewards.essences.arcane || 0) + 1;
+    }
+
+    // --- Mythic material drops ---
+    if (missionLevel >= 14 && starRating >= 3) {
+        if (Math.random() < 0.05) {
+            rewards.mythicMaterials.void_crystal = (rewards.mythicMaterials.void_crystal || 0) + 1;
+        }
+    }
+    if (isBoss) {
+        if (Math.random() < 0.10) {
+            rewards.mythicMaterials.dragon_scale = (rewards.mythicMaterials.dragon_scale || 0) + 1;
+        }
+    }
+
+    return rewards;
+}
+
+// Apply mission rewards to save data
+function applyMissionRewards(saveData, rewards) {
+    // Add items to bench (respect bench size limit)
+    for (var i = 0; i < rewards.items.length; i++) {
+        if (saveData.items.bench.length < (saveData.items.benchSize || 10)) {
+            saveData.items.bench.push(rewards.items[i]);
+        }
+    }
+
+    // Add gems — store in gems array on save
+    if (!saveData.items.gems) saveData.items.gems = [];
+    for (var g = 0; g < rewards.gems.length; g++) {
+        saveData.items.gems.push(rewards.gems[g]);
+    }
+
+    // Add essences
+    var essenceKeys = Object.keys(rewards.essences);
+    for (var e = 0; e < essenceKeys.length; e++) {
+        var ek = essenceKeys[e];
+        if (!saveData.items.essences[ek]) saveData.items.essences[ek] = 0;
+        saveData.items.essences[ek] += rewards.essences[ek];
+    }
+
+    // Add mythic materials
+    if (!saveData.items.mythicMaterials) saveData.items.mythicMaterials = {};
+    var matKeys = Object.keys(rewards.mythicMaterials);
+    for (var m = 0; m < matKeys.length; m++) {
+        var mk = matKeys[m];
+        if (!saveData.items.mythicMaterials[mk]) saveData.items.mythicMaterials[mk] = 0;
+        saveData.items.mythicMaterials[mk] += rewards.mythicMaterials[mk];
+    }
 }
 
 // ---- Item Display Helpers ----
