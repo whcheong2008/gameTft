@@ -17,7 +17,7 @@
 
 ---
 
-## Current Status: V2 — Phase 1 Complete, Phase 2 Roster Expansion IMPLEMENTED (5/5 prompts done), Git initialized
+## Current Status: V2 — Phase 3 Complete, Phase 4 In Progress (Region Expansion + Phase 5 parallel tracks)
 
 **Repository**: https://github.com/whcheong2008/gameTft
 **Current tag**: `v0.2.0-phase1-complete` (initial commit)
@@ -100,6 +100,36 @@ Hub → Gacha Rolling → Roster Management → Team Building → Mission Deploy
   - Evolution-gated equip restriction on ability items
   - Save version 3 with essences + milestonesClaimed migration
 
+### What's Done (Phase 3 — COMPLETE)
+- **Enhancement system** (+0 to +10 with pity counter, save v4→v5)
+- **Gem socket system** (9 types × 4 rarities)
+- **Arcane set** + 5 new ability items
+- **4 new components** + 13 new recipes
+- **Mythic items** (all 6 defined + materials + forge crafting)
+- **Item affinity system** (22 affinities matching by type/archetype/element)
+- **Recipe book + collection milestones** (6 milestones with permanent bonuses)
+- **Drop tables** (level-gated mission rewards, forge integration, recipe discovery hooks)
+
+### Phase 4 — In Progress (Region Expansion)
+**Design conflict resolved**: MISSIONS-DESIGN.md's 8-region structure supersedes CONTENT-DESIGN.md's 14-mission structure.
+
+**Resolution decisions**:
+1. **STORY_MISSIONS → STAGES**: 14 missions replaced by ~47 stages in 8 regions. `STORY_MISSIONS = STAGES` alias for backward compat.
+2. **CHAPTERS → REGIONS**: 4 chapters replaced by 8 regions with per-region rewards.
+3. **Boss reconciliation**:
+   - `veil_guardian` → replaced by `veil_warden` (MISSIONS-DESIGN R1 boss)
+   - `infernal_wyvern`, `tidal_leviathan`, `stone_colossus`, `storm_phoenix` → kept as challenge mode bosses
+   - `void_sovereign` → rewritten to MISSIONS-DESIGN spec (Puppeteer→Commander→Unmaker)
+   - 6 new bosses added: `archon`, `twin_heralds`, `shattered_colossus`, `elemental_chimera`, `prismatic_sentinel`, `arbiter_of_trials`
+4. **Captains reassigned**: pyra→R6S2, nereus→R5S2, gorath→R6S4, sylph→R7S2, arbiter→R7S5, voidborn_champion→R8S5
+5. **Save migration**: v5→v6 adds regionProgress, starRatings, regionRewardsClaimed
+
+**Parallel worker tracks**:
+- `feature/phase4-regions` — Region expansion (prompt 22): STAGES, REGIONS, locks, encounter mechanics, 8 bosses, save migration
+- `feature/phase5-progression` — Buildings/quests/achievements (prompt 23): 3 new buildings, daily quests, achievement system, stats tracking
+
+**Blocked until regions merge**: Endless mode, challenge modes, lore system (depend on new stage/boss structures)
+
 ### What's Still Needed
 
 **Deep Design Phase — Publishable Game Design** (COMPLETE):
@@ -152,19 +182,21 @@ The combat engine is being rebuilt from scratch per COMBAT-DESIGN.md. Implementa
 | 3b | T3-T5 Abilities + Legendaries | 12 T3 + 6 T4 abilities, 24 T3-T5 passives, T5 legendary ability system (MaxMana 0), Phoenix revive, Leviathan submerge, Void Wyrm trigger | `19b` | **DONE** |
 | 4 | Integration & Polish | Gacha pool update, mission enemy generation, team builder UI overhaul, synergy sidebar, save migration v3→v4, balance pass | `20` | **DONE** |
 
-**Phase 3 — Expanded Items** (from SCOPE.md):
-- 4 new components + 13 new recipes
-- Enhancement system (+0 to +10), gem sockets, item affinity
-- 3 mythic items (trimmed from 6), Arcane set, 5 new ability items
+**Phase 3 — Expanded Items** (COMPLETE — all 8 chunks done):
+- Enhancement system, gem sockets, Arcane set, 5 new ability items
+- 6 mythic items + materials, item affinity, recipe book, drop tables
+- Save version 5
 
-**Phase 4 — Content & Bosses** (from SCOPE.md):
-- Chapter UI overlay, named enemy captains
-- Endless mode (The Abyss) with floor modifiers
-- Challenge modes (4 types), lore system (codex, unit cards, bond stories)
+**Phase 4 — Content & Bosses** (IN PROGRESS):
+- [x] Chapter system + expanded descriptions (prompt 22 chunks 1-2 — will be replaced by regions)
+- [x] Named enemy captains (prompt 22 chunk 2 — will be reassigned to regions)
+- [ ] **Region expansion** (prompt 22 — feature/phase4-regions branch)
+- [ ] Endless mode (The Abyss) — blocked until regions merge
+- [ ] Challenge modes — blocked until regions merge
+- [ ] Lore system — blocked until regions merge
 
-**Phase 5 — Progression Polish** (from SCOPE.md):
-- 3 new buildings (Gem Workshop, Mana Shrine, Bond Hall)
-- Daily quests, achievement system, collection bonuses
+**Phase 5 — Progression Polish** (IN PROGRESS — parallel with Phase 4):
+- [ ] **3 new buildings + daily quests + achievements** (prompt 23 — feature/phase5-progression branch)
 
 **Phase 6 — Visual & Audio Polish**:
 - [ ] Sprite system (replace emoji with art)
@@ -249,7 +281,9 @@ Game TFT/
 │   ├── 19a-passives-and-t1t2-abilities.md ← Phase 2 Chunk 3a: Passive framework + T1-T2 abilities (READY)
 │   ├── 19b-t3t5-abilities-and-legendaries.md ← Phase 2 Chunk 3b: T3-T5 abilities + T5 legendaries (READY)
 │   ├── 20-integration-and-polish.md  ← Phase 2 Chunk 4: Gacha/UI/save migration/balance (DONE)
-│   └── 21-git-init.md              ← Git initialization, .gitignore, remote setup (DONE)
+│   ├── 21-git-init.md              ← Git initialization, .gitignore, remote setup (DONE)
+│   ├── 22-phase4-region-expansion.md ← Phase 4: 8-region structure, locks, encounter mechanics, 8 bosses (READY)
+│   └── 23-phase5-buildings-quests-achievements.md ← Phase 5: 3 buildings, daily quests, achievements (READY)
 ├── .gitignore            ← Excludes .claude/, fibery api.txt, OS/editor files
 ├── orchestrators/        ← V1 domain orchestrator docs (historical)
 ├── DESIGN-V2.md          ← V2 game design document (authoritative)
@@ -276,15 +310,15 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 - **Current progress**: 26/28 tasks done. Remaining: combat animations, smooth unit movement (Phase 3)
 
 ### Open Design Questions
-1. **Boss reconciliation**: Prompt 15 implemented 6 bosses from CONTENT-DESIGN.md (Veil Guardian, Infernal Wyvern, Tidal Leviathan, Stone Colossus, Storm Phoenix, Void Sovereign). MISSIONS-DESIGN.md defines 8 different bosses (Veil Warden, Archon, Twin Heralds, Shattered Colossus, Elemental Chimera, Prismatic Sentinel, Arbiter of Trials, Void Sovereign). Only Void Sovereign overlaps. Need to decide: replace prompt 15 bosses with mission bosses, or keep both sets for different contexts?
-2. **Boss feature gating**: Which game features unlock at which boss clears? (e.g., does clearing Region 2 boss unlock Evolution Lab?)
-3. **War Room building**: Current intel mechanic (show enemy info on mission cards) may need rethinking given the region/lock system. Locks already tell the player what to expect.
-4. **Grind missions vs regions**: How do repeatable grind missions fit alongside the 8-region structure? Separate system (current implementation: procedural grind missions) or integrated into regions as repeatable stages?
-5. **Stage wave counts**: Specific wave counts per stage TBD — depends on pacing feel during implementation.
-6. **Enemy composition specifics**: Exact unit budgets, star levels, and synergy configurations per stage need detailed tuning pass.
-7. **Prismatic threshold tuning**: 10-element requires significant investment. Math: 9 team slots, 9 unique mono-element families + 1 evolved T5 counting as 2 = 10. Verify grind timeline is acceptable.
-8. **Encounter mechanics in Endless Mode**: Should The Abyss (endless mode) use Region 4's encounter mechanics as floor modifiers?
-9. **Story/narrative**: Region names, mission dialogue, lore context all TBD (separate session with wife?)
+1. ~~**Boss reconciliation**~~: RESOLVED — see "Phase 4 — In Progress" section above. Mission bosses supersede content-design bosses. 4 element bosses kept for challenge mode.
+2. **Boss feature gating**: Region rewards in prompt 22 gate some features (e.g., R3 reward unlocks Forge L3, R5 unlocks Gem Workshop). Need to verify these are wired into building prereqs.
+3. **War Room building**: Current intel mechanic may need rethinking given the region/lock system. Locks already tell the player what to expect.
+4. **Grind missions vs regions**: Kept as separate system (procedural grind missions independent of regions).
+5. **Stage wave counts**: Defined in prompt 22 with budget scaling guidelines. Exact tuning during implementation.
+6. **Enemy composition specifics**: Budget scaling guidelines in prompt 22. Exact tuning during implementation.
+7. **Prismatic threshold tuning**: 10-element requires significant investment. Verify grind timeline is acceptable.
+8. **Encounter mechanics in Endless Mode**: Should The Abyss use encounter mechanics as floor modifiers? (Deferred until regions merge)
+9. **Story/narrative**: Region names defined, mission dialogue TBD (separate session)
 
 ### Session Log
 - **Session 1 (2026-03-16)**: Built Phase 1 prototype. 10 units, basic combat, economy, shop.
@@ -341,3 +375,12 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
   - Git initialized: repo at https://github.com/whcheong2008/gameTft, tagged `v0.2.0-phase1-complete`
   - Created prompt 21 (git-init) for Claude Code handoff
   - Project folder moving out of Dropbox to local directory (GitHub is now the backup)
+- **Session 9 (2026-03-18)**: Phase 3 completion + Phase 4 architecture + orchestrator pattern.
+  - Completed Phase 3 chunks 5-8: mythic items, item affinity, recipe book, drop tables. Save version v5.
+  - Started Phase 4: chapters + captains (chunks 1-2) based on CONTENT-DESIGN.md's 14 missions
+  - **Major design conflict discovered**: MISSIONS-DESIGN.md (8 regions, ~47 stages) vs CONTENT-DESIGN.md (14 missions). Resolved: MISSIONS-DESIGN supersedes.
+  - Established orchestrator >> workers architecture: Cowork session designs + writes prompts, Claude Code sessions execute in feature branches
+  - Boss reconciliation resolved: veil_guardian→veil_warden, 4 element bosses→challenge mode, void_sovereign→rewritten, 6 new bosses added
+  - Created prompt 22 (region expansion) and prompt 23 (Phase 5 buildings/quests/achievements)
+  - Created feature branches: `feature/phase4-regions`, `feature/phase5-progression` (both at main HEAD `3d5b493`)
+  - Updated CONTINUITY.md with all resolution decisions
