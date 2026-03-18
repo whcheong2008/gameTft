@@ -521,6 +521,147 @@ var ABILITY_ITEMS = {
     }
 };
 
+// ---- Mythic Items (Tier 4) ----
+
+var MYTHIC_MATERIALS = {
+    dragon_scale: { name: 'Dragon Scale', emoji: '🐉', desc: 'Drops from boss fights' },
+    void_crystal:  { name: 'Void Crystal',  emoji: '🔮', desc: 'Drops from 3-starring mission 14 or endless mode' },
+    world_shard:   { name: 'World Shard',   emoji: '🌍', desc: 'Obtained when a unit reaches Transcendent (Ascension T3)' }
+};
+
+var MYTHIC_ITEMS = {
+    infinity_gauntlet: {
+        name: 'Infinity Gauntlet', emoji: '🧤✨',
+        craftFrom: 'rabadons_deathcap',
+        material: 'dragon_scale',
+        goldCost: 250,
+        stats: { attack: 50 },
+        mythicAbility: {
+            effect: 'infinityNova',
+            bonusAbilityDmg: 0.50,
+            novaEveryN: 3,
+            desc: 'Abilities deal 50% bonus damage. Every 3rd cast hits ALL enemies.'
+        }
+    },
+    aegis_of_immortality: {
+        name: 'Aegis of Immortality', emoji: '🛡️👼',
+        craftFrom: 'guardian_angel',
+        material: 'dragon_scale',
+        goldCost: 250,
+        stats: { hp: 600, damageReduction: 0.15 },
+        mythicAbility: {
+            effect: 'aegisRevive',
+            revivePct: 0.60,
+            invulnDuration: 3,
+            taunt: true,
+            desc: 'Revive at 60% HP, become invulnerable 3s and taunt all enemies. Once per combat.'
+        }
+    },
+    eclipse: {
+        name: 'Eclipse', emoji: '🌑✨',
+        craftFrom: 'bloodthirster',
+        material: 'void_crystal',
+        goldCost: 250,
+        stats: { attack: 35 },
+        mythicAbility: {
+            effect: 'eclipseLifesteal',
+            lifesteal: 0.20,
+            overhealShieldPct: 0.30,
+            shieldBonusDmg: 0.15,
+            desc: '20% lifesteal. Excess heals become shield (max 30% HP). While shielded, +15% dmg.'
+        }
+    },
+    staff_of_ages: {
+        name: 'Staff of Ages', emoji: '🪄🌟',
+        craftFrom: 'void_staff',
+        material: 'void_crystal',
+        goldCost: 250,
+        stats: { attack: 45, startMana: 20 },
+        mythicAbility: {
+            effect: 'infiniteScaling',
+            dmgPerCast: 0.03,
+            desc: 'Ability damage permanently increases by 3% each cast (no cap).'
+        }
+    },
+    worldbreaker: {
+        name: 'Worldbreaker', emoji: '⚔️🌍',
+        craftFrom: 'primal_fury',
+        material: 'world_shard',
+        goldCost: 250,
+        stats: { attack: 30, attackSpd: -0.15 },
+        mythicAbility: {
+            effect: 'worldbreakerRampage',
+            atkBonus: 0.15,
+            asBonus: 0.15,
+            duration: 8,
+            maxStacks: 5,
+            splashAtMax: true,
+            desc: 'On kill: +15% ATK and AS for 8s (5x max). At 5 stacks, attacks splash.'
+        }
+    },
+    crown_of_ages: {
+        name: 'Crown of Ages', emoji: '👑🌟',
+        craftFrom: 'transcendence',
+        material: 'world_shard',
+        goldCost: 250,
+        stats: { startMana: 40 },
+        mythicAbility: {
+            effect: 'crownFreeCast',
+            cooldown: 12,
+            drWhileOnCD: 0.15,
+            desc: 'After casting, next ability costs 0 mana (12s CD). While on CD, +15% DR.'
+        }
+    }
+};
+
+// Forge operation: craft mythic item
+function forgeCraftMythic(saveData, mythicKey) {
+    var forgeLevel = getBuildingLevel(saveData, 'forge');
+    if (forgeLevel < 5) return { success: false, reason: 'Forge level 5 required' };
+
+    var mythicDef = MYTHIC_ITEMS[mythicKey];
+    if (!mythicDef) return { success: false, reason: 'Unknown mythic item' };
+
+    var cost = mythicDef.goldCost;
+    if (saveData.player.gold < cost) return { success: false, reason: 'Not enough gold (' + cost + 'g)' };
+
+    // Find the source ability item on bench
+    var sourceItem = null;
+    for (var i = 0; i < saveData.items.bench.length; i++) {
+        var bi = saveData.items.bench[i];
+        if (bi.type === 'ability' && bi.key === mythicDef.craftFrom && !bi.equipped) {
+            sourceItem = bi;
+            break;
+        }
+    }
+    if (!sourceItem) return { success: false, reason: 'Need unequipped ' + (ABILITY_ITEMS[mythicDef.craftFrom] ? ABILITY_ITEMS[mythicDef.craftFrom].name : mythicDef.craftFrom) };
+
+    // Check mythic material
+    if (!saveData.items.mythicMaterials) saveData.items.mythicMaterials = {};
+    var matCount = saveData.items.mythicMaterials[mythicDef.material] || 0;
+    if (matCount < 1) return { success: false, reason: 'Need 1 ' + (MYTHIC_MATERIALS[mythicDef.material] ? MYTHIC_MATERIALS[mythicDef.material].name : mythicDef.material) };
+
+    // Consume resources
+    spendGold(saveData, cost);
+    saveData.items.mythicMaterials[mythicDef.material]--;
+    removeItemFromBench(saveData, sourceItem.id);
+
+    // Create mythic item
+    var mythicItem = {
+        id: generateItemId(),
+        type: 'mythic',
+        key: mythicKey,
+        name: mythicDef.name,
+        rarity: sourceItem.rarity || 'epic',
+        enhanceLevel: 0,
+        gems: [],
+        equipped: null
+    };
+    saveData.items.bench.push(mythicItem);
+    autoSave(saveData);
+    return { success: true, item: mythicItem };
+}
+
 // ---- Item Instance Factory ----
 
 function generateItemId() {
@@ -1379,6 +1520,9 @@ function getItemEmoji(item) {
     } else if (item.type === 'ability') {
         var abilityDef = ABILITY_ITEMS[item.key];
         return abilityDef ? abilityDef.emoji : '?';
+    } else if (item.type === 'mythic') {
+        var mythicDef = MYTHIC_ITEMS[item.key];
+        return mythicDef ? mythicDef.emoji : '?';
     }
     return '?';
 }
@@ -1400,6 +1544,8 @@ function getItemRarityColor(item) {
         return ITEM_RARITIES[sBest] ? ITEM_RARITIES[sBest].color : '#e2b714';
     } else if (item.type === 'ability') {
         return ITEM_RARITIES[item.rarity] ? ITEM_RARITIES[item.rarity].color : '#e2b714';
+    } else if (item.type === 'mythic') {
+        return '#ff4500'; // Mythic: distinctive orange-red
     }
     return '#aaa';
 }
@@ -1420,6 +1566,8 @@ function getItemRarityName(item) {
     } else if (item.type === 'ability') {
         var abilityDef = ABILITY_ITEMS[item.key];
         return abilityDef && abilityDef.requiresEvolved ? '⚡ Evolved Only' : 'Ability';
+    } else if (item.type === 'mythic') {
+        return '🌟 Mythic';
     }
     return 'Standard';
 }
@@ -1470,6 +1618,17 @@ function getItemStatDescription(item) {
         }
         if (abilityDef.ability && abilityDef.ability.desc) {
             lines.push(abilityDef.ability.desc);
+        }
+    } else if (item.type === 'mythic') {
+        var mythicDef = MYTHIC_ITEMS[item.key];
+        if (!mythicDef) return '';
+        var mEnhanceMult = getEnhancedStatMultiplier(item);
+        var mKeys = Object.keys(mythicDef.stats);
+        for (var mi = 0; mi < mKeys.length; mi++) {
+            lines.push(formatStatLine(mKeys[mi], mythicDef.stats[mKeys[mi]] * mEnhanceMult));
+        }
+        if (mythicDef.mythicAbility && mythicDef.mythicAbility.desc) {
+            lines.push('🌟 ' + mythicDef.mythicAbility.desc);
         }
     }
     return lines.join(', ');
@@ -1538,12 +1697,15 @@ function getItemSellValue(item) {
     } else if (item.type === 'ability') {
         // Ability items: 100g flat
         return 100;
+    } else if (item.type === 'mythic') {
+        // Mythics cannot be sold, but return value for display
+        return 0;
     }
     return 5;
 }
 
 function sellItem(saveData, itemId) {
-    // Can't sell equipped items
+    // Can't sell equipped items or mythics
     var item = null;
     for (var i = 0; i < saveData.items.bench.length; i++) {
         if (saveData.items.bench[i].id === itemId) {
@@ -1553,6 +1715,7 @@ function sellItem(saveData, itemId) {
     }
     if (!item) return false;
     if (item.equipped) return false; // Must unequip first
+    if (item.type === 'mythic') return false; // Mythics cannot be sold
 
     var goldValue = getItemSellValue(item);
     removeItemFromBench(saveData, itemId);
@@ -1616,6 +1779,19 @@ function applyItemStats(unit, saveData) {
             if (setRecipe.special) {
                 if (!unit.itemSpecials) unit.itemSpecials = [];
                 unit.itemSpecials.push(setRecipe.special);
+            }
+        } else if (item.type === 'mythic') {
+            var mythicDef = MYTHIC_ITEMS[item.key];
+            if (!mythicDef) continue;
+            var mythicEnhanceMult = getEnhancedStatMultiplier(item);
+            var mStatKeys = Object.keys(mythicDef.stats);
+            for (var ms = 0; ms < mStatKeys.length; ms++) {
+                applyStatToUnit(unit, mStatKeys[ms], mythicDef.stats[mStatKeys[ms]] * mythicEnhanceMult);
+            }
+            // Store mythic ability on unit for combat processing
+            if (mythicDef.mythicAbility) {
+                if (!unit.mythicAbilities) unit.mythicAbilities = [];
+                unit.mythicAbilities.push(mythicDef.mythicAbility);
             }
         }
 
