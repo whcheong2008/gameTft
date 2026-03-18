@@ -3,7 +3,7 @@
 // =============================================================================
 
 var SAVE_KEY = 'autobattler_v2_save';
-var SAVE_VERSION = 4;
+var SAVE_VERSION = 5;
 
 // ---- Default State Factory ----
 
@@ -50,7 +50,10 @@ function createDefaultSaveData() {
         items: {
             bench: [],       // Array of item instances (max 10 slots)
             benchSize: 10,
-            essences: { fire: 0, water: 0, earth: 0, wind: 0, lightning: 0, force: 0 }
+            essences: { fire: 0, water: 0, earth: 0, wind: 0, lightning: 0, force: 0, arcane: 0 },
+            mythicMaterials: { dragon_scale: 0, void_crystal: 0, world_shard: 0 },
+            recipeBook: {},
+            milestones: {}
         },
         // Stats tracking
         stats: {
@@ -193,6 +196,31 @@ function migrateSave(data) {
 
         data.version = 4;
         console.log('Migration v3→v4 complete. Gold:', data.player.gold, 'Level:', data.player.level);
+    }
+    if (data.version < 5) {
+        console.log('Migrating save from v4 to v5 (Phase 3 expanded items)');
+
+        // Add arcane essence
+        if (data.items && data.items.essences) {
+            if (typeof data.items.essences.arcane === 'undefined') data.items.essences.arcane = 0;
+        }
+
+        // Add mythic materials storage
+        if (data.items && !data.items.mythicMaterials) {
+            data.items.mythicMaterials = { dragon_scale: 0, void_crystal: 0, world_shard: 0 };
+        }
+
+        // Add recipe book and milestones
+        if (data.items && !data.items.recipeBook) data.items.recipeBook = {};
+        if (data.items && !data.items.milestones) data.items.milestones = {};
+
+        // Auto-populate recipe book from existing crafted items
+        if (typeof autoPopulateRecipeBook === 'function') {
+            autoPopulateRecipeBook(data);
+        }
+
+        data.version = 5;
+        console.log('Migration v4→v5 complete.');
     }
     return data;
 }

@@ -1915,3 +1915,205 @@ function applyStatToUnit(unit, stat, value) {
     else if (stat === 'startShield') unit.startShield = (unit.startShield || 0) + Math.floor(value);
     else if (stat === 'manaPerHit') unit.manaPerHit = (unit.manaPerHit || 0) + Math.floor(value);
 }
+
+// ---- Recipe Book & Collection Bonuses ----
+
+// Collection milestone definitions
+var COLLECTION_MILESTONES = {
+    apprentice_smith:  { name: 'Apprentice Smith',  requirement: 'combined', count: 5,   bonus: { type: 'dropRarity',      value: 0.05, desc: '+5% item drop rarity' } },
+    journeyman_smith:  { name: 'Journeyman Smith',  requirement: 'combined', count: 10,  bonus: { type: 'gemDropRate',     value: 0.10, desc: '+10% gem drop rate' } },
+    master_smith:      { name: 'Master Smith',       requirement: 'combined', count: 21,  bonus: { type: 'forgeCostReduce', value: 0.10, desc: 'Forge costs -10% gold' } },
+    artificer:         { name: 'Artificer',          requirement: 'ability',  count: 3,   bonus: { type: 'benchSlot',       value: 1,    desc: '+1 item bench slot' } },
+    grand_artificer:   { name: 'Grand Artificer',    requirement: 'ability',  count: 12,  bonus: { type: 'pityReduce',      value: 2,    desc: 'Enhancement pity after 2 failures' } },
+    mythic_forger:     { name: 'Mythic Forger',      requirement: 'mythic',   count: 1,   bonus: { type: 'autoEnhance',     value: true, desc: 'Unlock auto-enhance option' } }
+};
+
+// Record a recipe discovery in save data
+function discoverRecipe(saveData, itemType, itemKey) {
+    if (!saveData.items.recipeBook) saveData.items.recipeBook = {};
+    var bookKey = itemType + ':' + itemKey;
+    if (!saveData.items.recipeBook[bookKey]) {
+        saveData.items.recipeBook[bookKey] = {
+            discovered: true,
+            discoveredAt: new Date().toISOString()
+        };
+        // Check for newly earned milestones
+        checkCollectionMilestones(saveData);
+        return true; // new discovery
+    }
+    return false; // already known
+}
+
+// Check if a recipe is discovered
+function isRecipeDiscovered(saveData, itemType, itemKey) {
+    if (!saveData.items.recipeBook) return false;
+    var bookKey = itemType + ':' + itemKey;
+    return !!(saveData.items.recipeBook[bookKey] && saveData.items.recipeBook[bookKey].discovered);
+}
+
+// Get count of discovered recipes by type
+function getDiscoveredCount(saveData, itemType) {
+    if (!saveData.items.recipeBook) return 0;
+    var count = 0;
+    var keys = Object.keys(saveData.items.recipeBook);
+    for (var i = 0; i < keys.length; i++) {
+        if (keys[i].indexOf(itemType + ':') === 0 && saveData.items.recipeBook[keys[i]].discovered) {
+            count++;
+        }
+    }
+    return count;
+}
+
+// Get total recipe counts for each type (for progress display)
+function getTotalRecipeCount(itemType) {
+    if (itemType === 'combined') return Object.keys(ITEM_RECIPES).length;
+    if (itemType === 'set') return Object.keys(SET_ITEM_RECIPES).length;
+    if (itemType === 'ability') return Object.keys(ABILITY_ITEMS).length;
+    if (itemType === 'mythic') return Object.keys(MYTHIC_ITEMS).length;
+    return 0;
+}
+
+// Check and award collection milestones
+function checkCollectionMilestones(saveData) {
+    if (!saveData.items.milestones) saveData.items.milestones = {};
+    var milestoneKeys = Object.keys(COLLECTION_MILESTONES);
+    var newlyEarned = [];
+
+    for (var i = 0; i < milestoneKeys.length; i++) {
+        var mKey = milestoneKeys[i];
+        if (saveData.items.milestones[mKey]) continue; // already earned
+
+        var milestone = COLLECTION_MILESTONES[mKey];
+        var discovered = getDiscoveredCount(saveData, milestone.requirement);
+
+        if (discovered >= milestone.count) {
+            saveData.items.milestones[mKey] = {
+                earned: true,
+                earnedAt: new Date().toISOString()
+            };
+            newlyEarned.push(milestone);
+
+            // Apply immediate bonuses
+            if (milestone.bonus.type === 'benchSlot') {
+                saveData.items.benchSize = (saveData.items.benchSize || 10) + milestone.bonus.value;
+            }
+        }
+    }
+
+    return newlyEarned;
+}
+
+// Check if a specific milestone is earned
+function isMilestoneEarned(saveData, milestoneKey) {
+    return !!(saveData.items.milestones && saveData.items.milestones[milestoneKey] && saveData.items.milestones[milestoneKey].earned);
+}
+
+// Get active collection bonuses (for use by other systems)
+function getActiveCollectionBonuses(saveData) {
+    var bonuses = {
+        dropRarityBonus: 0,
+        gemDropRateBonus: 0,
+        forgeCostReduction: 0,
+        pityThreshold: 3, // default
+        autoEnhanceUnlocked: false
+    };
+
+    if (!saveData.items.milestones) return bonuses;
+
+    var milestoneKeys = Object.keys(COLLECTION_MILESTONES);
+    for (var i = 0; i < milestoneKeys.length; i++) {
+        var mKey = milestoneKeys[i];
+        if (!saveData.items.milestones[mKey] || !saveData.items.milestones[mKey].earned) continue;
+
+        var milestone = COLLECTION_MILESTONES[mKey];
+        if (milestone.bonus.type === 'dropRarity') bonuses.dropRarityBonus += milestone.bonus.value;
+        else if (milestone.bonus.type === 'gemDropRate') bonuses.gemDropRateBonus += milestone.bonus.value;
+        else if (milestone.bonus.type === 'forgeCostReduce') bonuses.forgeCostReduction += milestone.bonus.value;
+        else if (milestone.bonus.type === 'pityReduce') bonuses.pityThreshold = milestone.bonus.value;
+        else if (milestone.bonus.type === 'autoEnhance') bonuses.autoEnhanceUnlocked = true;
+    }
+
+    return bonuses;
+}
+
+// Get all recipes for recipe book display
+function getRecipeBookEntries(saveData) {
+    var entries = [];
+
+    // Combined items
+    var combinedKeys = Object.keys(ITEM_RECIPES);
+    for (var c = 0; c < combinedKeys.length; c++) {
+        var cKey = combinedKeys[c];
+        var cRecipe = ITEM_RECIPES[cKey];
+        entries.push({
+            key: cKey,
+            type: 'combined',
+            name: cRecipe.name,
+            emoji: cRecipe.emoji,
+            discovered: isRecipeDiscovered(saveData, 'combined', cKey),
+            components: [cRecipe.comp1, cRecipe.comp2]
+        });
+    }
+
+    // Set items
+    var setKeys = Object.keys(SET_ITEM_RECIPES);
+    for (var s = 0; s < setKeys.length; s++) {
+        var sKey = setKeys[s];
+        var sRecipe = SET_ITEM_RECIPES[sKey];
+        entries.push({
+            key: sKey,
+            type: 'set',
+            name: sRecipe.name,
+            emoji: sRecipe.emoji,
+            discovered: isRecipeDiscovered(saveData, 'set', sKey),
+            components: [sRecipe.comp1, sRecipe.comp2],
+            setId: sRecipe.setId
+        });
+    }
+
+    // Ability items
+    var abilityKeys = Object.keys(ABILITY_ITEMS);
+    for (var a = 0; a < abilityKeys.length; a++) {
+        var aKey = abilityKeys[a];
+        var abilityDef = ABILITY_ITEMS[aKey];
+        entries.push({
+            key: aKey,
+            type: 'ability',
+            name: abilityDef.name,
+            emoji: abilityDef.emoji,
+            discovered: isRecipeDiscovered(saveData, 'ability', aKey),
+            craftFrom: abilityDef.craftFrom || null
+        });
+    }
+
+    // Mythic items
+    var mythicKeys = Object.keys(MYTHIC_ITEMS);
+    for (var m = 0; m < mythicKeys.length; m++) {
+        var mKey = mythicKeys[m];
+        var mythicDef = MYTHIC_ITEMS[mKey];
+        entries.push({
+            key: mKey,
+            type: 'mythic',
+            name: mythicDef.name,
+            emoji: mythicDef.emoji,
+            discovered: isRecipeDiscovered(saveData, 'mythic', mKey),
+            craftFrom: mythicDef.craftFrom,
+            material: mythicDef.material
+        });
+    }
+
+    return entries;
+}
+
+// Auto-populate recipe book from existing items on save migration
+function autoPopulateRecipeBook(saveData) {
+    if (!saveData.items || !saveData.items.bench) return;
+    if (!saveData.items.recipeBook) saveData.items.recipeBook = {};
+
+    for (var i = 0; i < saveData.items.bench.length; i++) {
+        var item = saveData.items.bench[i];
+        if (item.type === 'combined' || item.type === 'set' || item.type === 'ability' || item.type === 'mythic') {
+            discoverRecipe(saveData, item.type, item.key);
+        }
+    }
+}
