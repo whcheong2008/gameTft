@@ -17,7 +17,7 @@
 
 ---
 
-## Current Status: V2 — Phase 3 Complete, Phase 4 In Progress (Region Expansion + Phase 5 parallel tracks)
+## Current Status: V2 — Phases 1-5 Complete, Hero + Item Rework In Progress
 
 **Repository**: https://github.com/whcheong2008/gameTft
 **Current tag**: `v0.2.0-phase1-complete` (initial commit)
@@ -187,7 +187,7 @@ The combat engine is being rebuilt from scratch per COMBAT-DESIGN.md. Implementa
 - 6 mythic items + materials, item affinity, recipe book, drop tables
 - Save version 5
 
-**Phase 4 — Content & Bosses** (IN PROGRESS):
+**Phase 4 — Content & Bosses** (REGIONS COMPLETE, remaining deferred):
 - [x] Chapter system + expanded descriptions (prompt 22 chunks 1-2 — will be replaced by regions)
 - [x] Named enemy captains (prompt 22 chunk 2 — will be reassigned to regions)
 - [x] **Region expansion** (prompt 22 — feature/phase4-regions branch) — DONE: 8 regions, 47 stages, 12 bosses, save v6
@@ -198,7 +198,14 @@ The combat engine is being rebuilt from scratch per COMBAT-DESIGN.md. Implementa
 **Phase 5 — COMPLETE (Progression Polish)**:
 - [x] **3 new buildings + daily quests + achievements** (prompt 23 — feature/phase5-progression branch) — DONE: Gem Workshop, Mana Shrine, Bond Hall, daily quests, 20+ achievements, stats tracking
 
-**Phase 6 — Visual & Audio Polish**:
+**Phase 6 — Hero + Item Rework** (IN PROGRESS):
+- [x] Unit XP/levels + ascension + secondary archetypes (prompt 26)
+- [x] Archetype synergy rework to 2/4/6/8, archetype-scoped (prompts 25+27)
+- [ ] **Hero system** (prompt 29 — IN PROGRESS): 8 heroes, skill trees, story integration
+- [ ] **Item system rework** (prompt 30 — WRITTEN, awaiting 29): RPG equipment + Diablo loot
+- [ ] Progression/balance pass (gold economy, XP curves, power curve — NOT YET STARTED)
+
+**Phase 7 — Visual & Audio Polish** (deferred, considering Unity port):
 - [ ] Sprite system (replace emoji with art)
 - [ ] Combat visual effects (covered partially by chunk 6)
 - [ ] Sound effects and music
@@ -228,7 +235,12 @@ The combat engine is being rebuilt from scratch per COMBAT-DESIGN.md. Implementa
 
 ### Key Design Decisions (V2)
 - **Persistent progression**: Units, buildings, progress all persist via localStorage
-- **10-copy star-up**: `1.8^(stars-1)` scaling, uncapped stars
+- **10-copy star-up**: `1.8^(stars-1)` scaling, uncapped stars (may reduce to 5 copies for single-player — TBD)
+- **Unit XP/Levels**: Per-unit, 1-30, +2% stats/level, XP from combat (deployed units only)
+- **Ascension**: Awakened (L15, +10%, secondary archetype) → Exalted (L25, +30%, ability scaling) → Transcendent (L30, +65%, primary counts as 2 + new ability effect)
+- **Hero system**: 8 story characters equip onto units. Enable item equipping. Own XP + skill trees (2 branches, 20 levels). B dies R4, fragment R7.
+- **Item system (rework)**: RPG equipment (8 slots). Two-axis loot: Tier (region-gated) × Rarity (RNG). Random affixes, passives at Epic/Legendary. Diablo 4 style.
+- **Single-player pivot**: No daily quests, no stamina, no premium currency. 30-40 hour one-session experience. Gold is the only currency.
 - **Modular JS (global scope)**: All files loaded via `<script>` tags, NO ES modules
 - **Pre-set teams**: Team is locked when mission starts, only repositioning between waves
 - **Building bonuses wired**: Training Ground→XP mult, Warehouse→gold mult, Summoning Circle→roll discount+pity, War Room→mission intel, Barracks→team size
@@ -243,7 +255,13 @@ Game TFT/
 ├── game-v2.html          ← V2 HTML shell + CSS (376+ lines)
 ├── game.html             ← V1 HTML shell (historical, still playable)
 ├── js/
-│   ├── units.js          ← Unit templates, elements, archetypes, evolutions (data-driven requirements), ELEMENT_SYNERGIES
+│   ├── units-core.js     ← Elements, archetypes (2/4/6/8), synergies, unit functions
+│   ├── units-templates.js ← 60 base + 60 evolved unit templates with secondaryArchetype
+│   ├── units-abilities.js ← 120 ability + 120 passive definitions
+│   ├── units-bonds.js    ← 16 unit bonds (6 elemental, 4 cross-element, 6 trios)
+│   ├── units-ascension.js ← Ascension tiers, XP/leveling, power rating functions
+│   ├── heroes.js         ← Hero definitions, skill trees, hero functions (prompt 29 — in progress)
+│   ├── combat-benchmark.js ← Dev tool: headless combat benchmarks (not loaded in game)
 │   ├── save.js           ← localStorage persistence, migration v3, collection helpers, sell helpers
 │   ├── gacha.js          ← Gold rolling, tier weights, pity system, Summoning Circle discount, evolved copies
 │   ├── teams.js          ← Roster management (base+evolved), team builder, board deployment
@@ -398,3 +416,13 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
   - Merged both branches into main. Only conflict: save.js (both workers added migration code). Resolved by keeping both — v5→v6 region migration + version-agnostic Phase 5 field additions
   - All syntax checks pass. Main at `d7c9c61`
   - Phase 4 regions + Phase 5 progression both COMPLETE. Endless mode, challenge modes, lore system now unblocked
+  - **Prompt 24** (UI wiring + QoL): Region map UI, new building panels, achievements, stats dashboard, combat bonuses wired, team builder sorting, building confirmations, ability/synergy descriptions, removed daily quests + War Room + Training Ground
+  - **Prompt 25** (design-only): Synergy rework proposal → SYNERGY-REWORK.md. All 9 archetypes reworked to archetype-scoped buffs at 2/4/6/8 thresholds. Duelist ramping ATK capped at 40%.
+  - **Prompt 26** (unit progression): Split units.js → 5 files (core, templates, abilities, bonds, ascension). Added unit XP/levels (1-30), ascension system (Awakened/Exalted/Transcendent), secondary archetypes for all 60 units, unit bonds (16 total), power rating formula, combat benchmark system. Save v6→v7.
+  - **Prompt 27** (synergy implementation): All 9 archetype synergies replaced with reworked versions. New combat effects (last-stand, CC spread, death-save, focused shot, spell penetration, etc.) implemented.
+  - **Prompt 28** (design-only): Item system redesign → ITEMS-REDESIGN.md. Diablo-style tier × rarity loot with 39 item lines, random affixes, passives at Epic/Legendary.
+  - Designed hero system → HERO-SYSTEM-DESIGN.md: 8 heroes with skill trees, B dies R4, fragment R7, availability timeline per region.
+  - **Prompt 29** (hero system): LAUNCHED, awaiting completion. Implements heroes.js, hero data, skill trees, combat integration, hero management UI.
+  - **Prompt 30** (item rework): WRITTEN, not yet launched. Depends on prompt 29. Replaces items.js with RPG equipment + Diablo loot.
+  - **Still to discuss**: Progression/balance (gold economy, XP curves, star-up requirements, R4 power dip)
+  - Main at `bc06c9b`. Story being developed in separate session (STORY PLAN.md, STORY-DRAFT-V1.md)
