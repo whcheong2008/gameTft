@@ -135,6 +135,54 @@ var BUILDINGS = {
             'Set Crafting: forge set items using Essences',
             'Advanced Crafting: forge ability items and evolution-gated items'
         ]
+    },
+    gem_workshop: {
+        name: 'Gem Workshop',
+        emoji: '💎',
+        description: 'Socket, combine, and transmute gems',
+        maxLevel: 5,
+        upgradeCosts: [0, 500, 1200, 2500, 5000, 10000],
+        effects: [
+            'Locked — unlocks gem operations',
+            'Gem inventory + gem socketing',
+            'Gem combining (3→1) + gem removal',
+            'Gem transmute (change type, keep rarity, 30g)',
+            'Auto-socket suggestion for team',
+            'Prismatic Forge: combine 3 different Epic gems → 1 Prismatic gem'
+        ],
+        prereq: { level: 12 }
+    },
+    mana_shrine: {
+        name: 'Mana Shrine',
+        emoji: '🔵',
+        description: 'Passive bonuses to mana and ability power',
+        maxLevel: 5,
+        upgradeCosts: [0, 800, 2000, 4000, 8000, 15000],
+        effects: [
+            'Locked — unlocks mana bonuses',
+            '+5 starting mana for all units',
+            'Mana generation from attacks +10%',
+            'Ability damage +5% (global)',
+            'First ability cast costs 10% less mana',
+            'Full mana bar grants +10% ATK until cast'
+        ],
+        prereq: { level: 15 }
+    },
+    bond_hall: {
+        name: 'Bond Hall',
+        emoji: '🤝',
+        description: 'View and enhance unit bond bonuses',
+        maxLevel: 5,
+        upgradeCosts: [0, 600, 1500, 3500, 7000, 12000],
+        effects: [
+            'Locked — unlocks bond viewer',
+            'View active bonds and bonuses',
+            'Bond bonuses increased by 25%',
+            'Unlock bond quests (earn extra gold)',
+            'Bond bonuses increased by 50% total',
+            'Unlock trio bonds (3-unit bonds active)'
+        ],
+        prereq: { level: 10 }
     }
 };
 
@@ -155,7 +203,10 @@ function canUpgradeBuilding(saveData, buildingId) {
     var level = getBuildingLevel(saveData, buildingId);
     var bld = BUILDINGS[buildingId];
     if (!bld || level >= bld.maxLevel) return false;
-    var cost = getBuildingUpgradeCost(buildingId, level);
+    if (bld.prereq) {
+        if (bld.prereq.level && saveData.player.level < bld.prereq.level) return false;
+    }
+    var cost = bld.upgradeCosts[level + 1];
     return saveData.player.gold >= cost;
 }
 
@@ -219,4 +270,391 @@ function getEvolutionGoldCost(saveData, templateKey) {
     if (labLevel >= 3) return Math.floor(baseCost * 0.5);
     if (labLevel >= 2) return Math.floor(baseCost * 0.75);
     return baseCost;
+}
+
+// ---- New Building Bonus Getters ----
+
+function getManaShrineBonuses(saveData) {
+    var level = getBuildingLevel(saveData, 'mana_shrine');
+    return {
+        startingMana: level >= 1 ? 5 : 0,
+        manaGenMult: level >= 2 ? 1.10 : 1.0,
+        abilityDamageMult: level >= 3 ? 1.05 : 1.0,
+        firstCastDiscount: level >= 4 ? 0.10 : 0,
+        fullManaAtkBonus: level >= 5 ? 0.10 : 0
+    };
+}
+
+function getBondHallBonuses(saveData) {
+    var level = getBuildingLevel(saveData, 'bond_hall');
+    return {
+        canViewBonds: level >= 1,
+        bondBonusMult: level >= 4 ? 1.50 : (level >= 2 ? 1.25 : 1.0),
+        bondQuestsUnlocked: level >= 3,
+        trioBondsUnlocked: level >= 5
+    };
+}
+
+function getGemWorkshopCapabilities(saveData) {
+    var level = getBuildingLevel(saveData, 'gem_workshop');
+    return {
+        canSocket: level >= 1,
+        canCombine: level >= 2,
+        canRemove: level >= 2,
+        canTransmute: level >= 3,
+        transmuteGoldCost: 30,
+        canAutoSocket: level >= 4,
+        canPrismaticForge: level >= 5
+    };
+}
+
+// ---- Daily Quest System ----
+
+var DAILY_QUEST_POOL = [
+    {
+        id: 'win_missions',
+        name: 'Win 3 Missions',
+        description: 'Complete any 3 missions',
+        requirement: { type: 'missions_won', count: 3 },
+        reward: { gold: 80 }
+    },
+    {
+        id: 'deploy_element',
+        name: 'Deploy Element Team',
+        description: 'Use 3+ of one element in a mission',
+        requirement: { type: 'element_deploy', count: 3 },
+        reward: { gold: 60 }
+    },
+    {
+        id: 'enhance_item',
+        name: 'Enhance an Item',
+        description: 'Perform any item enhancement',
+        requirement: { type: 'enhance', count: 1 },
+        reward: { gold: 50 }
+    },
+    {
+        id: 'roll_units',
+        name: 'Roll 20 Units',
+        description: 'Perform 20 gacha pulls',
+        requirement: { type: 'gacha_pulls', count: 20 },
+        reward: { gold: 70 }
+    },
+    {
+        id: 'three_star',
+        name: '3-Star a Mission',
+        description: 'Get 3 stars on any mission',
+        requirement: { type: 'three_star', count: 1 },
+        reward: { gold: 100 }
+    },
+    {
+        id: 'evolve_unit',
+        name: 'Evolve a Unit',
+        description: 'Evolve any unit in the Evolution Lab',
+        requirement: { type: 'evolve', count: 1 },
+        reward: { gold: 80 }
+    },
+    {
+        id: 'equip_items',
+        name: 'Equip 3 Items',
+        description: 'Equip items on 3 different units',
+        requirement: { type: 'equip_items', count: 3 },
+        reward: { gold: 40 }
+    },
+    {
+        id: 'sell_items',
+        name: 'Sell 5 Items',
+        description: 'Sell any 5 items',
+        requirement: { type: 'sell_items', count: 5 },
+        reward: { gold: 40 }
+    },
+    {
+        id: 'defeat_boss',
+        name: 'Defeat a Boss',
+        description: 'Clear any boss encounter',
+        requirement: { type: 'boss_kill', count: 1 },
+        reward: { gold: 120 }
+    },
+    {
+        id: 'use_bond',
+        name: 'Use a Bond Pair',
+        description: 'Deploy 2+ bonded units in a mission',
+        requirement: { type: 'bond_deploy', count: 1 },
+        reward: { gold: 60 }
+    }
+];
+
+var DAILY_COMPLETION_BONUS = { gold: 300 };
+
+function generateDailyQuests(saveData) {
+    var today = new Date().toISOString().split('T')[0];
+    if (saveData.dailyQuests && saveData.dailyQuests.date === today) return;
+
+    var pool = DAILY_QUEST_POOL.slice();
+    var selected = [];
+    for (var i = 0; i < 4 && pool.length > 0; i++) {
+        var idx = Math.floor(Math.random() * pool.length);
+        selected.push({
+            id: pool[idx].id,
+            progress: 0,
+            completed: false,
+            rewardClaimed: false
+        });
+        pool.splice(idx, 1);
+    }
+
+    saveData.dailyQuests = {
+        date: today,
+        quests: selected,
+        bonusClaimed: false
+    };
+}
+
+function getDailyQuestStatus(saveData) {
+    if (!saveData.dailyQuests) return [];
+    var result = [];
+    for (var i = 0; i < saveData.dailyQuests.quests.length; i++) {
+        var q = saveData.dailyQuests.quests[i];
+        var poolEntry = null;
+        for (var j = 0; j < DAILY_QUEST_POOL.length; j++) {
+            if (DAILY_QUEST_POOL[j].id === q.id) { poolEntry = DAILY_QUEST_POOL[j]; break; }
+        }
+        if (poolEntry) {
+            result.push({
+                id: q.id,
+                name: poolEntry.name,
+                description: poolEntry.description,
+                requirement: poolEntry.requirement,
+                reward: poolEntry.reward,
+                progress: q.progress,
+                target: poolEntry.requirement.count,
+                completed: q.completed,
+                rewardClaimed: q.rewardClaimed
+            });
+        }
+    }
+    return result;
+}
+
+function updateDailyQuestProgress(saveData, eventType, amount) {
+    if (!saveData.dailyQuests) return;
+    for (var i = 0; i < saveData.dailyQuests.quests.length; i++) {
+        var q = saveData.dailyQuests.quests[i];
+        if (q.completed) continue;
+        var poolEntry = null;
+        for (var j = 0; j < DAILY_QUEST_POOL.length; j++) {
+            if (DAILY_QUEST_POOL[j].id === q.id) { poolEntry = DAILY_QUEST_POOL[j]; break; }
+        }
+        if (poolEntry && poolEntry.requirement.type === eventType) {
+            q.progress = Math.min(q.progress + (amount || 1), poolEntry.requirement.count);
+            if (q.progress >= poolEntry.requirement.count) {
+                q.completed = true;
+            }
+        }
+    }
+}
+
+function claimDailyQuestReward(saveData, questIndex) {
+    if (!saveData.dailyQuests) return null;
+    var q = saveData.dailyQuests.quests[questIndex];
+    if (!q || !q.completed || q.rewardClaimed) return null;
+
+    var poolEntry = null;
+    for (var j = 0; j < DAILY_QUEST_POOL.length; j++) {
+        if (DAILY_QUEST_POOL[j].id === q.id) { poolEntry = DAILY_QUEST_POOL[j]; break; }
+    }
+    if (!poolEntry) return null;
+
+    q.rewardClaimed = true;
+    saveData.player.gold += poolEntry.reward.gold;
+    return poolEntry.reward;
+}
+
+function claimDailyCompletionBonus(saveData) {
+    if (!saveData.dailyQuests || saveData.dailyQuests.bonusClaimed) return null;
+    var allComplete = true;
+    for (var i = 0; i < saveData.dailyQuests.quests.length; i++) {
+        if (!saveData.dailyQuests.quests[i].completed) { allComplete = false; break; }
+    }
+    if (!allComplete) return null;
+
+    saveData.dailyQuests.bonusClaimed = true;
+    saveData.player.gold += DAILY_COMPLETION_BONUS.gold;
+    return DAILY_COMPLETION_BONUS;
+}
+
+function areDailyQuestsAllComplete(saveData) {
+    if (!saveData.dailyQuests) return false;
+    for (var i = 0; i < saveData.dailyQuests.quests.length; i++) {
+        if (!saveData.dailyQuests.quests[i].completed) return false;
+    }
+    return true;
+}
+
+// ---- Achievement System ----
+
+// Achievement helper functions
+
+function countUniqueUnits(saveData) {
+    var count = 0;
+    if (saveData.collection) {
+        for (var key in saveData.collection) {
+            if (saveData.collection.hasOwnProperty(key)) count++;
+        }
+    }
+    return count;
+}
+
+function countEvolvedUnits(saveData) {
+    var count = 0;
+    if (saveData.collection) {
+        for (var key in saveData.collection) {
+            if (key.indexOf('_evo') >= 0 && saveData.collection[key]) count++;
+        }
+    }
+    return count;
+}
+
+function countFullyEquippedUnits(saveData) {
+    var count = 0;
+    if (saveData.teams) {
+        for (var t = 0; t < saveData.teams.length; t++) {
+            var team = saveData.teams[t];
+            if (team && team.slots) {
+                for (var i = 0; i < team.slots.length; i++) {
+                    var slot = team.slots[i];
+                    if (slot && slot.key && slot.items && slot.items.length >= 3) count++;
+                }
+            }
+        }
+    }
+    return count;
+}
+
+function hasAnyThreeStar(saveData) {
+    if (saveData.missions && saveData.missions.storyStars) {
+        for (var id in saveData.missions.storyStars) {
+            if (saveData.missions.storyStars[id] >= 3) return true;
+        }
+    }
+    if (saveData.missions && saveData.missions.grindBest) {
+        for (var id2 in saveData.missions.grindBest) {
+            if (saveData.missions.grindBest[id2] >= 3) return true;
+        }
+    }
+    return false;
+}
+
+function hasMaxedBuilding(saveData) {
+    var bkeys = Object.keys(BUILDINGS);
+    for (var i = 0; i < bkeys.length; i++) {
+        if (getBuildingLevel(saveData, bkeys[i]) >= BUILDINGS[bkeys[i]].maxLevel) return true;
+    }
+    return false;
+}
+
+function hasAllMaxedBuildings(saveData) {
+    var bkeys = Object.keys(BUILDINGS);
+    for (var i = 0; i < bkeys.length; i++) {
+        if (getBuildingLevel(saveData, bkeys[i]) < BUILDINGS[bkeys[i]].maxLevel) return false;
+    }
+    return true;
+}
+
+var ACHIEVEMENTS = [
+    // Combat
+    { id: 'first_blood', category: 'combat', name: 'First Blood', description: 'Win your first mission', check: function(s) { return s.missions.storyProgress >= 1; }, reward: { gold: 50 } },
+    { id: 'unscathed', category: 'combat', name: 'Unscathed', description: '3-star any mission', check: function(s) { return hasAnyThreeStar(s); }, reward: { gold: 100 } },
+    { id: 'elemental_mastery', category: 'combat', name: 'Elemental Mastery', description: 'Win with a 6-piece element synergy', check: function(s) { return s.stats && s.stats.maxElementSynergy >= 6; }, reward: { gold: 200 } },
+    { id: 'boss_slayer', category: 'combat', name: 'Boss Slayer', description: 'Defeat your first boss', check: function(s) { return s.stats && s.stats.bossesDefeated >= 1; }, reward: { gold: 300 } },
+    { id: 'deathless', category: 'combat', name: 'Deathless', description: 'Complete any boss with no unit deaths', check: function(s) { return s.stats && s.stats.deathlessBossClears >= 1; }, reward: { gold: 500 } },
+    { id: 'overkill', category: 'combat', name: 'Overkill', description: 'Deal 10,000 damage in a single hit', check: function(s) { return s.stats && s.stats.maxSingleHit >= 10000; }, reward: { gold: 200 } },
+    { id: 'speed_demon', category: 'combat', name: 'Speed Demon', description: 'Win a mission in under 30 seconds', check: function(s) { return s.stats && s.stats.fastestWin <= 30; }, reward: { gold: 150 } },
+
+    // Collection
+    { id: 'collector_1', category: 'collection', name: 'Collector I', description: 'Own 10 unique units', check: function(s) { return countUniqueUnits(s) >= 10; }, reward: { gold: 200 } },
+    { id: 'collector_2', category: 'collection', name: 'Collector II', description: 'Own 25 unique units', check: function(s) { return countUniqueUnits(s) >= 25; }, reward: { gold: 500 } },
+    { id: 'collector_3', category: 'collection', name: 'Collector III', description: 'Own all 60 base units', check: function(s) { return countUniqueUnits(s) >= 60; }, reward: { gold: 1000 } },
+    { id: 'evolution_pioneer', category: 'collection', name: 'Evolution Pioneer', description: 'Evolve your first unit', check: function(s) { return countEvolvedUnits(s) >= 1; }, reward: { gold: 200 } },
+    { id: 'evolution_master', category: 'collection', name: 'Evolution Master', description: 'Evolve 10 different units', check: function(s) { return countEvolvedUnits(s) >= 10; }, reward: { gold: 1000 } },
+    { id: 'bond_collector', category: 'collection', name: 'Bond Collector', description: 'Activate 5 different bonds in combat', check: function(s) { return s.stats && s.stats.uniqueBondsUsed >= 5; }, reward: { gold: 300 } },
+
+    // Economy
+    { id: 'big_spender', category: 'economy', name: 'Big Spender', description: 'Spend 10,000g total', check: function(s) { return s.stats && s.stats.totalGoldSpent >= 10000; }, reward: { gold: 500 } },
+    { id: 'master_forger', category: 'economy', name: 'Master Forger', description: 'Perform 100 forge operations', check: function(s) { return s.stats && s.stats.forgeOperations >= 100; }, reward: { gold: 300 } },
+    { id: 'enhancement_addict', category: 'economy', name: 'Enhancement Addict', description: 'Enhance items 50 times', check: function(s) { return s.stats && s.stats.enhancementsPerformed >= 50; }, reward: { gold: 200 } },
+    { id: 'plus_ten_club', category: 'economy', name: '+10 Club', description: 'Reach +10 on any item', check: function(s) { return s.stats && s.stats.maxEnhanceLevel >= 10; }, reward: { gold: 1000 } },
+    { id: 'mythic_wielder', category: 'economy', name: 'Mythic Wielder', description: 'Craft any mythic item', check: function(s) { return s.stats && s.stats.mythicsCrafted >= 1; }, reward: { gold: 500 } },
+    { id: 'full_house', category: 'economy', name: 'Full House', description: 'Fill all 3 item slots on 5 units', check: function(s) { return countFullyEquippedUnits(s) >= 5; }, reward: { gold: 200 } },
+    { id: 'gem_master', category: 'economy', name: 'Gem Master', description: 'Socket 20 gems into items', check: function(s) { return s.stats && s.stats.gemsSocketed >= 20; }, reward: { gold: 300 } },
+
+    // Progression
+    { id: 'level_10', category: 'progression', name: 'Level 10', description: 'Reach player level 10', check: function(s) { return s.player.level >= 10; }, reward: { gold: 300 } },
+    { id: 'level_20', category: 'progression', name: 'Level 20', description: 'Reach player level 20', check: function(s) { return s.player.level >= 20; }, reward: { gold: 1000 } },
+    { id: 'builder', category: 'progression', name: 'Builder', description: 'Max any building', check: function(s) { return hasMaxedBuilding(s); }, reward: { gold: 500 } },
+    { id: 'architect', category: 'progression', name: 'Architect', description: 'Max all buildings', check: function(s) { return hasAllMaxedBuildings(s); }, reward: { gold: 2000 } }
+];
+
+function checkAchievements(saveData) {
+    if (!saveData.achievements) saveData.achievements = { earned: [], claimed: [] };
+    var newlyEarned = [];
+    for (var i = 0; i < ACHIEVEMENTS.length; i++) {
+        var ach = ACHIEVEMENTS[i];
+        if (saveData.achievements.earned.indexOf(ach.id) >= 0) continue;
+        if (ach.check(saveData)) {
+            saveData.achievements.earned.push(ach.id);
+            newlyEarned.push(ach.id);
+        }
+    }
+    return newlyEarned;
+}
+
+function claimAchievementReward(saveData, achievementId) {
+    if (!saveData.achievements) return null;
+    if (saveData.achievements.earned.indexOf(achievementId) < 0) return null;
+    if (saveData.achievements.claimed.indexOf(achievementId) >= 0) return null;
+
+    var ach = null;
+    for (var i = 0; i < ACHIEVEMENTS.length; i++) {
+        if (ACHIEVEMENTS[i].id === achievementId) { ach = ACHIEVEMENTS[i]; break; }
+    }
+    if (!ach) return null;
+
+    saveData.achievements.claimed.push(achievementId);
+    saveData.player.gold += ach.reward.gold;
+    return ach.reward;
+}
+
+function getAchievementStatus(saveData) {
+    if (!saveData.achievements) saveData.achievements = { earned: [], claimed: [] };
+    var result = [];
+    for (var i = 0; i < ACHIEVEMENTS.length; i++) {
+        var ach = ACHIEVEMENTS[i];
+        result.push({
+            id: ach.id,
+            category: ach.category,
+            name: ach.name,
+            description: ach.description,
+            reward: ach.reward,
+            earned: saveData.achievements.earned.indexOf(ach.id) >= 0,
+            claimed: saveData.achievements.claimed.indexOf(ach.id) >= 0
+        });
+    }
+    return result;
+}
+
+// ---- Stats Tracking ----
+
+function trackStat(saveData, statName, value, mode) {
+    if (!saveData.stats) saveData.stats = {};
+    var current = saveData.stats[statName] || 0;
+    if (mode === 'add') {
+        saveData.stats[statName] = current + value;
+    } else if (mode === 'max') {
+        saveData.stats[statName] = Math.max(current, value);
+    } else if (mode === 'min') {
+        if (current === 0) saveData.stats[statName] = value;
+        else saveData.stats[statName] = Math.min(current, value);
+    } else {
+        saveData.stats[statName] = value;
+    }
 }
