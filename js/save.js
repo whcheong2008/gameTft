@@ -35,7 +35,10 @@ function createDefaultSaveData() {
             warehouse: 0,
             war_room: 0,
             evolution_lab: 0,
-            forge: 0
+            forge: 0,
+            gem_workshop: 0,
+            mana_shrine: 0,
+            bond_hall: 0
         },
         // Mission progress
         // storyProgress: index of highest completed story mission (0 = none)
@@ -67,13 +70,31 @@ function createDefaultSaveData() {
             recipeBook: {},
             milestones: {}
         },
+        // Daily quests (populated on first hub visit)
+        dailyQuests: null,
+        // Achievements
+        achievements: { earned: [], claimed: [] },
         // Stats tracking
         stats: {
             totalMissionsCompleted: 0,
             totalGoldEarned: 0,
+            totalGoldSpent: 0,
             totalRolls: 0,
             totalUnitsCollected: 0,
-            rollsSincePity: 0
+            rollsSincePity: 0,
+            missionsCompleted: 0,
+            bossesDefeated: 0,
+            deathlessBossClears: 0,
+            maxSingleHit: 0,
+            fastestWin: 999999,
+            maxElementSynergy: 0,
+            forgeOperations: 0,
+            enhancementsPerformed: 0,
+            maxEnhanceLevel: 0,
+            mythicsCrafted: 0,
+            gemsSocketed: 0,
+            uniqueBondsUsed: 0,
+            totalGachaPulls: 0
         },
         // Timestamp
         lastSaved: null
@@ -291,6 +312,28 @@ function migrateSave(data) {
         data.version = 6;
         console.log('Migration v5→v6 complete.');
     }
+
+    // Phase 5 graceful migration: add new fields if missing (version-agnostic)
+    if (!data.buildings) data.buildings = {};
+    if (typeof data.buildings.gem_workshop === 'undefined') data.buildings.gem_workshop = 0;
+    if (typeof data.buildings.mana_shrine === 'undefined') data.buildings.mana_shrine = 0;
+    if (typeof data.buildings.bond_hall === 'undefined') data.buildings.bond_hall = 0;
+    if (!data.achievements) data.achievements = { earned: [], claimed: [] };
+    if (!data.stats) data.stats = {};
+    if (typeof data.stats.missionsCompleted === 'undefined') data.stats.missionsCompleted = 0;
+    if (typeof data.stats.bossesDefeated === 'undefined') data.stats.bossesDefeated = 0;
+    if (typeof data.stats.deathlessBossClears === 'undefined') data.stats.deathlessBossClears = 0;
+    if (typeof data.stats.maxSingleHit === 'undefined') data.stats.maxSingleHit = 0;
+    if (typeof data.stats.fastestWin === 'undefined') data.stats.fastestWin = 999999;
+    if (typeof data.stats.maxElementSynergy === 'undefined') data.stats.maxElementSynergy = 0;
+    if (typeof data.stats.forgeOperations === 'undefined') data.stats.forgeOperations = 0;
+    if (typeof data.stats.enhancementsPerformed === 'undefined') data.stats.enhancementsPerformed = 0;
+    if (typeof data.stats.maxEnhanceLevel === 'undefined') data.stats.maxEnhanceLevel = 0;
+    if (typeof data.stats.mythicsCrafted === 'undefined') data.stats.mythicsCrafted = 0;
+    if (typeof data.stats.gemsSocketed === 'undefined') data.stats.gemsSocketed = 0;
+    if (typeof data.stats.uniqueBondsUsed === 'undefined') data.stats.uniqueBondsUsed = 0;
+    if (typeof data.stats.totalGachaPulls === 'undefined') data.stats.totalGachaPulls = 0;
+    if (!data.dailyQuests) data.dailyQuests = null;
     return data;
 }
 
@@ -341,6 +384,9 @@ function validateSaveData(data) {
     if (!data.buildings) data.buildings = defaults.buildings;
     if (typeof data.buildings.evolution_lab === 'undefined') data.buildings.evolution_lab = 0;
     if (typeof data.buildings.forge === 'undefined') data.buildings.forge = 0;
+    if (typeof data.buildings.gem_workshop === 'undefined') data.buildings.gem_workshop = 0;
+    if (typeof data.buildings.mana_shrine === 'undefined') data.buildings.mana_shrine = 0;
+    if (typeof data.buildings.bond_hall === 'undefined') data.buildings.bond_hall = 0;
     if (!data.missions) data.missions = defaults.missions;
     if (!data.missions.storyStars) data.missions.storyStars = {};
     if (!data.missions.grindBest) data.missions.grindBest = {};
@@ -356,6 +402,9 @@ function validateSaveData(data) {
     if (!data.stats) data.stats = defaults.stats;
     if (typeof data.stats.rollsSincePity !== 'number') data.stats.rollsSincePity = 0;
     if (typeof data.stats.totalGoldSpent !== 'number') data.stats.totalGoldSpent = 0;
+    if (!data.achievements) data.achievements = { earned: [], claimed: [] };
+    if (!Array.isArray(data.achievements.earned)) data.achievements.earned = [];
+    if (!Array.isArray(data.achievements.claimed)) data.achievements.claimed = [];
 
     // Items migration: add items if missing (old saves)
     if (!data.items) data.items = { bench: [], benchSize: 10, essences: { fire: 0, water: 0, earth: 0, wind: 0, lightning: 0, force: 0 } };
