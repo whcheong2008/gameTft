@@ -13,9 +13,10 @@ var ITEM_RARITIES = {
 
 var BASE_RARITY_WEIGHTS = { standard: 60, uncommon: 25, rare: 12, epic: 3 };
 
-// ---- Base Components (8) ----
+// ---- Base Components (12) ----
 
 var ITEM_COMPONENTS = {
+    // Original 8
     bf_sword:        { name: 'BF Sword',            emoji: '🗡️', stat: 'attack',          value: 15 },
     chain_vest:      { name: 'Chain Vest',           emoji: '🛡️', stat: 'hp',              value: 200 },
     giants_belt:     { name: "Giant's Belt",         emoji: '💪', stat: 'hp',              value: 300 },
@@ -23,8 +24,18 @@ var ITEM_COMPONENTS = {
     large_rod:       { name: 'Needlessly Large Rod', emoji: '🪄', stat: 'attack',          value: 20 },
     negatron_cloak:  { name: 'Negatron Cloak',       emoji: '🧥', stat: 'damageReduction', value: 0.10 },
     sparring_gloves: { name: 'Sparring Gloves',      emoji: '🥊', stat: 'critChance',      value: 0.10 },
-    tear:            { name: 'Tear of the Goddess',  emoji: '💧', stat: 'healPower',       value: 0.20 }
+    tear:            { name: 'Tear of the Goddess',  emoji: '💧', stat: 'healPower',       value: 0.20 },
+    // New 4 — drop from missions level 10+
+    aether_shard:    { name: 'Aether Shard',         emoji: '🔮', stat: 'startMana',       value: 15, minMissionLevel: 10 },
+    quicksilver_gem: { name: 'Quicksilver Gem',      emoji: '💎', stat: 'tenacity',        value: 0.15, minMissionLevel: 10 },
+    warding_stone:   { name: 'Warding Stone',        emoji: '🪨', stat: 'startShield',     value: 150, minMissionLevel: 10 },
+    soul_prism:      { name: 'Soul Prism',           emoji: '🌈', stat: 'manaPerHit',      value: 5, minMissionLevel: 10 }
 };
+
+// Keys for original component drop pool (missions 1-9)
+var BASE_COMPONENT_KEYS = ['bf_sword', 'chain_vest', 'giants_belt', 'recurve_bow', 'large_rod', 'negatron_cloak', 'sparring_gloves', 'tear'];
+// Keys for expanded drop pool (missions 10+)
+var ALL_COMPONENT_KEYS = BASE_COMPONENT_KEYS.concat(['aether_shard', 'quicksilver_gem', 'warding_stone', 'soul_prism']);
 
 // ---- Combined Item Recipes (8) ----
 
@@ -84,16 +95,118 @@ var ITEM_RECIPES = {
         stats: { damageReduction: 0.25, elemResist: 0.20 },
         special: null,
         passive: null, ability: null, setId: null
+    },
+
+    // ---- New Combined Recipes (13) ----
+
+    // Offensive
+    deathblade: {
+        name: 'Deathblade', emoji: '🪄🗡️',
+        components: ['large_rod', 'bf_sword'],
+        stats: { attack: 35 },
+        special: { type: 'onKill', effect: 'deathbladeStack', atkBonus: 0.08, duration: 6, maxStacks: 3 },
+        passive: null, ability: null, setId: null
+    },
+    guinsoos_rageblade: {
+        name: "Guinsoo's Rageblade", emoji: '🏹🪄',
+        components: ['recurve_bow', 'large_rod'],
+        stats: { attack: 15, attackSpd: -0.1 },
+        special: { type: 'onAttack', effect: 'ragePermanentAS', asPerStack: 0.03, maxStacks: 10 },
+        passive: null, ability: null, setId: null
+    },
+    statikk_shiv: {
+        name: 'Statikk Shiv', emoji: '🏹🥊',
+        components: ['recurve_bow', 'sparring_gloves'],
+        stats: { attackSpd: -0.1, critChance: 0.10 },
+        special: { type: 'onAttackCount', effect: 'chainLightning', every: 3, targets: 2, damage: 50 },
+        passive: null, ability: null, setId: null
+    },
+    last_whisper: {
+        name: 'Last Whisper', emoji: '🥊🧥',
+        components: ['sparring_gloves', 'negatron_cloak'],
+        stats: { critChance: 0.10, damageReduction: 0.10 },
+        special: { type: 'onCrit', effect: 'drShred', drReduction: 0.50, duration: 3 },
+        passive: null, ability: null, setId: null
+    },
+
+    // Defensive
+    sunfire_cape: {
+        name: 'Sunfire Cape', emoji: '💪🛡️',
+        components: ['giants_belt', 'chain_vest'],
+        stats: { hp: 500 },
+        special: { type: 'aura', effect: 'sunfireDPS', dps: 15, range: 1 },
+        passive: null, ability: null, setId: null
+    },
+    bramble_vest: {
+        name: 'Bramble Vest', emoji: '🛡️🛡️',
+        components: ['chain_vest', 'chain_vest'],
+        stats: { hp: 400 },
+        special: { type: 'onHit', effect: 'thornsGrievous', reflectDmg: 80, grievousPct: 0.40, grievousDur: 3 },
+        passive: null, ability: null, setId: null
+    },
+    gargoyle_stoneplate: {
+        name: 'Gargoyle Stoneplate', emoji: '🛡️💪',
+        components: ['chain_vest', 'giants_belt'],
+        stats: { hp: 500 },
+        special: { type: 'passive', effect: 'gargoyleDR', drPerAttacker: 0.05, maxDR: 0.25 },
+        passive: null, ability: null, setId: null
+    },
+    redemption: {
+        name: 'Redemption', emoji: '💪💧',
+        components: ['giants_belt', 'tear'],
+        stats: { hp: 300, healPower: 0.20 },
+        special: { type: 'onLowHP', effect: 'redemptionHeal', threshold: 0.25, healPct: 0.15, range: 2, once: true },
+        passive: null, ability: null, setId: null
+    },
+
+    // Mana/Utility
+    spear_of_shojin: {
+        name: 'Spear of Shojin', emoji: '🗡️🔮',
+        components: ['bf_sword', 'aether_shard'],
+        stats: { attack: 15, startMana: 15 },
+        special: { type: 'onAttack', effect: 'bonusManaPerHit', bonusMana: 5 },
+        passive: null, ability: null, setId: null
+    },
+    blue_buff: {
+        name: 'Blue Buff', emoji: '🔮🔮',
+        components: ['aether_shard', 'aether_shard'],
+        stats: { startMana: 30 },
+        special: { type: 'onCast', effect: 'postCastMana', manaRefund: 20 },
+        passive: null, ability: null, setId: null
+    },
+    quicksilver_sash: {
+        name: 'Quicksilver Sash', emoji: '💎🧥',
+        components: ['quicksilver_gem', 'negatron_cloak'],
+        stats: { tenacity: 0.15, damageReduction: 0.10 },
+        special: { type: 'onCC', effect: 'qssCleanse', immunitySec: 1.5, cooldownSec: 10 },
+        passive: null, ability: null, setId: null
+    },
+    hextech_gunblade: {
+        name: 'Hextech Gunblade', emoji: '🪄🌈',
+        components: ['large_rod', 'soul_prism'],
+        stats: { attack: 20, manaPerHit: 5 },
+        special: { type: 'onAbilityDmg', effect: 'abilityHeal', healPct: 0.25 },
+        passive: null, ability: null, setId: null
+    },
+    aegis_plate: {
+        name: 'Aegis Plate', emoji: '🪨🛡️',
+        components: ['warding_stone', 'chain_vest'],
+        stats: { startShield: 150, hp: 200 },
+        special: { type: 'timedCheck', effect: 'shieldRefresh', checkTimeSec: 5 },
+        passive: null, ability: null, setId: null
     }
 };
 
 // ---- Essence System ----
 
 var ESSENCES = {
-    fire:  { name: 'Fire Essence',  emoji: '🔥💎', color: '#ff4444' },
-    water: { name: 'Water Essence', emoji: '💧💎', color: '#4488ff' },
-    earth: { name: 'Earth Essence', emoji: '🌿💎', color: '#44aa44' },
-    wind:  { name: 'Wind Essence',  emoji: '💨💎', color: '#aa44ff' }
+    fire:      { name: 'Fire Essence',      emoji: '🔥💎', color: '#ff4444' },
+    water:     { name: 'Water Essence',     emoji: '💧💎', color: '#4488ff' },
+    earth:     { name: 'Earth Essence',     emoji: '🌿💎', color: '#44aa44' },
+    wind:      { name: 'Wind Essence',      emoji: '💨💎', color: '#aa44ff' },
+    lightning: { name: 'Lightning Essence', emoji: '⚡💎', color: '#ffcc00' },
+    force:     { name: 'Force Essence',     emoji: '💥💎', color: '#ff6644' },
+    arcane:    { name: 'Arcane Essence',    emoji: '✨💎', color: '#dd88ff' }
 };
 
 // ---- Set Items ----
@@ -815,7 +928,8 @@ function rollItemRarity(missionLevel, starRating) {
 
 function rollItemDrop(missionLevel, starRating) {
     var rarity = rollItemRarity(missionLevel, starRating);
-    var compKeys = Object.keys(ITEM_COMPONENTS);
+    // Use expanded pool for missions 10+, base pool otherwise
+    var compKeys = missionLevel >= 10 ? ALL_COMPONENT_KEYS : BASE_COMPONENT_KEYS;
     var key = compKeys[Math.floor(Math.random() * compKeys.length)];
     return createItemInstance('component', key, rarity);
 }
@@ -957,14 +1071,33 @@ function formatStatLine(stat, value) {
     if (stat === 'healPower') return '+' + Math.round(value * 100) + '% Heal Power';
     if (stat === 'range') return '+' + Math.floor(value) + ' Range';
     if (stat === 'elemResist') return '+' + Math.round(value * 100) + '% Elem Resist';
+    if (stat === 'startMana') return '+' + Math.floor(value) + ' Start Mana';
+    if (stat === 'tenacity') return '+' + Math.round(value * 100) + '% Tenacity';
+    if (stat === 'startShield') return '+' + Math.floor(value) + ' Start Shield';
+    if (stat === 'manaPerHit') return '+' + Math.floor(value) + ' Mana/Hit';
     return '+' + value + ' ' + stat;
 }
 
 function getSpecialDescription(special) {
+    if (!special) return '';
     if (special.effect === 'bork') return '3% max HP on-hit';
     if (special.effect === 'warmogRegen') return '2% HP regen/s';
     if (special.effect === 'archangelDmg') return 'Heals deal 20% as damage';
     if (special.effect === 'hojHeal') return 'Heal 10% max HP on kill';
+    // New Phase 3 specials
+    if (special.effect === 'deathbladeStack') return 'On kill: +8% ATK for 6s (3x max)';
+    if (special.effect === 'ragePermanentAS') return 'Each attack: +3% AS permanently (max 30%)';
+    if (special.effect === 'chainLightning') return 'Every 3rd attack: chain lightning to 2 enemies for 50 dmg';
+    if (special.effect === 'drShred') return 'Crits reduce target DR by 50% for 3s';
+    if (special.effect === 'sunfireDPS') return '15 DPS to enemies within 1 cell';
+    if (special.effect === 'thornsGrievous') return 'Reflect 80 dmg + Grievous Wounds 3s';
+    if (special.effect === 'gargoyleDR') return '+5% DR per attacker (max 25%)';
+    if (special.effect === 'redemptionHeal') return 'At 25% HP: heal nearby allies 15% max HP';
+    if (special.effect === 'bonusManaPerHit') return '+5 bonus mana per attack';
+    if (special.effect === 'postCastMana') return 'After ability: gain 20 mana instantly';
+    if (special.effect === 'qssCleanse') return 'Cleanse first CC, 1.5s immunity (10s CD)';
+    if (special.effect === 'abilityHeal') return 'Heal 25% of ability damage dealt';
+    if (special.effect === 'shieldRefresh') return 'If shield survives 5s, refresh to full';
     return '';
 }
 
@@ -1090,4 +1223,9 @@ function applyStatToUnit(unit, stat, value) {
     else if (stat === 'healPower') unit.healBonus = (unit.healBonus || 0) + value;
     else if (stat === 'range') unit.range += Math.floor(value);
     else if (stat === 'elemResist') unit.elemResist = (unit.elemResist || 0) + value;
+    // New Phase 3 stats
+    else if (stat === 'startMana') unit.startMana = (unit.startMana || 0) + Math.floor(value);
+    else if (stat === 'tenacity') unit.tenacity = (unit.tenacity || 0) + value;
+    else if (stat === 'startShield') unit.startShield = (unit.startShield || 0) + Math.floor(value);
+    else if (stat === 'manaPerHit') unit.manaPerHit = (unit.manaPerHit || 0) + Math.floor(value);
 }
