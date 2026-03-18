@@ -2229,13 +2229,13 @@ function renderCombatBoard() {
     }
     boardEl.innerHTML = gridHtml;
 
-    // Render unit overlays in a separate container
+    // Render unit overlays inside the board (board is position:relative)
     var unitLayer = document.getElementById('combat-unit-layer');
     if (!unitLayer) {
         unitLayer = document.createElement('div');
         unitLayer.id = 'combat-unit-layer';
-        unitLayer.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;';
-        boardEl.parentNode.insertBefore(unitLayer, boardEl.nextSibling);
+        unitLayer.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:4;';
+        boardEl.appendChild(unitLayer);
     }
 
     // Create/update unit elements
