@@ -251,6 +251,17 @@ var ITEM_SETS = {
             { desc: 'All wind allies: +20% attack speed', stat: 'elemSpdBoost', element: 'wind', value: 0.20 },
             { desc: 'All wind allies: +20% AS, 10% dodge', stat: 'elemSpdBoost', element: 'wind', value: 0.20, dodge: 0.10 }
         ]
+    },
+    arcane: {
+        name: 'Arcane Set',
+        emoji: '✨',
+        element: 'any',
+        thresholds: [2, 3, 4],
+        bonuses: [
+            { desc: 'All allies: +8% ATK, +8% max HP', stat: 'arcaneTeamBuff', atkPct: 0.08, hpPct: 0.08 },
+            { desc: 'All allies: +8% ATK, +8% HP, +10 start mana', stat: 'arcaneTeamBuff', atkPct: 0.08, hpPct: 0.08, startMana: 10 },
+            { desc: 'All allies: +15% ATK, +15% HP, +20 start mana, 5% lifesteal', stat: 'arcaneTeamBuff', atkPct: 0.15, hpPct: 0.15, startMana: 20, lifesteal: 0.05 }
+        ]
     }
 };
 
@@ -354,6 +365,39 @@ var SET_ITEM_RECIPES = {
         setId: 'tempest',
         stats: { attack: 18 },
         special: { type: 'onHit', effect: 'bork', pctMaxHp: 0.04 }
+    },
+    // Arcane Set — 4 items (works with ANY element, requires Arcane Essence from bosses)
+    arcane_edge: {
+        name: 'Arcane Edge', emoji: '⚔️✨',
+        baseCombined: 'infinity_edge',
+        essenceElement: 'arcane',
+        setId: 'arcane',
+        stats: { attack: 35, critChance: 0.25 },
+        special: null
+    },
+    arcane_bulwark: {
+        name: 'Arcane Bulwark', emoji: '🛡️✨',
+        baseCombined: 'titans_resolve',
+        essenceElement: 'arcane',
+        setId: 'arcane',
+        stats: { hp: 250, damageReduction: 0.18 },
+        special: null
+    },
+    arcane_catalyst: {
+        name: 'Arcane Catalyst', emoji: '🪄✨',
+        baseCombined: 'archangels_staff',
+        essenceElement: 'arcane',
+        setId: 'arcane',
+        stats: { attack: 25, healPower: 0.35 },
+        special: { type: 'onHeal', effect: 'archangelDmg', damagePct: 0.25 }
+    },
+    arcane_accelerator: {
+        name: 'Arcane Accelerator', emoji: '🏹✨',
+        baseCombined: 'rapid_firecannon',
+        essenceElement: 'arcane',
+        setId: 'arcane',
+        stats: { attackSpd: -0.25, range: 1 },
+        special: null
     }
 };
 
@@ -422,6 +466,57 @@ var ABILITY_ITEMS = {
         stats: { hp: 600, damageReduction: 0.10 },
         ability: { type: 'passive', effect: 'titanResolve', hpThreshold: 0.5, bonusDR: 0.20,
                    desc: 'Below 50% HP: +20% damage reduction' },
+        requiresEvolved: true
+    },
+
+    // ---- New Ability Items (Phase 3) ----
+
+    // Standard (any unit)
+    morellonomicon: {
+        name: 'Morellonomicon', emoji: '📖🔥',
+        craftFrom: ['sunfire_cape', 'archangels_staff'],
+        missionReward: null,
+        stats: { attack: 15, hp: 300 },
+        ability: { type: 'onAbilityHit', effect: 'grievousWounds', healReduction: 0.40, duration: 5,
+                   desc: 'Abilities apply Grievous Wounds (40% heal reduction) for 5s' },
+        requiresEvolved: false
+    },
+    ionic_spark: {
+        name: 'Ionic Spark', emoji: '⚡🔮',
+        craftFrom: ['statikk_shiv', 'blue_buff'],
+        missionReward: null,
+        stats: { attackSpd: -0.15, startMana: 20 },
+        ability: { type: 'aura', effect: 'ionicDisrupt', range: 2, damage: 100, manaBurn: 15,
+                   desc: 'When nearby enemy casts: deal 100 dmg and burn 15 mana' },
+        requiresEvolved: false
+    },
+    frozen_heart: {
+        name: 'Frozen Heart', emoji: '❄️🛡️',
+        craftFrom: ['bramble_vest', 'titans_resolve'],
+        missionReward: null,
+        stats: { hp: 500, damageReduction: 0.20 },
+        ability: { type: 'aura', effect: 'frozenAura', range: 2, asSlow: 0.20,
+                   desc: 'Enemies within 2 cells: -20% attack speed' },
+        requiresEvolved: false
+    },
+
+    // Evolved-gated (evolved units only)
+    void_staff: {
+        name: 'Void Staff', emoji: '🌑⚡',
+        craftFrom: ['deathblade', 'hextech_gunblade'],
+        missionReward: null,
+        stats: { attack: 40, manaPerHit: 5 },
+        ability: { type: 'passive', effect: 'voidPenetration', drBypass: 0.40, abilityHeal: 0.15,
+                   desc: 'Abilities ignore 40% DR. Ability damage heals 15%.' },
+        requiresEvolved: true
+    },
+    transcendence: {
+        name: 'Transcendence', emoji: '🌟⚡',
+        craftFrom: ['blue_buff', 'spear_of_shojin'],
+        missionReward: null,
+        stats: { startMana: 30 },
+        ability: { type: 'onCast', effect: 'manaCostReduction', reductionPct: 0.10, minPct: 0.50,
+                   desc: 'Each ability cast reduces max mana by 10% (min 50% of base)' },
         requiresEvolved: true
     }
 };
