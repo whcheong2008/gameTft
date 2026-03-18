@@ -817,6 +817,126 @@ function forgeCraftAbilityItem(saveData, abilityItemKey) {
     return { success: true, item: abilityItem };
 }
 
+// ---- Enhancement System ----
+
+var ENHANCEMENT_TABLE = [
+    // { level, statBonus, goldCost, successRate, onFailDrop }
+    { level: 1,  statBonus: 0.05, goldCost: 20,   successRate: 1.00, onFailDrop: 0 },
+    { level: 2,  statBonus: 0.10, goldCost: 30,   successRate: 1.00, onFailDrop: 0 },
+    { level: 3,  statBonus: 0.15, goldCost: 50,   successRate: 1.00, onFailDrop: 0 },
+    { level: 4,  statBonus: 0.22, goldCost: 80,   successRate: 0.90, onFailDrop: 4 },  // stay
+    { level: 5,  statBonus: 0.30, goldCost: 120,  successRate: 0.80, onFailDrop: 5 },  // stay
+    { level: 6,  statBonus: 0.40, goldCost: 180,  successRate: 0.70, onFailDrop: 5 },
+    { level: 7,  statBonus: 0.52, goldCost: 250,  successRate: 0.55, onFailDrop: 5 },
+    { level: 8,  statBonus: 0.66, goldCost: 350,  successRate: 0.40, onFailDrop: 6 },
+    { level: 9,  statBonus: 0.82, goldCost: 500,  successRate: 0.25, onFailDrop: 7 },
+    { level: 10, statBonus: 1.00, goldCost: 750,  successRate: 0.15, onFailDrop: 8 }
+];
+
+// Forge level required per enhancement tier
+var ENHANCEMENT_FORGE_REQS = {
+    1: 1, 2: 1, 3: 1,     // Forge 1+
+    4: 2, 5: 2, 6: 2,     // Forge 2+
+    7: 4, 8: 4,            // Forge 4+
+    9: 5, 10: 5            // Forge 5+
+};
+
+// Pity: after N consecutive failures at the same target level, next is guaranteed
+var ENHANCEMENT_PITY_THRESHOLD = 3;
+
+function getEnhancementLevel(item) {
+    return item.enhanceLevel || 0;
+}
+
+function getEnhancementBonus(item) {
+    var level = getEnhancementLevel(item);
+    if (level <= 0 || level > ENHANCEMENT_TABLE.length) return 0;
+    return ENHANCEMENT_TABLE[level - 1].statBonus;
+}
+
+function getEnhancementCost(item) {
+    var targetLevel = getEnhancementLevel(item) + 1;
+    if (targetLevel > 10) return null;
+    var entry = ENHANCEMENT_TABLE[targetLevel - 1];
+    var cost = entry.goldCost;
+    // Mythic items cost 1.5x
+    if (item.type === 'mythic') cost = Math.floor(cost * 1.5);
+    return cost;
+}
+
+function forgeEnhance(saveData, itemId) {
+    var item = findBenchItem(saveData, itemId);
+    if (!item) return { success: false, reason: 'Item not found' };
+
+    // Can enhance combined, set, ability, mythic — not components
+    if (item.type === 'component') return { success: false, reason: 'Cannot enhance components' };
+
+    var currentLevel = getEnhancementLevel(item);
+    var targetLevel = currentLevel + 1;
+    if (targetLevel > 10) return { success: false, reason: 'Already at max enhancement (+10)' };
+
+    // Check forge level requirement
+    var forgeLevel = getBuildingLevel(saveData, 'forge');
+    var reqForge = ENHANCEMENT_FORGE_REQS[targetLevel] || 1;
+    if (forgeLevel < reqForge) return { success: false, reason: 'Forge level ' + reqForge + ' required for +' + targetLevel };
+
+    var entry = ENHANCEMENT_TABLE[targetLevel - 1];
+    var cost = entry.goldCost;
+    if (item.type === 'mythic') cost = Math.floor(cost * 1.5);
+    if (saveData.player.gold < cost) return { success: false, reason: 'Not enough gold (' + cost + 'g)' };
+
+    spendGold(saveData, cost);
+
+    // Initialize pity tracking
+    if (!item.enhancePity) item.enhancePity = { targetLevel: targetLevel, failures: 0 };
+    if (item.enhancePity.targetLevel !== targetLevel) {
+        item.enhancePity = { targetLevel: targetLevel, failures: 0 };
+    }
+
+    // Check collection bonus: Grand Artificer reduces pity threshold
+    var pityThreshold = ENHANCEMENT_PITY_THRESHOLD;
+    if (saveData.items && saveData.items.collectionBonuses && saveData.items.collectionBonuses.grandArtificer) {
+        pityThreshold = 2;
+    }
+
+    // Roll for success
+    var isPityGuaranteed = item.enhancePity.failures >= pityThreshold;
+    var roll = Math.random();
+    var succeeded = isPityGuaranteed || roll < entry.successRate;
+
+    if (succeeded) {
+        item.enhanceLevel = targetLevel;
+        item.enhancePity = { targetLevel: targetLevel + 1, failures: 0 };
+        autoSave(saveData);
+        return { success: true, enhanced: true, newLevel: targetLevel, cost: cost, pityUsed: isPityGuaranteed };
+    } else {
+        // Failure
+        item.enhancePity.failures++;
+        var dropTo = entry.onFailDrop;
+        var droppedFrom = currentLevel;
+        // onFailDrop equal to targetLevel means "stay at current level"
+        if (dropTo >= currentLevel) {
+            // Stay at current level — no drop
+            autoSave(saveData);
+            return { success: true, enhanced: false, stayed: true, level: currentLevel, cost: cost,
+                     pityCount: item.enhancePity.failures, pityThreshold: pityThreshold };
+        } else {
+            // Drop to lower level
+            item.enhanceLevel = dropTo;
+            // Reset pity for the failed level since we dropped
+            item.enhancePity = { targetLevel: dropTo + 1, failures: 0 };
+            autoSave(saveData);
+            return { success: true, enhanced: false, dropped: true, from: droppedFrom, to: dropTo, cost: cost };
+        }
+    }
+}
+
+// Get enhanced stat multiplier: base × (1 + rarityBonus) × (1 + enhancementBonus)
+function getEnhancedStatMultiplier(item) {
+    var enhanceBonus = getEnhancementBonus(item);
+    return 1 + enhanceBonus;
+}
+
 // ---- Set Bonus Calculation ----
 
 function calculateActiveSetBonuses(playerUnits, saveData) {
@@ -937,20 +1057,26 @@ function rollItemDrop(missionLevel, starRating) {
 // ---- Item Display Helpers ----
 
 function getItemName(item) {
+    var name = 'Unknown';
     if (item.type === 'component') {
         var comp = ITEM_COMPONENTS[item.key];
-        return comp ? comp.name : item.key;
+        name = comp ? comp.name : item.key;
     } else if (item.type === 'combined') {
         var recipe = ITEM_RECIPES[item.key];
-        return recipe ? recipe.name : item.key;
+        name = recipe ? recipe.name : item.key;
     } else if (item.type === 'set') {
         var setRecipe = SET_ITEM_RECIPES[item.key];
-        return setRecipe ? setRecipe.name : item.key;
+        name = setRecipe ? setRecipe.name : item.key;
     } else if (item.type === 'ability') {
         var abilityDef = ABILITY_ITEMS[item.key];
-        return abilityDef ? abilityDef.name : item.key;
+        name = abilityDef ? abilityDef.name : item.key;
+    } else if (item.type === 'mythic') {
+        name = item.name || item.key;
     }
-    return 'Unknown';
+    // Append enhancement level if enhanced
+    var eLevel = getEnhancementLevel(item);
+    if (eLevel > 0) name += ' +' + eLevel;
+    return name;
 }
 
 function getItemEmoji(item) {
@@ -1167,9 +1293,10 @@ function applyItemStats(unit, saveData) {
             var recipe = ITEM_RECIPES[item.key];
             if (!recipe) continue;
             multiplier = getCombinedItemStatMultiplier(item.comp1Rarity, item.comp2Rarity);
+            var enhanceMult = getEnhancedStatMultiplier(item);
             var statKeys = Object.keys(recipe.stats);
             for (var s = 0; s < statKeys.length; s++) {
-                applyStatToUnit(unit, statKeys[s], recipe.stats[statKeys[s]] * multiplier);
+                applyStatToUnit(unit, statKeys[s], recipe.stats[statKeys[s]] * multiplier * enhanceMult);
             }
             // Mark special effects on unit for combat processing
             if (recipe.special) {
@@ -1180,9 +1307,10 @@ function applyItemStats(unit, saveData) {
             var abilityData = ABILITY_ITEMS[item.key];
             if (!abilityData) continue;
             var abilityMult = 1 + (ITEM_RARITIES[item.rarity] ? ITEM_RARITIES[item.rarity].bonus : 0);
+            var abilityEnhanceMult = getEnhancedStatMultiplier(item);
             var aStatKeys = Object.keys(abilityData.stats);
             for (var as = 0; as < aStatKeys.length; as++) {
-                applyStatToUnit(unit, aStatKeys[as], abilityData.stats[aStatKeys[as]] * abilityMult);
+                applyStatToUnit(unit, aStatKeys[as], abilityData.stats[aStatKeys[as]] * abilityMult * abilityEnhanceMult);
             }
             // Store ability on unit for combat processing
             if (abilityData.ability) {
@@ -1193,9 +1321,10 @@ function applyItemStats(unit, saveData) {
             var setRecipe = SET_ITEM_RECIPES[item.key];
             if (!setRecipe) continue;
             var setMult = getCombinedItemStatMultiplier(item.comp1Rarity, item.comp2Rarity);
+            var setEnhanceMult = getEnhancedStatMultiplier(item);
             var sStatKeys = Object.keys(setRecipe.stats);
             for (var ss = 0; ss < sStatKeys.length; ss++) {
-                applyStatToUnit(unit, sStatKeys[ss], setRecipe.stats[sStatKeys[ss]] * setMult);
+                applyStatToUnit(unit, sStatKeys[ss], setRecipe.stats[sStatKeys[ss]] * setMult * setEnhanceMult);
             }
             if (setRecipe.special) {
                 if (!unit.itemSpecials) unit.itemSpecials = [];
