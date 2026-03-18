@@ -110,7 +110,7 @@ Hub → Gacha Rolling → Roster Management → Team Building → Mission Deploy
 - **Recipe book + collection milestones** (6 milestones with permanent bonuses)
 - **Drop tables** (level-gated mission rewards, forge integration, recipe discovery hooks)
 
-### Phase 4 — In Progress (Region Expansion)
+### Phase 4 — COMPLETE (Region Expansion)
 **Design conflict resolved**: MISSIONS-DESIGN.md's 8-region structure supersedes CONTENT-DESIGN.md's 14-mission structure.
 
 **Resolution decisions**:
@@ -190,13 +190,13 @@ The combat engine is being rebuilt from scratch per COMBAT-DESIGN.md. Implementa
 **Phase 4 — Content & Bosses** (IN PROGRESS):
 - [x] Chapter system + expanded descriptions (prompt 22 chunks 1-2 — will be replaced by regions)
 - [x] Named enemy captains (prompt 22 chunk 2 — will be reassigned to regions)
-- [ ] **Region expansion** (prompt 22 — feature/phase4-regions branch)
-- [ ] Endless mode (The Abyss) — blocked until regions merge
-- [ ] Challenge modes — blocked until regions merge
-- [ ] Lore system — blocked until regions merge
+- [x] **Region expansion** (prompt 22 — feature/phase4-regions branch) — DONE: 8 regions, 47 stages, 12 bosses, save v6
+- [ ] Endless mode (The Abyss) — unblocked
+- [ ] Challenge modes — unblocked
+- [ ] Lore system — unblocked
 
-**Phase 5 — Progression Polish** (IN PROGRESS — parallel with Phase 4):
-- [ ] **3 new buildings + daily quests + achievements** (prompt 23 — feature/phase5-progression branch)
+**Phase 5 — COMPLETE (Progression Polish)**:
+- [x] **3 new buildings + daily quests + achievements** (prompt 23 — feature/phase5-progression branch) — DONE: Gem Workshop, Mana Shrine, Bond Hall, daily quests, 20+ achievements, stats tracking
 
 **Phase 6 — Visual & Audio Polish**:
 - [ ] Sprite system (replace emoji with art)
@@ -388,3 +388,13 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
   - Created prompt 22 (region expansion) and prompt 23 (Phase 5 buildings/quests/achievements)
   - Created feature branches: `feature/phase4-regions`, `feature/phase5-progression` (both at main HEAD `3d5b493`)
   - Updated CONTINUITY.md with all resolution decisions
+- **Session 10 (2026-03-18)**: Integration session — orchestrator in Cowork mode.
+  - Fixed git push from Cowork VM using GitHub PAT in `keys/github.txt`
+  - Added `keys/.gitignore` to prevent token from being committed
+  - Rebased (fast-forward merged) both feature branches onto current main
+  - Pushed both branches + main to origin
+  - **Worker 1** (prompt 22 — regions): Completed on this PC via Claude Code. 1 commit: region-based mission expansion (8 regions, 47 stages, 12 bosses, missions.js rewrite, save v5→v6 migration)
+  - **Worker 2** (prompt 23 — progression): Completed and pushed to remote. 1 commit: 3 new buildings (Gem Workshop, Mana Shrine, Bond Hall), daily quests, achievement system, expanded stats tracking
+  - Merged both branches into main. Only conflict: save.js (both workers added migration code). Resolved by keeping both — v5→v6 region migration + version-agnostic Phase 5 field additions
+  - All syntax checks pass. Main at `d7c9c61`
+  - Phase 4 regions + Phase 5 progression both COMPLETE. Endless mode, challenge modes, lore system now unblocked
