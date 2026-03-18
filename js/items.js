@@ -614,6 +614,64 @@ var MYTHIC_ITEMS = {
     }
 };
 
+// ---- Item Affinity System ----
+// Affinities match items to unit types/archetypes/elements for bonus effects
+// matchType: 'type', 'archetype', or 'element' — what to check on the unit
+// matchValue: the value to match (e.g. 'assassin', 'guardian', 'earth')
+// bonus: describes the mechanical bonus applied in combat
+var ITEM_AFFINITIES = {
+    // Combined items (from Section 9 + Extended Examples)
+    infinity_edge:         { matchType: 'type',      matchValue: 'assassin',  bonus: { effect: 'bonusCritDamage', value: 0.15, desc: '+15% bonus crit damage' } },
+    warmogs_armor:         { matchType: 'type',      matchValue: 'tank',      bonus: { effect: 'warmogRegenUp', value: 0.03, desc: 'Regen increased to 3% max HP/s' } },
+    rapid_firecannon:      { matchType: 'type',      matchValue: 'archer',    bonus: { effect: 'bonusRange', value: 1, desc: '+1 additional range (total +2)' } },
+    archangels_staff:      { matchType: 'type',      matchValue: 'healer',    bonus: { effect: 'archangelDmgUp', value: 0.35, desc: 'Heal-to-damage conversion increased to 35%' } },
+    dragons_claw:          { matchType: 'archetype',  matchValue: 'guardian', bonus: { effect: 'bonusDR', value: 0.05, desc: '+5% additional damage reduction' } },
+    bloodthirster:         { matchType: 'type',      matchValue: 'assassin',  bonus: { effect: 'lifestealUp', value: 0.22, desc: 'Lifesteal increased to 22%' } },
+    deathblade:            { matchType: 'type',      matchValue: 'assassin',  bonus: { effect: 'deathbladeStackUp', value: 0.12, desc: 'Kill stack bonus increased to +12%' } },
+    guinsoos_rageblade:    { matchType: 'type',      matchValue: 'archer',    bonus: { effect: 'rageStackUp', value: 0.05, desc: 'AS per-stack increased to +5%' } },
+    statikk_shiv:          { matchType: 'type',      matchValue: 'mage',      bonus: { effect: 'chainLightningUp', value: 3, desc: 'Chain lightning hits 3 enemies instead of 2' } },
+    last_whisper:          { matchType: 'archetype',  matchValue: 'predator', bonus: { effect: 'drShredDurUp', value: 5, desc: 'DR shred duration increased to 5s' } },
+    sunfire_cape:          { matchType: 'type',      matchValue: 'tank',      bonus: { effect: 'sunfireDPSUp', value: 25, desc: 'AoE DPS increased to 25' } },
+    bramble_vest:          { matchType: 'element',    matchValue: 'earth',    bonus: { effect: 'brambleRootUp', value: 120, desc: 'Reflect damage 120 + 0.5s Root' } },
+    gargoyle_stoneplate:   { matchType: 'archetype',  matchValue: 'guardian', bonus: { effect: 'gargoyleDRUp', value: 0.07, desc: 'DR per attacker increased to +7%' } },
+    redemption:            { matchType: 'type',      matchValue: 'healer',    bonus: { effect: 'redemptionRangeUp', value: 3, desc: 'AoE heal range increased to 3 cells' } },
+    spear_of_shojin:       { matchType: 'type',      matchValue: 'warrior',   bonus: { effect: 'shojinManaUp', value: 8, desc: 'Bonus mana per hit increased to +8' } },
+    blue_buff:             { matchType: 'type',      matchValue: 'mage',      bonus: { effect: 'blueManaUp', value: 35, desc: 'Post-cast mana refund increased to 35' } },
+    quicksilver_sash:      { matchType: 'type',      matchValue: 'assassin',  bonus: { effect: 'qssCDDown', value: 7, desc: 'QSS cooldown reduced to 7s' } },
+    aegis_plate:           { matchType: 'type',      matchValue: 'tank',      bonus: { effect: 'aegisShieldUp', value: 250, desc: 'Starting shield increased to 250' } },
+    // Ability items
+    frozen_heart:          { matchType: 'archetype',  matchValue: 'vanguard', bonus: { effect: 'frozenASRedUp', value: 0.30, desc: 'AS reduction aura increased to -30%' } },
+    morellonomicon:        { matchType: 'archetype',  matchValue: 'mystic',   bonus: { effect: 'morelloDurUp', value: 7, desc: 'Grievous duration increased to 7s' } }
+};
+
+// Check if a unit matches an item's affinity
+function checkItemAffinity(itemKey, unitKey) {
+    var affinity = ITEM_AFFINITIES[itemKey];
+    if (!affinity) return null;
+
+    var template = typeof UNIT_TEMPLATES !== 'undefined' ? UNIT_TEMPLATES[unitKey] : null;
+    if (!template) return null;
+
+    var matched = false;
+    if (affinity.matchType === 'type' && template.type === affinity.matchValue) matched = true;
+    else if (affinity.matchType === 'archetype' && template.archetype === affinity.matchValue) matched = true;
+    else if (affinity.matchType === 'element' && template.element === affinity.matchValue) matched = true;
+
+    return matched ? affinity.bonus : null;
+}
+
+// Get affinity description for tooltip display
+function getAffinityDescription(itemKey) {
+    var affinity = ITEM_AFFINITIES[itemKey];
+    if (!affinity) return null;
+    var typeLabel = affinity.matchType === 'type' ? affinity.matchValue :
+                    affinity.matchType === 'archetype' ? affinity.matchValue :
+                    affinity.matchType === 'element' ? affinity.matchValue + ' element' :
+                    affinity.matchValue;
+    typeLabel = typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1);
+    return 'Affinity: ' + typeLabel + ' — ' + affinity.bonus.desc;
+}
+
 // Forge operation: craft mythic item
 function forgeCraftMythic(saveData, mythicKey) {
     var forgeLevel = getBuildingLevel(saveData, 'forge');
@@ -809,14 +867,23 @@ function unequipItem(saveData, itemId) {
     for (var i = 0; i < saveData.items.bench.length; i++) {
         var item = saveData.items.bench[i];
         if (item.id === itemId) {
-            // Combined items cannot be unequipped
-            if (item.type === 'combined') return false;
             item.equipped = null;
             autoSave(saveData);
             return true;
         }
     }
     return false;
+}
+
+// Unequip all items from a specific unit, returning them to the bench
+function unequipAllItemsFromUnit(saveData, unitKey) {
+    if (!saveData.items) return;
+    for (var i = 0; i < saveData.items.bench.length; i++) {
+        var item = saveData.items.bench[i];
+        if (item.equipped && item.equipped.unitKey === unitKey) {
+            item.equipped = null;
+        }
+    }
 }
 
 // ---- Recipe Lookup ----
@@ -1631,6 +1698,11 @@ function getItemStatDescription(item) {
             lines.push('🌟 ' + mythicDef.mythicAbility.desc);
         }
     }
+    // Add affinity info if present
+    var affinityDesc = getAffinityDescription(item.key);
+    if (affinityDesc) {
+        lines.push(affinityDesc);
+    }
     return lines.join(', ');
 }
 
@@ -1793,6 +1865,25 @@ function applyItemStats(unit, saveData) {
                 if (!unit.mythicAbilities) unit.mythicAbilities = [];
                 unit.mythicAbilities.push(mythicDef.mythicAbility);
             }
+        }
+
+        // Check and apply item affinity bonus
+        var affinityBonus = checkItemAffinity(item.key, unit.key);
+        if (affinityBonus) {
+            if (!unit.affinityBonuses) unit.affinityBonuses = [];
+            unit.affinityBonuses.push(affinityBonus);
+            // Apply stat-based affinity bonuses directly
+            if (affinityBonus.effect === 'bonusCritDamage') {
+                unit.bonusCritDamage = (unit.bonusCritDamage || 0) + affinityBonus.value;
+            } else if (affinityBonus.effect === 'bonusDR') {
+                applyStatToUnit(unit, 'damageReduction', affinityBonus.value);
+            } else if (affinityBonus.effect === 'bonusRange') {
+                applyStatToUnit(unit, 'range', affinityBonus.value);
+            } else if (affinityBonus.effect === 'aegisShieldUp') {
+                // Replace base startShield with affinity-boosted value
+                unit.startShield = (unit.startShield || 0) + (affinityBonus.value - 150);
+            }
+            // Other affinity bonuses (combat specials) are read from unit.affinityBonuses during combat
         }
 
         // Apply gem stats for socketed items
