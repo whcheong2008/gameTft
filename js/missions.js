@@ -8,7 +8,8 @@ var STORY_MISSIONS = [
     {
         id: 'story_1',
         name: 'Forest Outskirts',
-        description: 'Clear the creatures lurking at the forest edge.',
+        description: 'The Veil is thinnest at the forest\'s edge. Creatures from Pyrheim and Terramund slip through, drawn by the warmth of nearby settlements. Clear them before they establish a foothold.',
+        chapter: 1,
         requiredLevel: 1,
         waves: [
             { budget: 3, maxCost: 1, count: 2 }
@@ -18,7 +19,8 @@ var STORY_MISSIONS = [
     {
         id: 'story_2',
         name: 'Goblin Camp',
-        description: 'A small goblin camp blocks the path forward.',
+        description: 'Organized creatures have set up camp along the trade road. Their coordinated patrols suggest something more intelligent is directing them.',
+        chapter: 1,
         requiredLevel: 2,
         waves: [
             { budget: 5, maxCost: 1, count: 3 },
@@ -29,7 +31,8 @@ var STORY_MISSIONS = [
     {
         id: 'story_3',
         name: 'River Crossing',
-        description: 'Water elementals guard the ancient bridge.',
+        description: 'The ancient bridge at Tide\'s Edge is guarded by water elementals drawn from Abyssia. Their slowing currents test your team\'s ability to fight through elemental resistance.',
+        chapter: 1,
         requiredLevel: 3,
         waves: [
             { budget: 6, maxCost: 2, count: 3 },
@@ -40,7 +43,8 @@ var STORY_MISSIONS = [
     {
         id: 'story_4',
         name: 'Abandoned Mine',
-        description: 'Something stirs in the depths of the old mine.',
+        description: 'An old mining shaft now pulses with Veil energy. The creatures within have grown powerful feeding on raw elemental runoff. Your first true test of strength.',
+        chapter: 1,
         requiredLevel: 4,
         waves: [
             { budget: 8, maxCost: 2, count: 4 },
@@ -52,7 +56,8 @@ var STORY_MISSIONS = [
     {
         id: 'story_5',
         name: 'Dragon\'s Pass',
-        description: 'The mountain pass is guarded by fierce elemental beasts.',
+        description: 'The mountain pass between Pyrheim and Terramund is contested by powerful elemental beasts. Cost-3 creatures roam freely here — team composition matters more than raw power.',
+        chapter: 2,
         requiredLevel: 6,
         waves: [
             { budget: 10, maxCost: 3, count: 4 },
@@ -64,7 +69,8 @@ var STORY_MISSIONS = [
     {
         id: 'story_6',
         name: 'Elemental Nexus',
-        description: 'All four elemental forces converge at this ancient site.',
+        description: 'A convergence point where ley lines from all four planes intersect. Forces from Pyrheim, Abyssia, Terramund, and Zephyria clash in a preview of the wars to come.',
+        chapter: 2,
         requiredLevel: 8,
         waves: [
             { budget: 12, maxCost: 3, count: 5 },
@@ -75,8 +81,9 @@ var STORY_MISSIONS = [
     },
     {
         id: 'story_7',
-        name: 'The Veil Guardian',
-        description: 'A powerful guardian blocks the path forward.',
+        name: 'The Dark Citadel',
+        description: 'A fortress built directly on a Veil tear, guarded by the Veil Guardian — a corrupted entity born from the Shattering itself. Your first boss encounter.',
+        chapter: 2,
         requiredLevel: 10,
         waves: [],
         boss: 'veil_guardian',
@@ -86,7 +93,8 @@ var STORY_MISSIONS = [
     {
         id: 'story_8',
         name: 'The Ember Fortress',
-        description: 'A stronghold defended by fire-aligned warriors working in concert.',
+        description: 'The Ember Legion\'s stronghold. General Pyra commands fire warriors and guardians in devastating coordinated strikes. Counter their frontline with assassins and armor-shredding.',
+        chapter: 3,
         requiredLevel: 11,
         waves: [
             { budget: 18, maxCost: 4, count: 5, elementBias: 'fire', synergyBias: 'duelist' },
@@ -99,7 +107,8 @@ var STORY_MISSIONS = [
     {
         id: 'story_9',
         name: 'Tidal Depths',
-        description: 'Aquatic mystics channel slowing auras from the ocean floor.',
+        description: 'The Tidal Court\'s mystic sanctum. Oracle Nereus weaves healing and slowing auras that create an impenetrable sustain wall. Bring burst damage and Grievous Wounds.',
+        chapter: 3,
         requiredLevel: 12,
         waves: [
             { budget: 20, maxCost: 4, count: 5, elementBias: 'water', synergyBias: 'mystic' },
@@ -112,7 +121,8 @@ var STORY_MISSIONS = [
     {
         id: 'story_10',
         name: 'The Living Mountain',
-        description: 'Earth golems and guardians form an impenetrable wall.',
+        description: 'The Stone Conclave\'s fortress, ruled by King Gorath. Massive HP, extreme damage reduction, shields upon shields. You need %HP damage and DR shred to break through.',
+        chapter: 3,
         requiredLevel: 13,
         waves: [
             { budget: 22, maxCost: 4, count: 5, elementBias: 'earth', synergyBias: 'guardian' },
@@ -125,7 +135,8 @@ var STORY_MISSIONS = [
     {
         id: 'story_11',
         name: 'Storm\'s Eye',
-        description: 'Wind assassins and snipers strike from every direction.',
+        description: 'A Sky Reaver ambush led by Sylph, the Storm Blade. Glass cannon predators that kill your carries before you can react. CC, taunt tanks, and careful positioning are your survival.',
+        chapter: 3,
         requiredLevel: 14,
         waves: [
             { budget: 24, maxCost: 4, count: 6, elementBias: 'wind', synergyBias: 'predator' },
@@ -138,7 +149,8 @@ var STORY_MISSIONS = [
     {
         id: 'story_12',
         name: 'The Convergence',
-        description: 'Forces from all four elements collide. Enemy squads fight with coordinated synergies.',
+        description: 'The Void Sovereign\'s manipulation is revealed. All four factions converge on a single battlefield, each wave featuring a different element with active synergy bonuses. Adaptability is key.',
+        chapter: 4,
         requiredLevel: 16,
         waves: [
             { budget: 28, maxCost: 5, count: 6, synergyBias: 'duelist', enemySynergies: true },
@@ -152,7 +164,8 @@ var STORY_MISSIONS = [
     {
         id: 'story_13',
         name: 'Ascended Warfront',
-        description: 'The enemy has discovered evolution. Their champions have transcended mortal limits.',
+        description: 'The Void Sovereign has gifted evolution to its champions. For the first time, you face evolved enemy abilities — enhanced passives, stronger stats, and devastating synergy combinations.',
+        chapter: 4,
         requiredLevel: 18,
         waves: [
             { budget: 32, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
@@ -165,14 +178,158 @@ var STORY_MISSIONS = [
     // Mission 14 — Final boss
     {
         id: 'story_14',
-        name: 'The Void Sovereign',
-        description: 'The source of the corruption. End this.',
+        name: 'The Eternal Throne',
+        description: 'The Void Sovereign awaits at the point where the Veil is thinnest. A three-phase gauntlet that tests every system you\'ve mastered. All synergies, evolved champions, and the final boss.',
+        chapter: 4,
         requiredLevel: 20,
         waves: [],
         boss: 'void_sovereign',
         rewards: { gold: 1000, xp: 1500 }
     }
 ];
+
+// ---- Chapter System ----
+
+var CHAPTERS = {
+    1: {
+        name: 'The Frontier',
+        subtitle: 'Learn the basics. The world is dangerous but manageable.',
+        missions: ['story_1', 'story_2', 'story_3', 'story_4'],
+        reward: {
+            description: 'Unlock Summoning Circle upgrades + 1 free 10-pull',
+            gold: 0,
+            freeMultiRoll: 1 // grants 1 free 10-pull
+        }
+    },
+    2: {
+        name: 'The Elemental Frontier',
+        subtitle: 'The elements are organized. Each faction has power and purpose.',
+        missions: ['story_5', 'story_6', 'story_7'],
+        reward: {
+            description: 'Unlock Evolution Lab + 500g + 1 random Cost-3 unit',
+            gold: 500,
+            randomUnit: { minCost: 3, maxCost: 3 }
+        }
+    },
+    3: {
+        name: 'The Elemental Wars',
+        subtitle: 'Each element\'s faction is fully realized. Master countering specific strategies.',
+        missions: ['story_8', 'story_9', 'story_10', 'story_11'],
+        reward: {
+            description: 'Unlock Forge Level 4 (Set Crafting) + 1 essence of choice',
+            gold: 0,
+            essenceChoice: 1 // player picks 1 essence type
+        }
+    },
+    4: {
+        name: 'The Convergence',
+        subtitle: 'All elements unite under the Void Sovereign\'s influence. Full complexity.',
+        missions: ['story_12', 'story_13', 'story_14'],
+        reward: {
+            description: 'Choice of any Cost-4 unit + 1,000g + Mythic Material Fragment',
+            gold: 1000,
+            randomUnit: { minCost: 4, maxCost: 4 },
+            mythicMaterialChoice: 1
+        }
+    }
+};
+
+// Get chapter info for a given mission ID
+function getMissionChapter(missionId) {
+    for (var i = 0; i < STORY_MISSIONS.length; i++) {
+        if (STORY_MISSIONS[i].id === missionId) {
+            return STORY_MISSIONS[i].chapter || null;
+        }
+    }
+    return null;
+}
+
+// Check if a chapter is fully completed (all missions cleared)
+function isChapterComplete(saveData, chapterNum) {
+    var chapter = CHAPTERS[chapterNum];
+    if (!chapter) return false;
+    for (var i = 0; i < chapter.missions.length; i++) {
+        var mId = chapter.missions[i];
+        // Find mission index in STORY_MISSIONS
+        var mIdx = -1;
+        for (var j = 0; j < STORY_MISSIONS.length; j++) {
+            if (STORY_MISSIONS[j].id === mId) { mIdx = j; break; }
+        }
+        if (mIdx < 0) return false;
+        if (saveData.missions.storyProgress <= mIdx) return false;
+    }
+    return true;
+}
+
+// Check if chapter reward has been claimed
+function isChapterRewardClaimed(saveData, chapterNum) {
+    if (!saveData.missions.chapterRewardsClaimed) return false;
+    return saveData.missions.chapterRewardsClaimed.indexOf(chapterNum) >= 0;
+}
+
+// Claim chapter reward (returns reward info, caller applies to save)
+function claimChapterReward(saveData, chapterNum) {
+    if (!isChapterComplete(saveData, chapterNum)) return { success: false, reason: 'Chapter not complete' };
+    if (isChapterRewardClaimed(saveData, chapterNum)) return { success: false, reason: 'Already claimed' };
+
+    if (!saveData.missions.chapterRewardsClaimed) saveData.missions.chapterRewardsClaimed = [];
+    saveData.missions.chapterRewardsClaimed.push(chapterNum);
+
+    var chapter = CHAPTERS[chapterNum];
+    var reward = chapter.reward;
+
+    // Apply gold
+    if (reward.gold > 0) {
+        saveData.player.gold += reward.gold;
+    }
+
+    // Apply free multi-roll
+    if (reward.freeMultiRoll) {
+        if (!saveData.player.freeMultiRolls) saveData.player.freeMultiRolls = 0;
+        saveData.player.freeMultiRolls += reward.freeMultiRoll;
+    }
+
+    // Unit rewards handled by caller (needs UI for choice)
+    // Essence choice handled by caller (needs UI for choice)
+    // Mythic material choice handled by caller (needs UI for choice)
+
+    return { success: true, reward: reward, chapterName: chapter.name };
+}
+
+// Get chapter completion status for all chapters
+function getChapterStatuses(saveData) {
+    var statuses = [];
+    var chapterKeys = Object.keys(CHAPTERS);
+    for (var i = 0; i < chapterKeys.length; i++) {
+        var cNum = parseInt(chapterKeys[i]);
+        var chapter = CHAPTERS[cNum];
+        var complete = isChapterComplete(saveData, cNum);
+        var claimed = isChapterRewardClaimed(saveData, cNum);
+
+        // Count completed missions in this chapter
+        var completedCount = 0;
+        for (var m = 0; m < chapter.missions.length; m++) {
+            var mId = chapter.missions[m];
+            var mIdx = -1;
+            for (var j = 0; j < STORY_MISSIONS.length; j++) {
+                if (STORY_MISSIONS[j].id === mId) { mIdx = j; break; }
+            }
+            if (mIdx >= 0 && saveData.missions.storyProgress > mIdx) completedCount++;
+        }
+
+        statuses.push({
+            chapter: cNum,
+            name: chapter.name,
+            subtitle: chapter.subtitle,
+            totalMissions: chapter.missions.length,
+            completedMissions: completedCount,
+            complete: complete,
+            rewardClaimed: claimed,
+            rewardDescription: chapter.reward.description
+        });
+    }
+    return statuses;
+}
 
 // ---- Boss Data ----
 
