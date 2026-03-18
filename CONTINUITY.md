@@ -1,6 +1,22 @@
 # Auto Battler — Continuity Document
 > Tracks current development state for cross-session continuity.
 
+## Git Branch Conventions
+
+**Branch naming:**
+- `feature/` — new functionality (e.g., `feature/new-character-kai`)
+- `fix/` — bug fixes (e.g., `fix/battle-crash-on-empty-team`)
+- `balance/` — balance/tuning changes (e.g., `balance/reduce-3star-pull-rate`)
+- `polish/` — visual/UX improvements (e.g., `polish/summon-reveal-animation`)
+
+**Workflow:**
+1. Branch from `main` for every change
+2. Test on branch
+3. Merge to `main` only when verified working
+4. Tag meaningful milestones (e.g., `v0.3.0-phase2-roster`)
+
+---
+
 ## Current Status: V2 — Combat Engine Rebuild Complete (6/6 chunks), Roster Expansion Design + Prompts Complete (5/5 ready)
 
 ### What's Working (V2 Game — game-v2.html)
