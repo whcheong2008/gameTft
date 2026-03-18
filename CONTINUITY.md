@@ -235,6 +235,7 @@ The combat engine is being rebuilt from scratch per COMBAT-DESIGN.md. Implementa
 - **Evolution via Evolution Lab**: Deliberate player action via building. Evolved units are separate collection entries. Base unit preserved. 3-star base required. (Rework from combat-start system — prompt 09)
 - **Item rarity**: Both component rarities contribute independently to combined item power
 - **Orchestrator pattern**: Cowork session designs features + writes prompts in `prompts/`. To hand off, provide a single paste-ready line for the Claude Code chatbox: `Read the file prompts/XX-name.md and implement everything it describes.` — no CLI commands, no piping.
+- **Git push from Cowork**: GitHub PAT stored in `keys/github.txt`. To push, temporarily set remote URL with token, push, then reset URL. The keys/ folder is gitignored.
 
 ### File Structure (Current)
 ```
@@ -284,6 +285,9 @@ Game TFT/
 │   ├── 21-git-init.md              ← Git initialization, .gitignore, remote setup (DONE)
 │   ├── 22-phase4-region-expansion.md ← Phase 4: 8-region structure, locks, encounter mechanics, 8 bosses (READY)
 │   └── 23-phase5-buildings-quests-achievements.md ← Phase 5: 3 buildings, daily quests, achievements (READY)
+├── keys/
+│   ├── github.txt        ← GitHub PAT for pushing from sandboxed environments (Cowork VM, etc.)
+│   └── .gitignore        ← Ignores everything in keys/ except .gitignore itself
 ├── .gitignore            ← Excludes .claude/, fibery api.txt, OS/editor files
 ├── orchestrators/        ← V1 domain orchestrator docs (historical)
 ├── DESIGN-V2.md          ← V2 game design document (authoritative)
