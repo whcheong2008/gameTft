@@ -25,6 +25,20 @@ var STATUS_ICONS = {
     vulnerability:  '\u26A0\uFE0F'
 };
 
+// ---- Toast Notification ----
+
+function showToast(message) {
+    var toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#e2b714; color:#1a1a2e; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:13px; z-index:9999; white-space:pre-line; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,0.5); animation:toastIn 0.3s ease-out;';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(function() {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.5s';
+        setTimeout(function() { toast.remove(); }, 500);
+    }, 3000);
+}
+
 // ---- Top Bar ----
 
 function renderTopBar() {
@@ -54,6 +68,9 @@ function goBack() {
 
 function renderHubScreen() {
     var sd = getSaveData();
+    // Achievement catch-all check
+    var newAch = checkAchievements(sd);
+    if (newAch.length > 0) { autoSave(sd); showAchievementToasts(newAch); }
     var grid = document.getElementById('buildings-grid');
     grid.innerHTML = '';
 
@@ -65,21 +82,29 @@ function renderHubScreen() {
         var canUp = canUpgradeBuilding(sd, id);
         var cost = getBuildingUpgradeCost(id, level);
 
-        // Gate barracks visibility to level 10+
-        var barracksLocked = (id === 'barracks' && sd.player.level < 10);
+        // Check prereq locks (barracks at lvl 10, new buildings have prereq.level)
+        var prereqLocked = false;
+        var prereqText = '';
+        if (id === 'barracks' && sd.player.level < 10) {
+            prereqLocked = true;
+            prereqText = 'Unlock at Player Level 10';
+        } else if (bld.prereq && bld.prereq.level && sd.player.level < bld.prereq.level) {
+            prereqLocked = true;
+            prereqText = 'Unlock at Player Level ' + bld.prereq.level;
+        }
 
         var div = document.createElement('div');
         div.className = 'hub-building';
         div.setAttribute('data-building', id);
 
-        if (barracksLocked) {
+        if (prereqLocked) {
             div.style.opacity = '0.5';
             div.innerHTML =
                 '<div class="emoji">' + bld.emoji + '</div>' +
                 '<div class="bld-name">' + bld.name + '</div>' +
                 '<div class="bld-level" style="color:#888;">Locked</div>' +
-                '<div class="bld-effect" style="color:#666;">Unlock at Player Level 10</div>' +
-                '<div class="mt-sm text-muted" style="font-size:11px;">Increases team size beyond 7</div>';
+                '<div class="bld-effect" style="color:#666;">' + prereqText + '</div>' +
+                '<div class="mt-sm text-muted" style="font-size:11px;">' + bld.description + '</div>';
             grid.appendChild(div);
             continue;
         }
@@ -93,16 +118,17 @@ function renderHubScreen() {
             '<div class="bld-effect">' + getBuildingEffect(id, level) + '</div>' +
             '<div class="mt-sm text-muted" style="font-size:11px;">' + costText + '</div>';
 
-        if (id === 'evolution_lab' && level >= 1) {
-            div.onclick = (function() {
-                return function() { showEvolutionLabPanel(); };
-            })();
+        // Buildings with panels get click-to-open; all others get upgrade-on-click
+        var hasPanel = (id === 'evolution_lab' && level >= 1) ||
+                       (id === 'forge' && level >= 1) ||
+                       (id === 'gem_workshop') ||
+                       (id === 'mana_shrine') ||
+                       (id === 'bond_hall');
+        if (hasPanel) {
             div.style.cursor = 'pointer';
-        } else if (id === 'forge' && level >= 1) {
-            div.onclick = (function() {
-                return function() { showForgePanel(); };
-            })();
-            div.style.cursor = 'pointer';
+            div.onclick = (function(bId) {
+                return function() { openBuildingPanel(bId); };
+            })(id);
         } else if (canUp) {
             div.onclick = (function(bId) {
                 return function() { uiUpgradeBuilding(bId); };
@@ -115,9 +141,295 @@ function renderHubScreen() {
 
 function uiUpgradeBuilding(buildingId) {
     var sd = getSaveData();
-    if (upgradeBuilding(sd, buildingId)) {
-        renderHubScreen();
-        renderTopBar();
+    var bld = BUILDINGS[buildingId];
+    var level = getBuildingLevel(sd, buildingId);
+    var cost = getBuildingUpgradeCost(buildingId, level);
+    if (!canUpgradeBuilding(sd, buildingId)) return;
+
+    showConfirmDialog(
+        'Upgrade ' + bld.name + ' to Level ' + (level + 1) + ' for ' + cost + ' gold?',
+        function() {
+            var sd2 = getSaveData();
+            if (upgradeBuilding(sd2, buildingId)) {
+                renderHubScreen();
+                renderTopBar();
+                // Check achievements after upgrade
+                var newAch = checkAchievements(sd2);
+                if (newAch.length > 0) showAchievementToasts(newAch);
+            }
+        }
+    );
+}
+
+function showConfirmDialog(message, onConfirm) {
+    var overlay = document.getElementById('confirm-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'confirm-overlay';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:2000;';
+        document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = '<div style="background:#1a1a2e; border:2px solid #e2b714; border-radius:10px; padding:20px; max-width:400px; text-align:center;">' +
+        '<div style="font-size:14px; margin-bottom:16px;">' + message + '</div>' +
+        '<div style="display:flex; gap:10px; justify-content:center;">' +
+        '<button id="confirm-ok" class="btn-primary" style="padding:8px 20px;">OK</button>' +
+        '<button id="confirm-cancel" class="btn-secondary" style="padding:8px 20px;">Cancel</button>' +
+        '</div></div>';
+    overlay.style.display = 'flex';
+    document.getElementById('confirm-ok').onclick = function() { overlay.style.display = 'none'; onConfirm(); };
+    document.getElementById('confirm-cancel').onclick = function() { overlay.style.display = 'none'; };
+}
+
+function openBuildingPanel(buildingId) {
+    switch (buildingId) {
+        case 'evolution_lab': showEvolutionLabPanel(); break;
+        case 'forge': showForgePanel(); break;
+        case 'gem_workshop': showGemWorkshopPanel(); break;
+        case 'mana_shrine': showManaShrinePanel(); break;
+        case 'bond_hall': showBondHallPanel(); break;
+    }
+}
+
+// ---- Gem Workshop Panel ----
+
+function showGemWorkshopPanel() {
+    var sd = getSaveData();
+    var level = getBuildingLevel(sd, 'gem_workshop');
+    var caps = getGemWorkshopCapabilities(sd);
+
+    var overlay = document.getElementById('gem-workshop-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'gem-workshop-overlay';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:1000;';
+        document.body.appendChild(overlay);
+    }
+
+    var html = '<div style="background:#1a1a2e; border:2px solid #e2b714; border-radius:12px; max-width:600px; width:95%; max-height:85vh; overflow-y:auto; padding:20px;">';
+    html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">';
+    html += '<div style="font-size:20px; font-weight:bold; color:#e2b714;">💎 Gem Workshop</div>';
+    html += '<div style="font-size:12px; color:#aaa;">Level ' + level + ' / ' + BUILDINGS.gem_workshop.maxLevel + '</div>';
+    html += '</div>';
+
+    // Upgrade button
+    var canUp = canUpgradeBuilding(sd, 'gem_workshop');
+    var upCost = getBuildingUpgradeCost('gem_workshop', level);
+    if (level < BUILDINGS.gem_workshop.maxLevel) {
+        html += '<div style="margin-bottom:16px;">';
+        html += '<button id="gem-ws-upgrade" style="padding:6px 14px; background:' + (canUp ? '#e2b714' : '#444') + '; color:' + (canUp ? '#000' : '#888') + '; border:none; border-radius:6px; cursor:' + (canUp ? 'pointer' : 'default') + '; font-size:12px;"' + (canUp ? '' : ' disabled') + '>';
+        html += 'Upgrade to Level ' + (level + 1) + ' (' + upCost + 'g)';
+        html += '</button></div>';
+    }
+
+    // Capabilities checklist
+    html += '<div style="margin-bottom:16px;">';
+    html += '<div style="font-size:14px; font-weight:bold; margin-bottom:8px;">Capabilities</div>';
+    var gemCaps = [
+        { lvl: 1, desc: 'Socket gems onto items' },
+        { lvl: 2, desc: 'Combine 3 same-type gems into next rarity + Remove socketed gems' },
+        { lvl: 3, desc: 'Transmute gems (swap type, 30g)' },
+        { lvl: 4, desc: 'Auto-socket recommendation' },
+        { lvl: 5, desc: 'Prismatic Forge (craft prismatic gems)' }
+    ];
+    for (var i = 0; i < gemCaps.length; i++) {
+        var unlocked = level >= gemCaps[i].lvl;
+        html += '<div style="font-size:12px; color:' + (unlocked ? '#6bcb77' : '#666') + '; margin-bottom:4px;">' +
+            (unlocked ? '✓' : '○') + ' L' + gemCaps[i].lvl + ': ' + gemCaps[i].desc + '</div>';
+    }
+    html += '</div>';
+
+    // Gem socketing UI placeholder
+    if (level >= 1) {
+        html += '<div style="margin-bottom:16px;">';
+        html += '<div style="font-size:14px; font-weight:bold; margin-bottom:8px;">Gem Socketing</div>';
+        // Show items with sockets from bench
+        var bench = getBenchItems(sd);
+        var socketableItems = [];
+        for (var bi = 0; bi < bench.length; bi++) {
+            if (bench[bi].type === 'combined' || bench[bi].type === 'set' || bench[bi].type === 'ability' || bench[bi].type === 'mythic') {
+                socketableItems.push(bench[bi]);
+            }
+        }
+        if (socketableItems.length === 0) {
+            html += '<div style="font-size:12px; color:#666;">No items available for socketing. Craft combined items first.</div>';
+        } else {
+            html += '<div style="font-size:12px; color:#aaa;">Items on bench: ' + socketableItems.length + ' (gem socketing uses item socket slots)</div>';
+        }
+        html += '</div>';
+    }
+
+    html += '<div style="text-align:center; margin-top:16px;">';
+    html += '<button id="gem-ws-close" style="padding:8px 20px; background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer;">Close</button>';
+    html += '</div>';
+    html += '</div>';
+
+    overlay.innerHTML = html;
+    overlay.style.display = 'flex';
+
+    document.getElementById('gem-ws-close').onclick = function() { overlay.style.display = 'none'; };
+
+    var upBtn = document.getElementById('gem-ws-upgrade');
+    if (upBtn && canUp) {
+        upBtn.onclick = function() {
+            uiUpgradeBuilding('gem_workshop');
+            overlay.style.display = 'none';
+        };
+    }
+}
+
+// ---- Mana Shrine Panel ----
+
+function showManaShrinePanel() {
+    var sd = getSaveData();
+    var level = getBuildingLevel(sd, 'mana_shrine');
+
+    var overlay = document.getElementById('mana-shrine-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'mana-shrine-overlay';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:1000;';
+        document.body.appendChild(overlay);
+    }
+
+    var html = '<div style="background:#1a1a2e; border:2px solid #4488ff; border-radius:12px; max-width:500px; width:95%; max-height:85vh; overflow-y:auto; padding:20px;">';
+    html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">';
+    html += '<div style="font-size:20px; font-weight:bold; color:#4488ff;">🔵 Mana Shrine</div>';
+    html += '<div style="font-size:12px; color:#aaa;">Level ' + level + ' / ' + BUILDINGS.mana_shrine.maxLevel + '</div>';
+    html += '</div>';
+
+    var canUp = canUpgradeBuilding(sd, 'mana_shrine');
+    var upCost = getBuildingUpgradeCost('mana_shrine', level);
+    if (level < BUILDINGS.mana_shrine.maxLevel) {
+        html += '<div style="margin-bottom:16px;">';
+        html += '<button id="mana-shrine-upgrade" style="padding:6px 14px; background:' + (canUp ? '#4488ff' : '#444') + '; color:' + (canUp ? '#fff' : '#888') + '; border:none; border-radius:6px; cursor:' + (canUp ? 'pointer' : 'default') + '; font-size:12px;"' + (canUp ? '' : ' disabled') + '>';
+        html += 'Upgrade to Level ' + (level + 1) + ' (' + upCost + 'g)';
+        html += '</button></div>';
+    }
+
+    // Bonuses checklist
+    html += '<div style="font-size:14px; font-weight:bold; margin-bottom:8px;">Passive Combat Bonuses</div>';
+    var manaBonuses = [
+        { lvl: 1, desc: '+5 starting mana for all units' },
+        { lvl: 2, desc: '+10% mana generation rate' },
+        { lvl: 3, desc: '+5% ability damage' },
+        { lvl: 4, desc: '10% mana discount on first cast' },
+        { lvl: 5, desc: '+10% ATK when mana is full' }
+    ];
+    for (var i = 0; i < manaBonuses.length; i++) {
+        var unlocked = level >= manaBonuses[i].lvl;
+        html += '<div style="font-size:12px; color:' + (unlocked ? '#6bcb77' : '#666') + '; margin-bottom:4px;">' +
+            (unlocked ? '✓' : '○') + ' L' + manaBonuses[i].lvl + ': ' + manaBonuses[i].desc + '</div>';
+    }
+    html += '<div style="font-size:11px; color:#888; margin-top:8px; font-style:italic;">These bonuses are applied automatically in combat.</div>';
+
+    html += '<div style="text-align:center; margin-top:16px;">';
+    html += '<button id="mana-shrine-close" style="padding:8px 20px; background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer;">Close</button>';
+    html += '</div>';
+    html += '</div>';
+
+    overlay.innerHTML = html;
+    overlay.style.display = 'flex';
+
+    document.getElementById('mana-shrine-close').onclick = function() { overlay.style.display = 'none'; };
+
+    var upBtn = document.getElementById('mana-shrine-upgrade');
+    if (upBtn && canUp) {
+        upBtn.onclick = function() {
+            uiUpgradeBuilding('mana_shrine');
+            overlay.style.display = 'none';
+        };
+    }
+}
+
+// ---- Bond Hall Panel ----
+
+function showBondHallPanel() {
+    var sd = getSaveData();
+    var level = getBuildingLevel(sd, 'bond_hall');
+    var bonuses = getBondHallBonuses(sd);
+
+    var overlay = document.getElementById('bond-hall-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'bond-hall-overlay';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:1000;';
+        document.body.appendChild(overlay);
+    }
+
+    var html = '<div style="background:#1a1a2e; border:2px solid #44aa88; border-radius:12px; max-width:600px; width:95%; max-height:85vh; overflow-y:auto; padding:20px;">';
+    html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">';
+    html += '<div style="font-size:20px; font-weight:bold; color:#44aa88;">🤝 Bond Hall</div>';
+    html += '<div style="font-size:12px; color:#aaa;">Level ' + level + ' / ' + BUILDINGS.bond_hall.maxLevel + '</div>';
+    html += '</div>';
+
+    var canUp = canUpgradeBuilding(sd, 'bond_hall');
+    var upCost = getBuildingUpgradeCost('bond_hall', level);
+    if (level < BUILDINGS.bond_hall.maxLevel) {
+        html += '<div style="margin-bottom:16px;">';
+        html += '<button id="bond-hall-upgrade" style="padding:6px 14px; background:' + (canUp ? '#44aa88' : '#444') + '; color:' + (canUp ? '#fff' : '#888') + '; border:none; border-radius:6px; cursor:' + (canUp ? 'pointer' : 'default') + '; font-size:12px;"' + (canUp ? '' : ' disabled') + '>';
+        html += 'Upgrade to Level ' + (level + 1) + ' (' + upCost + 'g)';
+        html += '</button></div>';
+    }
+
+    // Bonuses checklist
+    html += '<div style="font-size:14px; font-weight:bold; margin-bottom:8px;">Bonuses</div>';
+    var bondBonusList = [
+        { lvl: 1, desc: 'View unit bonds' },
+        { lvl: 2, desc: '+25% bond bonus' },
+        { lvl: 3, desc: 'Show bond hints in team builder' },
+        { lvl: 4, desc: '+50% bond bonus (replaces 25%)' },
+        { lvl: 5, desc: 'Trio bonds unlocked' }
+    ];
+    for (var i = 0; i < bondBonusList.length; i++) {
+        var unlocked = level >= bondBonusList[i].lvl;
+        html += '<div style="font-size:12px; color:' + (unlocked ? '#6bcb77' : '#666') + '; margin-bottom:4px;">' +
+            (unlocked ? '✓' : '○') + ' L' + bondBonusList[i].lvl + ': ' + bondBonusList[i].desc + '</div>';
+    }
+
+    // Bond viewer (if level >= 1)
+    if (level >= 1) {
+        html += '<div style="margin-top:16px; font-size:14px; font-weight:bold; margin-bottom:8px;">Unit Bonds</div>';
+        if (typeof UNIT_BONDS !== 'undefined' && UNIT_BONDS) {
+            var bondKeys = Object.keys(UNIT_BONDS);
+            for (var bi = 0; bi < bondKeys.length; bi++) {
+                var bond = UNIT_BONDS[bondKeys[bi]];
+                var unitsOwned = 0;
+                var unitNames = [];
+                for (var ui = 0; ui < bond.units.length; ui++) {
+                    var uKey = bond.units[ui];
+                    var tmpl = UNIT_TEMPLATES[uKey] || EVOLVED_TEMPLATES[uKey];
+                    var owned = !!sd.collection[uKey];
+                    if (owned) unitsOwned++;
+                    unitNames.push('<span style="color:' + (owned ? '#6bcb77' : '#666') + ';">' + (tmpl ? tmpl.name : uKey) + '</span>');
+                }
+                var active = unitsOwned >= bond.units.length;
+                html += '<div style="padding:6px 8px; margin-bottom:4px; background:' + (active ? '#1a3328' : '#16213e') + '; border-radius:6px; border:1px solid ' + (active ? '#44aa88' : '#333') + ';">';
+                html += '<div style="font-size:12px;">' + (bond.emoji || '🤝') + ' <strong>' + bond.name + '</strong> <span style="color:#888;">(' + unitsOwned + '/' + bond.units.length + ')</span></div>';
+                html += '<div style="font-size:11px; color:#aaa;">' + unitNames.join(' + ') + '</div>';
+                html += '<div style="font-size:11px; color:#e2b714;">' + bond.bonus + '</div>';
+                html += '</div>';
+            }
+        } else {
+            html += '<div style="font-size:12px; color:#888; font-style:italic;">Bond data not yet available. Coming soon!</div>';
+        }
+    }
+
+    html += '<div style="text-align:center; margin-top:16px;">';
+    html += '<button id="bond-hall-close" style="padding:8px 20px; background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer;">Close</button>';
+    html += '</div>';
+    html += '</div>';
+
+    overlay.innerHTML = html;
+    overlay.style.display = 'flex';
+
+    document.getElementById('bond-hall-close').onclick = function() { overlay.style.display = 'none'; };
+
+    var upBtn = document.getElementById('bond-hall-upgrade');
+    if (upBtn && canUp) {
+        upBtn.onclick = function() {
+            uiUpgradeBuilding('bond_hall');
+            overlay.style.display = 'none';
+        };
     }
 }
 
@@ -888,6 +1200,7 @@ function showSellPanel(unitKey) {
 // ---- Team Builder Screen ----
 
 var selectedRosterUnit = null;
+var teamBuilderFilters = { element: 'all', archetype: 'all', sort: 'tier' };
 
 function renderTeamBuilderScreen() {
     var sd = getSaveData();
@@ -900,10 +1213,59 @@ function renderTeamBuilderScreen() {
 
     // Render roster panel
     var panel = document.getElementById('team-roster-panel');
-    panel.innerHTML = '<div class="section-title">Available Units</div>';
+    panel.innerHTML = '';
 
-    for (var i = 0; i < roster.length; i++) {
-        var r = roster[i];
+    // Filter/sort controls
+    var filterHtml = '<div style="margin-bottom:6px; font-size:11px;">';
+    // Sort
+    filterHtml += '<div style="margin-bottom:4px;"><span style="color:#888;">Sort:</span> ';
+    var sortOpts = [['tier', 'Tier'], ['name', 'Name'], ['element', 'Element']];
+    for (var so = 0; so < sortOpts.length; so++) {
+        var sActive = teamBuilderFilters.sort === sortOpts[so][0];
+        filterHtml += '<button class="tb-sort-btn" data-sort="' + sortOpts[so][0] + '" style="padding:1px 5px; border-radius:3px; border:1px solid #444; background:' + (sActive ? '#e2b714' : '#222') + '; color:' + (sActive ? '#000' : '#ccc') + '; cursor:pointer; font-size:10px; margin-right:2px;">' + sortOpts[so][1] + '</button>';
+    }
+    filterHtml += '</div>';
+    // Element filter
+    filterHtml += '<div style="margin-bottom:4px; display:flex; flex-wrap:wrap; gap:2px;">';
+    var elActive = teamBuilderFilters.element === 'all';
+    filterHtml += '<button class="tb-elem-btn" data-elem="all" style="padding:1px 4px; border-radius:3px; border:1px solid #444; background:' + (elActive ? '#e2b714' : '#222') + '; color:' + (elActive ? '#000' : '#ccc') + '; cursor:pointer; font-size:10px;">All</button>';
+    var elemKeys = Object.keys(ELEMENTS);
+    for (var ek = 0; ek < elemKeys.length; ek++) {
+        var eAct = teamBuilderFilters.element === elemKeys[ek];
+        filterHtml += '<button class="tb-elem-btn" data-elem="' + elemKeys[ek] + '" style="padding:1px 4px; border-radius:3px; border:1px solid #444; background:' + (eAct ? '#e2b714' : '#222') + '; color:' + (eAct ? '#000' : '#ccc') + '; cursor:pointer; font-size:10px;">' + ELEMENTS[elemKeys[ek]].emoji + '</button>';
+    }
+    filterHtml += '</div>';
+    // Archetype filter
+    filterHtml += '<div style="display:flex; flex-wrap:wrap; gap:2px;">';
+    var archActive = teamBuilderFilters.archetype === 'all';
+    filterHtml += '<button class="tb-arch-btn" data-arch="all" style="padding:1px 4px; border-radius:3px; border:1px solid #444; background:' + (archActive ? '#e2b714' : '#222') + '; color:' + (archActive ? '#000' : '#ccc') + '; cursor:pointer; font-size:10px;">All</button>';
+    var archKeys2 = Object.keys(ARCHETYPES);
+    for (var ak = 0; ak < archKeys2.length; ak++) {
+        var aAct = teamBuilderFilters.archetype === archKeys2[ak];
+        filterHtml += '<button class="tb-arch-btn" data-arch="' + archKeys2[ak] + '" style="padding:1px 4px; border-radius:3px; border:1px solid #444; background:' + (aAct ? '#e2b714' : '#222') + '; color:' + (aAct ? '#000' : '#ccc') + '; cursor:pointer; font-size:10px;">' + ARCHETYPES[archKeys2[ak]].emoji + '</button>';
+    }
+    filterHtml += '</div>';
+    filterHtml += '</div>';
+    panel.innerHTML = filterHtml + '<div class="section-title" style="margin-top:4px;">Available Units</div>';
+
+    // Apply filters to roster
+    var filteredRoster = roster.filter(function(r) {
+        if (teamBuilderFilters.element !== 'all' && r.template.element !== teamBuilderFilters.element) return false;
+        if (teamBuilderFilters.archetype !== 'all' && r.template.archetype !== teamBuilderFilters.archetype) return false;
+        return true;
+    });
+
+    // Apply sort
+    if (teamBuilderFilters.sort === 'name') {
+        filteredRoster.sort(function(a, b) { return a.template.name.localeCompare(b.template.name); });
+    } else if (teamBuilderFilters.sort === 'element') {
+        filteredRoster.sort(function(a, b) { return a.template.element.localeCompare(b.template.element); });
+    } else {
+        filteredRoster.sort(function(a, b) { return (a.template.cost || 0) - (b.template.cost || 0); });
+    }
+
+    for (var i = 0; i < filteredRoster.length; i++) {
+        var r = filteredRoster[i];
         var onTeam = false;
         for (var t = 0; t < team.slots.length; t++) {
             if (team.slots[t].key === r.key) { onTeam = true; break; }
@@ -924,6 +1286,15 @@ function renderTeamBuilderScreen() {
         var rATK = Math.floor(r.template.attack * rMult);
         var rTypeLabel = r.template.type.charAt(0).toUpperCase() + r.template.type.slice(1);
 
+        // Ability info for team builder
+        var tbAbility = ABILITY_DATA ? ABILITY_DATA[r.key] : null;
+        var tbAbilHtml = '';
+        if (tbAbility) {
+            var tbAbilDesc = tbAbility.desc || '';
+            if (tbAbilDesc.length > 50) tbAbilDesc = tbAbilDesc.substring(0, 47) + '...';
+            tbAbilHtml = '<div style="font-size:9px; color:#8bbcff; margin-top:1px;">⚡ ' + tbAbility.name + '</div>' +
+                '<div style="font-size:8px; color:#666; line-height:1.2;">' + tbAbilDesc + '</div>';
+        }
         div.innerHTML =
             '<span class="unit-info-btn" data-info-key="' + r.key + '" style="cursor:pointer; float:right; font-size:14px; padding:2px 4px; opacity:0.7;">ℹ️</span>' +
             (r.isEvolved ? '<span style="color:#e2b714; font-size:10px;">✨</span> ' : '') +
@@ -932,7 +1303,7 @@ function renderTeamBuilderScreen() {
             (onTeam ? ' <span class="text-green">✓</span>' : '') +
             '<div style="font-size:10px; color:#999; margin-top:2px;">' +
                 rTypeLabel + ' · HP:' + rHP + ' · ATK:' + rATK +
-            '</div>';
+            '</div>' + tbAbilHtml;
 
         div.title = r.template.name + '\n' +
             rTypeLabel + ' · ' + ARCHETYPES[r.template.archetype].name + ' · ' + ELEMENTS[r.template.element].name + '\n' +
@@ -962,9 +1333,32 @@ function renderTeamBuilderScreen() {
     var infoBtns = panel.querySelectorAll('.unit-info-btn');
     for (var ib = 0; ib < infoBtns.length; ib++) {
         infoBtns[ib].addEventListener('click', function(e) {
-            e.stopPropagation(); // Don't trigger the parent click
+            e.stopPropagation();
             var key = this.getAttribute('data-info-key');
             showUnitDetail(key, 'team-builder');
+        });
+    }
+
+    // Bind team builder filter buttons
+    var sortBtns = panel.querySelectorAll('.tb-sort-btn');
+    for (var sb = 0; sb < sortBtns.length; sb++) {
+        sortBtns[sb].addEventListener('click', function() {
+            teamBuilderFilters.sort = this.getAttribute('data-sort');
+            renderTeamBuilderScreen();
+        });
+    }
+    var elemBtns = panel.querySelectorAll('.tb-elem-btn');
+    for (var eb = 0; eb < elemBtns.length; eb++) {
+        elemBtns[eb].addEventListener('click', function() {
+            teamBuilderFilters.element = this.getAttribute('data-elem');
+            renderTeamBuilderScreen();
+        });
+    }
+    var archBtns = panel.querySelectorAll('.tb-arch-btn');
+    for (var ab = 0; ab < archBtns.length; ab++) {
+        archBtns[ab].addEventListener('click', function() {
+            teamBuilderFilters.archetype = this.getAttribute('data-arch');
+            renderTeamBuilderScreen();
         });
     }
 
@@ -1182,101 +1576,205 @@ function getSynergyArchBonusDesc(archKey, tierIndex) {
     return '';
 }
 
-// ---- Mission Select Screen ----
+// ---- Mission Select Screen (Region Map) ----
+
+var missionScreenMode = 'regions'; // 'regions' or 'stages'
+var selectedRegion = null;
 
 function renderMissionSelectScreen() {
-    var sd = getSaveData();
-    var available = getAvailableStoryMissions(sd);
+    if (missionScreenMode === 'stages' && selectedRegion) {
+        renderStageListScreen();
+    } else {
+        renderRegionMapScreen();
+    }
+}
 
+function renderRegionMapScreen() {
+    missionScreenMode = 'regions';
+    var sd = getSaveData();
     var storyEl = document.getElementById('story-missions');
     storyEl.innerHTML = '';
 
-    for (var i = 0; i < STORY_MISSIONS.length; i++) {
-        var m = STORY_MISSIONS[i];
-        var info = null;
-        for (var a = 0; a < available.length; a++) {
-            if (available[a].index === i) { info = available[a]; break; }
-        }
+    var statuses = getRegionStatuses(sd);
+
+    for (var i = 0; i < statuses.length; i++) {
+        var rs = statuses[i];
+        var regionNum = rs.region;
+        var unlocked = regionNum === 1 || isRegionBossCleared(sd, regionNum - 1);
+        var allDone = rs.complete;
+        var canClaim = allDone && !rs.rewardClaimed;
 
         var div = document.createElement('div');
-        var locked = sd.player.level < m.requiredLevel;
-        var completed = info && info.completed;
+        div.className = 'mission-card' + (!unlocked ? ' locked' : '') + (allDone ? ' completed' : '');
+        div.style.flexDirection = 'column';
+        div.style.alignItems = 'stretch';
 
-        div.className = 'mission-card' + (locked ? ' locked' : '') + (completed ? ' completed' : '');
+        var statusIcon = allDone ? (rs.rewardClaimed ? ' ✅' : ' ✓') : '';
+        var lockIcon = !unlocked ? ' 🔒' : '';
 
-        var starsHtml = '';
-        if (info && info.bestStars > 0) {
-            for (var s = 0; s < 3; s++) {
-                starsHtml += s < info.bestStars ? '⭐' : '☆';
-            }
+        var progressText = rs.completedStages + '/' + rs.totalStages + ' stages';
+        var bossText = rs.bossCleared ? '<span style="color:#6bcb77;">Boss: Cleared</span>' : '<span style="color:#888;">Boss: Not cleared</span>';
+
+        var html = '<div style="display:flex; justify-content:space-between; align-items:center;">';
+        html += '<div>';
+        html += '<div class="m-name">Region ' + regionNum + ': ' + rs.name + lockIcon + statusIcon + '</div>';
+        html += '<div class="m-desc">' + rs.subtitle + '</div>';
+        html += '<div style="font-size:12px; color:#aaa; margin-top:4px;">' + progressText + ' · ' + bossText + '</div>';
+        html += '<div style="font-size:11px; color:#e2b714; margin-top:2px;">Reward: ' + rs.rewardDescription + '</div>';
+        html += '</div>';
+        html += '</div>';
+
+        if (canClaim) {
+            html += '<div style="margin-top:8px;"><button class="btn-primary region-claim-btn" data-region="' + regionNum + '" style="font-size:12px; padding:6px 14px;">Claim Reward</button></div>';
         }
 
-        // War Room intel
-        var intelHtml = '';
-        var intelLevel = getWarRoomIntelLevel(sd);
-        if (!locked && intelLevel >= 1) {
-            intelHtml = '<div class="m-intel" style="font-size:11px; color:#8bbcff; margin-top:4px;">';
-            for (var wi = 0; wi < m.waves.length; wi++) {
-                var wc = m.waves[wi];
-                if (intelLevel === 1) {
-                    intelHtml += 'Wave ' + (wi + 1) + ': ' + wc.count + ' enemies';
-                } else if (intelLevel === 2) {
-                    var biasInfo2 = '';
-                    if (wc.elementBias) {
-                        var elemData2 = ELEMENTS[wc.elementBias];
-                        if (elemData2) biasInfo2 += ' ' + elemData2.emoji + ' ' + elemData2.name + '-aligned';
-                    }
-                    intelHtml += 'Wave ' + (wi + 1) + ': ' + wc.count + ' units (budget ' + wc.budget + ', max cost ' + wc.maxCost + ')' + biasInfo2;
-                } else if (intelLevel >= 3) {
-                    // Show eligible unit pool for this wave
-                    var eligible = [];
-                    for (var ek = 0; ek < SHOP_POOL_KEYS.length; ek++) {
-                        var eKey = SHOP_POOL_KEYS[ek];
-                        var eTmpl = UNIT_TEMPLATES[eKey];
-                        if (eTmpl && eTmpl.cost <= wc.maxCost) {
-                            eligible.push(ELEMENTS[eTmpl.element].emoji + ' ' + eTmpl.name + ' (C' + eTmpl.cost + ')');
-                        }
-                    }
-                    var biasInfo3 = '';
-                    if (wc.elementBias) {
-                        var elemData3 = ELEMENTS[wc.elementBias];
-                        if (elemData3) biasInfo3 += ' ' + elemData3.emoji + elemData3.name + '-aligned';
-                    }
-                    if (wc.synergyBias) {
-                        var archData3 = ARCHETYPES[wc.synergyBias];
-                        if (archData3) biasInfo3 += ' ' + archData3.emoji + archData3.name + '-focused';
-                    }
-                    var warnInfo = '';
-                    if (wc.enemySynergies) warnInfo += ' ⚠️ Enemy synergies active';
-                    if (wc.enemyEvolutions) warnInfo += ' ⚠️ Enemy evolutions possible';
-                    intelHtml += 'Wave ' + (wi + 1) + ': ' + wc.count + ' units, budget ' + wc.budget + biasInfo3 + warnInfo + ', pool: ' + eligible.join(', ');
-                }
-                if (wi < m.waves.length - 1) intelHtml += '<br>';
-            }
-            intelHtml += '</div>';
-        }
+        div.innerHTML = html;
 
-        div.innerHTML =
-            '<div>' +
-                '<div class="m-name">' + m.name + (locked ? ' 🔒' : '') + '</div>' +
-                '<div class="m-desc">' + m.description + '</div>' +
-                '<div class="m-reward">Reward: ' + m.rewards.gold + 'g · ' + m.rewards.xp + ' XP · ' +
-                    (m.boss ? '👑 Boss Fight' : m.waves.length + ' wave' + (m.waves.length > 1 ? 's' : '')) + '</div>' +
-                intelHtml +
-            '</div>' +
-            '<div>' +
-                '<div class="m-stars">' + starsHtml + '</div>' +
-                (locked ? '<div class="text-muted" style="font-size:11px;">Requires Lv.' + m.requiredLevel + '</div>' : '') +
-            '</div>';
-
-        if (!locked) {
-            div.onclick = (function(idx) {
-                return function() { uiStartStoryMission(idx); };
-            })(i);
+        if (unlocked) {
+            div.style.cursor = 'pointer';
+            div.onclick = (function(rNum) {
+                return function(e) {
+                    if (e.target.classList.contains('region-claim-btn')) return;
+                    selectedRegion = rNum;
+                    missionScreenMode = 'stages';
+                    renderMissionSelectScreen();
+                };
+            })(regionNum);
         }
 
         storyEl.appendChild(div);
     }
+
+    // Bind claim buttons
+    var claimBtns = storyEl.querySelectorAll('.region-claim-btn');
+    for (var cb = 0; cb < claimBtns.length; cb++) {
+        claimBtns[cb].addEventListener('click', function(e) {
+            e.stopPropagation();
+            var rNum = parseInt(this.getAttribute('data-region'));
+            uiClaimRegionReward(rNum);
+        });
+    }
+}
+
+function uiClaimRegionReward(regionNum) {
+    var sd = getSaveData();
+    var result = claimRegionReward(sd, regionNum);
+    if (result.success) {
+        var reward = result.reward;
+        var msg = 'Region ' + regionNum + ' (' + result.regionName + ') reward claimed!';
+        if (reward.gold > 0) msg += '\n+' + reward.gold + ' gold';
+        if (reward.freeMultiRoll) msg += '\n+' + reward.freeMultiRoll + ' free 10-pull(s)';
+        if (reward.randomUnit) {
+            var unitKey = rollOneUnit(reward.randomUnit.minCost);
+            if (unitKey) {
+                addUnitToCollection(sd, unitKey);
+                var uTmpl = UNIT_TEMPLATES[unitKey];
+                msg += '\nUnit: ' + (uTmpl ? uTmpl.name : unitKey);
+            }
+        }
+        if (reward.essenceChoice) msg += '\n+' + reward.essenceChoice + ' essence(s) of choice (auto-granted as fire)';
+        if (reward.essenceChoice) {
+            if (!sd.items.essences) sd.items.essences = {};
+            sd.items.essences.fire = (sd.items.essences.fire || 0) + reward.essenceChoice;
+        }
+        if (reward.mythicMaterialChoice) {
+            if (!sd.items.mythicMaterials) sd.items.mythicMaterials = {};
+            sd.items.mythicMaterials.dragon_scale = (sd.items.mythicMaterials.dragon_scale || 0) + reward.mythicMaterialChoice;
+            msg += '\n+' + reward.mythicMaterialChoice + ' Mythic Material (Dragon Scale)';
+        }
+        autoSave(sd);
+        showToast(msg);
+        renderTopBar();
+        renderMissionSelectScreen();
+    }
+}
+
+function renderStageListScreen() {
+    var sd = getSaveData();
+    var regionNum = selectedRegion;
+    var region = REGIONS[regionNum];
+    if (!region) { missionScreenMode = 'regions'; renderRegionMapScreen(); return; }
+
+    var storyEl = document.getElementById('story-missions');
+    storyEl.innerHTML = '';
+
+    // Back button + header
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex; align-items:center; gap:10px; margin-bottom:10px;';
+    header.innerHTML = '<button class="btn-secondary" style="padding:6px 14px; font-size:13px;" id="region-back-btn">&larr; Back to Regions</button>' +
+        '<div style="font-size:16px; font-weight:bold; color:#e2b714;">Region ' + regionNum + ': ' + region.name + '</div>';
+    storyEl.appendChild(header);
+
+    document.getElementById('region-back-btn').onclick = function() {
+        missionScreenMode = 'regions';
+        selectedRegion = null;
+        renderMissionSelectScreen();
+    };
+
+    // Render stages
+    for (var si = 0; si < region.stageIds.length; si++) {
+        var stageId = region.stageIds[si];
+        var stageIndex = -1;
+        var stage = null;
+        for (var j = 0; j < STAGES.length; j++) {
+            if (STAGES[j].id === stageId) { stage = STAGES[j]; stageIndex = j; break; }
+        }
+        if (!stage) continue;
+
+        var unlocked = isStageUnlocked(sd, stageId);
+        var completed = isStageCompleted(sd, stageId);
+        var levelLocked = sd.player.level < stage.requiredLevel;
+        var lockCheck = stage.lock ? checkLock(sd, stage.lock) : { passed: true, reason: '' };
+        var isBoss = !!stage.boss;
+        var bestStars = (sd.missions.starRatings && sd.missions.starRatings[stageId]) || 0;
+
+        var div = document.createElement('div');
+        div.className = 'mission-card' + (!unlocked || levelLocked ? ' locked' : '') + (completed ? ' completed' : '');
+        if (isBoss) {
+            div.style.borderColor = completed ? '#4a8a5e' : '#884422';
+            div.style.borderWidth = '2px';
+        }
+
+        var starsHtml = '';
+        if (bestStars > 0) {
+            for (var s = 0; s < 3; s++) starsHtml += s < bestStars ? '⭐' : '☆';
+        }
+
+        var waveText = isBoss ? '👑 Boss Fight' : stage.waves.length + ' wave' + (stage.waves.length > 1 ? 's' : '');
+        var lockText = '';
+        if (!lockCheck.passed && unlocked && !levelLocked) {
+            lockText = '<div style="font-size:11px; color:#ff8844; margin-top:2px;">🔒 ' + lockCheck.reason + '</div>';
+        }
+        if (levelLocked) {
+            lockText = '<div style="font-size:11px; color:#888; margin-top:2px;">Requires Lv.' + stage.requiredLevel + '</div>';
+        }
+
+        div.innerHTML =
+            '<div>' +
+                '<div class="m-name">' + stage.name + (isBoss ? ' 👑' : '') + (!unlocked || levelLocked ? ' 🔒' : '') + '</div>' +
+                '<div class="m-desc">' + stage.description + '</div>' +
+                '<div class="m-reward">Reward: ' + stage.rewards.gold + 'g · ' + stage.rewards.xp + ' XP · ' + waveText + '</div>' +
+                lockText +
+            '</div>' +
+            '<div>' +
+                '<div class="m-stars">' + starsHtml + '</div>' +
+            '</div>';
+
+        if (unlocked && !levelLocked && lockCheck.passed) {
+            div.onclick = (function(idx) {
+                return function() { uiStartStoryMission(idx); };
+            })(stageIndex);
+        }
+
+        storyEl.appendChild(div);
+    }
+
+    // Grind button at bottom
+    var grindDiv = document.createElement('div');
+    grindDiv.style.cssText = 'margin-top:16px; text-align:center;';
+    grindDiv.innerHTML = '<button class="btn-primary" id="grind-from-region">Start Training Mission</button>';
+    storyEl.appendChild(grindDiv);
+    document.getElementById('grind-from-region').onclick = function() { uiStartGrindMission(); };
 }
 
 function uiStartStoryMission(index) {
@@ -2048,6 +2546,10 @@ function showMissionResults(victory, stars) {
         if (pendingMissionIsStory && pendingMissionIndex >= 0) {
             completeStoryMission(sd, pendingMissionIndex, stars);
         }
+
+        // Check achievements after mission
+        var missionAch = checkAchievements(sd);
+        if (missionAch.length > 0) { autoSave(sd); showAchievementToasts(missionAch); }
     } else {
         document.getElementById('results-rewards').textContent = 'No rewards earned.';
     }
@@ -2480,8 +2982,9 @@ function renderCombatSynergyBar() {
             if (count >= arch.thresholds[t]) tierReached = t + 1;
         }
         if (tierReached > 0) {
-            html += '<span style="background:#2a3a5e; padding:2px 6px; border-radius:4px; white-space:nowrap;">' +
-                arch.emoji + ' ' + count + '</span>';
+            var archDesc = getSynergyArchBonusDesc(aKey, tierReached - 1);
+            html += '<span style="background:#2a3a5e; padding:2px 6px; border-radius:4px; white-space:nowrap;" title="' + arch.name + ': ' + archDesc + '">' +
+                arch.emoji + ' ' + arch.name + ' ' + count + '<span style="font-size:9px; color:#999; margin-left:3px;">' + archDesc.substring(0, 30) + (archDesc.length > 30 ? '...' : '') + '</span></span>';
         }
     }
 
@@ -2495,8 +2998,14 @@ function renderCombatSynergyBar() {
         var eCount = (combatState.activeElements || {})[eKey] || 0;
         var isPrismatic = elemBonuses[eKey] && elemBonuses[eKey].isPrismatic;
         var bgColor = isPrismatic ? '#5a4a2e' : '#2a3a5e';
-        html += '<span style="background:' + bgColor + '; padding:2px 6px; border-radius:4px; white-space:nowrap; color:' + (elemSyn.color || '#fff') + ';">' +
-            elemSyn.emoji + ' ' + eCount + '</span>';
+        var eTierReached = 0;
+        for (var et = 0; et < elemSyn.thresholds.length; et++) {
+            if (eCount >= elemSyn.thresholds[et]) eTierReached = et + 1;
+        }
+        var elemDesc = (eTierReached > 0 && elemSyn.bonuses[eTierReached - 1]) ? elemSyn.bonuses[eTierReached - 1].desc : '';
+        if (elemDesc.length > 35) elemDesc = elemDesc.substring(0, 32) + '...';
+        html += '<span style="background:' + bgColor + '; padding:2px 6px; border-radius:4px; white-space:nowrap; color:' + (elemSyn.color || '#fff') + ';" title="' + elemSyn.name + ': ' + elemDesc + '">' +
+            elemSyn.emoji + ' ' + elemSyn.name + ' ' + eCount + '<span style="font-size:9px; color:#999; margin-left:3px;">' + elemDesc + '</span></span>';
     }
 
     bar.innerHTML = html || '<span class="text-muted">No active synergies</span>';
@@ -3061,6 +3570,168 @@ function getElementColor(element) {
     return colorMap[element] || '#FFF';
 }
 
+// ---- Achievement Panel ----
+
+function showAchievementPanel() {
+    var sd = getSaveData();
+    // Run check to catch any newly earned
+    var newAch = checkAchievements(sd);
+    var statuses = getAchievementStatus(sd);
+
+    var overlay = document.getElementById('achievement-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'achievement-overlay';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:1000;';
+        document.body.appendChild(overlay);
+    }
+
+    var categories = { combat: [], collection: [], economy: [], progression: [] };
+    for (var i = 0; i < statuses.length; i++) {
+        var cat = statuses[i].category || 'combat';
+        if (!categories[cat]) categories[cat] = [];
+        categories[cat].push(statuses[i]);
+    }
+
+    var catEmojis = { combat: '⚔️', collection: '📋', economy: '💰', progression: '📈' };
+
+    var html = '<div style="background:#1a1a2e; border:2px solid #e2b714; border-radius:12px; max-width:700px; width:95%; max-height:85vh; overflow-y:auto; padding:20px;">';
+    html += '<div style="font-size:20px; font-weight:bold; color:#e2b714; margin-bottom:16px;">🏆 Achievements</div>';
+
+    var catKeys = ['combat', 'collection', 'economy', 'progression'];
+    for (var ci = 0; ci < catKeys.length; ci++) {
+        var catKey = catKeys[ci];
+        var achList = categories[catKey];
+        if (!achList || achList.length === 0) continue;
+
+        html += '<div style="font-size:14px; font-weight:bold; color:#aac; margin-top:12px; margin-bottom:6px;">' +
+            (catEmojis[catKey] || '') + ' ' + catKey.charAt(0).toUpperCase() + catKey.slice(1) + '</div>';
+
+        for (var ai = 0; ai < achList.length; ai++) {
+            var ach = achList[ai];
+            var bgColor = ach.claimed ? '#1a3328' : (ach.earned ? '#2a2a1e' : '#16213e');
+            var borderColor = ach.claimed ? '#6bcb77' : (ach.earned ? '#e2b714' : '#333');
+
+            html += '<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; margin-bottom:4px; background:' + bgColor + '; border-radius:6px; border:1px solid ' + borderColor + ';">';
+            html += '<div>';
+            html += '<div style="font-size:13px; font-weight:bold;">' + ach.name + '</div>';
+            html += '<div style="font-size:11px; color:#aaa;">' + ach.description + '</div>';
+            html += '<div style="font-size:11px; color:#e2b714;">Reward: ' + ach.reward.gold + 'g</div>';
+            html += '</div>';
+            html += '<div style="text-align:right;">';
+            if (ach.claimed) {
+                html += '<span style="color:#6bcb77; font-weight:bold; font-size:12px;">✓ Claimed</span>';
+            } else if (ach.earned) {
+                html += '<button class="ach-claim-btn btn-primary" data-ach-id="' + ach.id + '" style="padding:4px 12px; font-size:11px;">Claim</button>';
+            } else {
+                html += '<span style="color:#666; font-size:11px;">🔒 Locked</span>';
+            }
+            html += '</div>';
+            html += '</div>';
+        }
+    }
+
+    html += '<div style="text-align:center; margin-top:16px;">';
+    html += '<button id="ach-close" style="padding:8px 20px; background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer;">Close</button>';
+    html += '</div>';
+    html += '</div>';
+
+    overlay.innerHTML = html;
+    overlay.style.display = 'flex';
+
+    document.getElementById('ach-close').onclick = function() { overlay.style.display = 'none'; };
+
+    // Bind claim buttons
+    var claimBtns = overlay.querySelectorAll('.ach-claim-btn');
+    for (var cb = 0; cb < claimBtns.length; cb++) {
+        claimBtns[cb].addEventListener('click', function() {
+            var achId = this.getAttribute('data-ach-id');
+            var sd2 = getSaveData();
+            var reward = claimAchievementReward(sd2, achId);
+            if (reward) {
+                autoSave(sd2);
+                renderTopBar();
+                showAchievementPanel(); // Refresh
+            }
+        });
+    }
+}
+
+function showAchievementToasts(newAchIds) {
+    for (var i = 0; i < newAchIds.length; i++) {
+        var ach = null;
+        for (var j = 0; j < ACHIEVEMENTS.length; j++) {
+            if (ACHIEVEMENTS[j].id === newAchIds[i]) { ach = ACHIEVEMENTS[j]; break; }
+        }
+        if (ach) {
+            showToast('🏆 Achievement Earned: ' + ach.name + '!');
+        }
+    }
+}
+
+// ---- Stats Panel ----
+
+function showStatsPanel() {
+    var sd = getSaveData();
+    var stats = sd.stats || {};
+
+    var overlay = document.getElementById('stats-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'stats-overlay';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:1000;';
+        document.body.appendChild(overlay);
+    }
+
+    function fmtNum(n) {
+        if (typeof n !== 'number' || isNaN(n)) return '0';
+        return n.toLocaleString();
+    }
+
+    var fastestWin = stats.fastestWin || 999999;
+    var fastestStr = fastestWin >= 999999 ? 'N/A' : (fastestWin.toFixed ? fastestWin.toFixed(1) : fastestWin) + 's';
+
+    var statLines = [
+        ['Missions Completed', fmtNum(stats.totalMissionsCompleted || stats.missionsCompleted || 0)],
+        ['Bosses Defeated', fmtNum(stats.bossesDefeated || 0)],
+        ['Deathless Boss Clears', fmtNum(stats.deathlessBossClears || 0)],
+        ['Max Single Hit', fmtNum(stats.maxSingleHit || 0)],
+        ['Fastest Win', fastestStr],
+        ['Total Gold Earned', fmtNum(stats.totalGoldEarned || 0)],
+        ['Total Gold Spent', fmtNum(stats.totalGoldSpent || 0)],
+        ['Total Rolls', fmtNum(stats.totalRolls || 0)],
+        ['Total Units Collected', fmtNum(stats.totalUnitsCollected || 0)],
+        ['Total Gacha Pulls', fmtNum(stats.totalGachaPulls || 0)],
+        ['Max Element Synergy', fmtNum(stats.maxElementSynergy || 0)],
+        ['Forge Operations', fmtNum(stats.forgeOperations || 0)],
+        ['Enhancements Performed', fmtNum(stats.enhancementsPerformed || 0)],
+        ['Max Enhance Level', '+' + (stats.maxEnhanceLevel || 0)],
+        ['Mythics Crafted', fmtNum(stats.mythicsCrafted || 0)],
+        ['Gems Socketed', fmtNum(stats.gemsSocketed || 0)],
+        ['Unique Bonds Used', fmtNum(stats.uniqueBondsUsed || 0)]
+    ];
+
+    var html = '<div style="background:#1a1a2e; border:2px solid #8bbcff; border-radius:12px; max-width:500px; width:95%; max-height:85vh; overflow-y:auto; padding:20px;">';
+    html += '<div style="font-size:20px; font-weight:bold; color:#8bbcff; margin-bottom:16px;">📊 Player Stats</div>';
+
+    for (var i = 0; i < statLines.length; i++) {
+        html += '<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #222; font-size:13px;">';
+        html += '<span style="color:#aaa;">' + statLines[i][0] + '</span>';
+        html += '<span style="color:#fff; font-weight:bold;">' + statLines[i][1] + '</span>';
+        html += '</div>';
+    }
+
+    html += '<div style="text-align:center; margin-top:16px;">';
+    html += '<button id="stats-close" style="padding:8px 20px; background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer;">Close</button>';
+    html += '</div>';
+    html += '</div>';
+
+    overlay.innerHTML = html;
+    overlay.style.display = 'flex';
+
+    document.getElementById('stats-close').onclick = function() { overlay.style.display = 'none'; };
+}
+
 // ---- Collection Browser (Prompt 20 Phase C1) ----
 
 var collectionFilters = {
@@ -3250,12 +3921,23 @@ function renderCollectionGrid(unitKeys) {
         var scaledHP = Math.floor(template.hp * statMult);
         var scaledATK = Math.floor(template.attack * statMult);
 
+        // Ability description
+        var abilityHtml = '';
+        var abilityInfo = ABILITY_DATA ? ABILITY_DATA[key] : null;
+        if (abilityInfo) {
+            var abilDesc = abilityInfo.desc || '';
+            if (abilDesc.length > 60) abilDesc = abilDesc.substring(0, 57) + '...';
+            abilityHtml = '<div style="font-size:10px; color:#8bbcff; margin-top:2px; line-height:1.3;">⚡ ' + abilityInfo.name + '</div>' +
+                '<div style="font-size:9px; color:#777; line-height:1.2;">' + abilDesc + '</div>';
+        }
+
         var html =
             '<div class="r-stars">' + starSpan + '</div>' +
             '<div>' + getElementEmoji(template.element) + ' ' + ARCHETYPES[template.archetype].emoji + '</div>' +
             '<div class="r-name">' + template.name + '</div>' +
             '<div class="r-info">' + template.type.charAt(0).toUpperCase() + template.type.slice(1) + ' · Cost ' + template.cost + '</div>' +
-            '<div class="r-info" style="color:#ccc;">HP: ' + scaledHP + ' · ATK: ' + scaledATK + '</div>';
+            '<div class="r-info" style="color:#ccc;">HP: ' + scaledHP + ' · ATK: ' + scaledATK + '</div>' +
+            abilityHtml;
 
         if (owned) {
             html += '<div class="r-copies" style="margin-top:2px;">' +

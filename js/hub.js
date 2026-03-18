@@ -65,21 +65,6 @@ var BUILDINGS = {
             'Pity system: guaranteed cost 4+ every 30 rolls'
         ]
     },
-    training_ground: {
-        name: 'Training Ground',
-        emoji: '⚔️',
-        description: 'Earn bonus XP from missions',
-        maxLevel: 5,
-        upgradeCosts: [0, 60, 150, 350, 700, 1200],
-        effects: [
-            'Standard XP',
-            '+10% mission XP',
-            '+20% mission XP',
-            '+30% mission XP',
-            '+40% mission XP',
-            '+50% mission XP'
-        ]
-    },
     warehouse: {
         name: 'Warehouse',
         emoji: '📦',
@@ -93,19 +78,6 @@ var BUILDINGS = {
             '+15% gold, 16 item slots',
             '+20% gold, 18 item slots',
             '+25% gold, 20 item slots'
-        ]
-    },
-    war_room: {
-        name: 'War Room',
-        emoji: '🗺️',
-        description: 'Reveals enemy info before missions',
-        maxLevel: 3,
-        upgradeCosts: [0, 200, 500, 1000],
-        effects: [
-            'No intel',
-            'See enemy unit count',
-            'See enemy unit types and elements',
-            'See full enemy composition and stats'
         ]
     },
     evolution_lab: {
@@ -232,8 +204,8 @@ function getBuildingEffect(buildingId, level) {
 // ---- Building Bonus Getters ----
 
 function getXPMultiplier(saveData) {
-    var level = getBuildingLevel(saveData, 'training_ground');
-    return 1.0 + (level * 0.10);
+    // Training Ground removed — always 1.0x
+    return 1.0;
 }
 
 function getGoldMultiplier(saveData) {
@@ -255,7 +227,8 @@ function getItemBenchSize(saveData) {
 }
 
 function getWarRoomIntelLevel(saveData) {
-    return getBuildingLevel(saveData, 'war_room');
+    // War Room removed — always 0 (no intel)
+    return 0;
 }
 
 function canEvolve(saveData) {
@@ -290,7 +263,7 @@ function getBondHallBonuses(saveData) {
     return {
         canViewBonds: level >= 1,
         bondBonusMult: level >= 4 ? 1.50 : (level >= 2 ? 1.25 : 1.0),
-        bondQuestsUnlocked: level >= 3,
+        bondHintsUnlocked: level >= 3,
         trioBondsUnlocked: level >= 5
     };
 }
@@ -308,187 +281,8 @@ function getGemWorkshopCapabilities(saveData) {
     };
 }
 
-// ---- Daily Quest System ----
-
-var DAILY_QUEST_POOL = [
-    {
-        id: 'win_missions',
-        name: 'Win 3 Missions',
-        description: 'Complete any 3 missions',
-        requirement: { type: 'missions_won', count: 3 },
-        reward: { gold: 80 }
-    },
-    {
-        id: 'deploy_element',
-        name: 'Deploy Element Team',
-        description: 'Use 3+ of one element in a mission',
-        requirement: { type: 'element_deploy', count: 3 },
-        reward: { gold: 60 }
-    },
-    {
-        id: 'enhance_item',
-        name: 'Enhance an Item',
-        description: 'Perform any item enhancement',
-        requirement: { type: 'enhance', count: 1 },
-        reward: { gold: 50 }
-    },
-    {
-        id: 'roll_units',
-        name: 'Roll 20 Units',
-        description: 'Perform 20 gacha pulls',
-        requirement: { type: 'gacha_pulls', count: 20 },
-        reward: { gold: 70 }
-    },
-    {
-        id: 'three_star',
-        name: '3-Star a Mission',
-        description: 'Get 3 stars on any mission',
-        requirement: { type: 'three_star', count: 1 },
-        reward: { gold: 100 }
-    },
-    {
-        id: 'evolve_unit',
-        name: 'Evolve a Unit',
-        description: 'Evolve any unit in the Evolution Lab',
-        requirement: { type: 'evolve', count: 1 },
-        reward: { gold: 80 }
-    },
-    {
-        id: 'equip_items',
-        name: 'Equip 3 Items',
-        description: 'Equip items on 3 different units',
-        requirement: { type: 'equip_items', count: 3 },
-        reward: { gold: 40 }
-    },
-    {
-        id: 'sell_items',
-        name: 'Sell 5 Items',
-        description: 'Sell any 5 items',
-        requirement: { type: 'sell_items', count: 5 },
-        reward: { gold: 40 }
-    },
-    {
-        id: 'defeat_boss',
-        name: 'Defeat a Boss',
-        description: 'Clear any boss encounter',
-        requirement: { type: 'boss_kill', count: 1 },
-        reward: { gold: 120 }
-    },
-    {
-        id: 'use_bond',
-        name: 'Use a Bond Pair',
-        description: 'Deploy 2+ bonded units in a mission',
-        requirement: { type: 'bond_deploy', count: 1 },
-        reward: { gold: 60 }
-    }
-];
-
-var DAILY_COMPLETION_BONUS = { gold: 300 };
-
-function generateDailyQuests(saveData) {
-    var today = new Date().toISOString().split('T')[0];
-    if (saveData.dailyQuests && saveData.dailyQuests.date === today) return;
-
-    var pool = DAILY_QUEST_POOL.slice();
-    var selected = [];
-    for (var i = 0; i < 4 && pool.length > 0; i++) {
-        var idx = Math.floor(Math.random() * pool.length);
-        selected.push({
-            id: pool[idx].id,
-            progress: 0,
-            completed: false,
-            rewardClaimed: false
-        });
-        pool.splice(idx, 1);
-    }
-
-    saveData.dailyQuests = {
-        date: today,
-        quests: selected,
-        bonusClaimed: false
-    };
-}
-
-function getDailyQuestStatus(saveData) {
-    if (!saveData.dailyQuests) return [];
-    var result = [];
-    for (var i = 0; i < saveData.dailyQuests.quests.length; i++) {
-        var q = saveData.dailyQuests.quests[i];
-        var poolEntry = null;
-        for (var j = 0; j < DAILY_QUEST_POOL.length; j++) {
-            if (DAILY_QUEST_POOL[j].id === q.id) { poolEntry = DAILY_QUEST_POOL[j]; break; }
-        }
-        if (poolEntry) {
-            result.push({
-                id: q.id,
-                name: poolEntry.name,
-                description: poolEntry.description,
-                requirement: poolEntry.requirement,
-                reward: poolEntry.reward,
-                progress: q.progress,
-                target: poolEntry.requirement.count,
-                completed: q.completed,
-                rewardClaimed: q.rewardClaimed
-            });
-        }
-    }
-    return result;
-}
-
-function updateDailyQuestProgress(saveData, eventType, amount) {
-    if (!saveData.dailyQuests) return;
-    for (var i = 0; i < saveData.dailyQuests.quests.length; i++) {
-        var q = saveData.dailyQuests.quests[i];
-        if (q.completed) continue;
-        var poolEntry = null;
-        for (var j = 0; j < DAILY_QUEST_POOL.length; j++) {
-            if (DAILY_QUEST_POOL[j].id === q.id) { poolEntry = DAILY_QUEST_POOL[j]; break; }
-        }
-        if (poolEntry && poolEntry.requirement.type === eventType) {
-            q.progress = Math.min(q.progress + (amount || 1), poolEntry.requirement.count);
-            if (q.progress >= poolEntry.requirement.count) {
-                q.completed = true;
-            }
-        }
-    }
-}
-
-function claimDailyQuestReward(saveData, questIndex) {
-    if (!saveData.dailyQuests) return null;
-    var q = saveData.dailyQuests.quests[questIndex];
-    if (!q || !q.completed || q.rewardClaimed) return null;
-
-    var poolEntry = null;
-    for (var j = 0; j < DAILY_QUEST_POOL.length; j++) {
-        if (DAILY_QUEST_POOL[j].id === q.id) { poolEntry = DAILY_QUEST_POOL[j]; break; }
-    }
-    if (!poolEntry) return null;
-
-    q.rewardClaimed = true;
-    saveData.player.gold += poolEntry.reward.gold;
-    return poolEntry.reward;
-}
-
-function claimDailyCompletionBonus(saveData) {
-    if (!saveData.dailyQuests || saveData.dailyQuests.bonusClaimed) return null;
-    var allComplete = true;
-    for (var i = 0; i < saveData.dailyQuests.quests.length; i++) {
-        if (!saveData.dailyQuests.quests[i].completed) { allComplete = false; break; }
-    }
-    if (!allComplete) return null;
-
-    saveData.dailyQuests.bonusClaimed = true;
-    saveData.player.gold += DAILY_COMPLETION_BONUS.gold;
-    return DAILY_COMPLETION_BONUS;
-}
-
-function areDailyQuestsAllComplete(saveData) {
-    if (!saveData.dailyQuests) return false;
-    for (var i = 0; i < saveData.dailyQuests.quests.length; i++) {
-        if (!saveData.dailyQuests.quests[i].completed) return false;
-    }
-    return true;
-}
+// ---- Daily Quest System (REMOVED — doesn't fit single-player design) ----
+// Old dailyQuests data in saves is harmless dead data.
 
 // ---- Achievement System ----
 

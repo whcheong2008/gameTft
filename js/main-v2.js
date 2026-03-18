@@ -182,6 +182,52 @@ function initCombat(gs) {
         }
     }
 
+    // Apply Mana Shrine bonuses
+    if (sd && typeof getManaShrineBonuses === 'function') {
+        var manaBonuses = getManaShrineBonuses(sd);
+        for (var mi2 = 0; mi2 < combatState.playerUnits.length; mi2++) {
+            var mu = combatState.playerUnits[mi2];
+            // Starting mana
+            if (manaBonuses.startingMana > 0 && mu.maxMana > 0) {
+                mu.currentMana = Math.min(mu.maxMana, mu.currentMana + manaBonuses.startingMana);
+            }
+            // Store shrine bonuses on unit for combat-time use
+            mu.manaShrine = manaBonuses;
+        }
+    }
+
+    // Apply Bond Hall bonuses
+    if (sd && typeof getBondHallBonuses === 'function') {
+        var bondBonuses = getBondHallBonuses(sd);
+        if (bondBonuses.canViewBonds && typeof UNIT_BONDS !== 'undefined' && UNIT_BONDS) {
+            var teamKeys = [];
+            for (var bk = 0; bk < combatState.playerUnits.length; bk++) {
+                if (combatState.playerUnits[bk].templateKey) teamKeys.push(combatState.playerUnits[bk].templateKey);
+            }
+            var bondKeys = Object.keys(UNIT_BONDS);
+            for (var bdi = 0; bdi < bondKeys.length; bdi++) {
+                var bond = UNIT_BONDS[bondKeys[bdi]];
+                var isTrio = bond.units.length >= 3;
+                if (isTrio && !bondBonuses.trioBondsUnlocked) continue;
+                var allPresent = true;
+                for (var bu = 0; bu < bond.units.length; bu++) {
+                    if (teamKeys.indexOf(bond.units[bu]) < 0) { allPresent = false; break; }
+                }
+                if (allPresent && bond.effect) {
+                    // Apply bond effect to all bond members, scaled by bondBonusMult
+                    for (var bm = 0; bm < combatState.playerUnits.length; bm++) {
+                        var pUnit = combatState.playerUnits[bm];
+                        if (bond.units.indexOf(pUnit.templateKey) >= 0) {
+                            if (bond.effect.atk) pUnit.attack += Math.floor(bond.effect.atk * bondBonuses.bondBonusMult);
+                            if (bond.effect.hp) { pUnit.hp += Math.floor(bond.effect.hp * bondBonuses.bondBonusMult); pUnit.maxHp += Math.floor(bond.effect.hp * bondBonuses.bondBonusMult); }
+                            if (bond.effect.atkSpd) pUnit.attackSpd = Math.max(0.3, pUnit.attackSpd - bond.effect.atkSpd * bondBonuses.bondBonusMult);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Initialize passive states and fire combat_start passives
     for (var pi = 0; pi < combatState.allUnits.length; pi++) {
         initUnitPassiveState(combatState.allUnits[pi]);
@@ -2900,6 +2946,10 @@ function executeAbility(caster) {
         atk = Math.floor(atk * caster.abilityBuffs.nextAtkMult);
         delete caster.abilityBuffs.nextAtkMult;
     }
+    // Mana Shrine: ability damage multiplier
+    if (caster.manaShrine && caster.manaShrine.abilityDamageMult > 1) {
+        atk = Math.floor(atk * caster.manaShrine.abilityDamageMult);
+    }
 
     // Track cast
     if (caster.combatStats) caster.combatStats.abilityCasts++;
@@ -5320,6 +5370,7 @@ function combatTick(dt) {
                 executeAbility(unit);
                 unit.currentMana = 0;
                 unit.isCasting = false;
+                unit._firstCastDone = true;
                 unit.attackCooldown = unit.attackSpd || 1.0;
                 // Post-cast passive effects (gale_dancer, stormweaver)
                 if (unit.passiveState && unit.passiveState.customData.postCastMoveSpeed) {
@@ -5387,13 +5438,25 @@ function combatTick(dt) {
             effectiveAtkSpd = Math.max(effectiveAtkSpd, 0.2); // minimum 0.2s between attacks
             unit.attackCooldown = effectiveAtkSpd;
 
-            // Mana generation on auto-attack
+            // Mana generation on auto-attack (with Mana Shrine bonus)
             if (unit.maxMana > 0) {
-                unit.currentMana = Math.min(unit.maxMana, unit.currentMana + 10);
+                var manaGain = 10;
+                if (unit.manaShrine && unit.manaShrine.manaGenMult) manaGain = Math.floor(manaGain * unit.manaShrine.manaGenMult);
+                unit.currentMana = Math.min(unit.maxMana, unit.currentMana + manaGain);
             }
 
+            // Mana Shrine: first cast discount (reduce effective max mana for first cast)
+            var effectiveMaxMana = unit.maxMana;
+            if (unit.manaShrine && unit.manaShrine.firstCastDiscount > 0 && !unit._firstCastDone) {
+                effectiveMaxMana = Math.floor(unit.maxMana * (1 - unit.manaShrine.firstCastDiscount));
+            }
+            // Mana Shrine: full mana ATK bonus
+            if (unit.manaShrine && unit.manaShrine.fullManaAtkBonus > 0 && unit.currentMana >= effectiveMaxMana && !unit._fullManaAtkApplied) {
+                unit.attack = Math.floor(unit.attack * (1 + unit.manaShrine.fullManaAtkBonus));
+                unit._fullManaAtkApplied = true;
+            }
             // Check if mana is full → start casting (blocked by silence)
-            if (unit.maxMana > 0 && unit.currentMana >= unit.maxMana && !unit.isCasting) {
+            if (unit.maxMana > 0 && unit.currentMana >= effectiveMaxMana && !unit.isCasting) {
                 if (!hasStatus(unit, 'silence')) {
                     unit.isCasting = true;
                     unit.castTimer = 0.3;
@@ -5844,9 +5907,11 @@ function performAttack(attacker, target) {
     // Blind check (only auto-attacks, not abilities)
     if (hasStatus(attacker, 'blind') && Math.random() < 0.5) {
         addCombatLog(attacker.name + ' misses! (Blind)');
-        // Still generate mana for attacking
+        // Still generate mana for attacking (with Mana Shrine bonus)
         if (attacker.maxMana > 0) {
-            attacker.currentMana = Math.min(attacker.maxMana, attacker.currentMana + 10);
+            var blindManaGain = 10;
+            if (attacker.manaShrine && attacker.manaShrine.manaGenMult) blindManaGain = Math.floor(blindManaGain * attacker.manaShrine.manaGenMult);
+            attacker.currentMana = Math.min(attacker.maxMana, attacker.currentMana + blindManaGain);
         }
         return; // miss, no damage
     }

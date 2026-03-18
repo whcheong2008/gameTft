@@ -70,8 +70,6 @@ function createDefaultSaveData() {
             recipeBook: {},
             milestones: {}
         },
-        // Daily quests (populated on first hub visit)
-        dailyQuests: null,
         // Achievements
         achievements: { earned: [], claimed: [] },
         // Stats tracking
@@ -333,7 +331,6 @@ function migrateSave(data) {
     if (typeof data.stats.gemsSocketed === 'undefined') data.stats.gemsSocketed = 0;
     if (typeof data.stats.uniqueBondsUsed === 'undefined') data.stats.uniqueBondsUsed = 0;
     if (typeof data.stats.totalGachaPulls === 'undefined') data.stats.totalGachaPulls = 0;
-    if (!data.dailyQuests) data.dailyQuests = null;
     return data;
 }
 

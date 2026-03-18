@@ -763,6 +763,15 @@ body {
                 </div>
             </div>
 
+            <div class="hub-nav mt-md" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="hub-nav-btn" onclick="showAchievementPanel()">
+                    <span class="nav-emoji">🏆</span> Achievements
+                </div>
+                <div class="hub-nav-btn" onclick="showStatsPanel()">
+                    <span class="nav-emoji">📊</span> Stats
+                </div>
+            </div>
+
             <div style="text-align:center; margin-top:20px;">
                 <button class="btn-secondary" onclick="uiResetGame()" style="font-size:12px; opacity:0.6;">Reset Game (Start Over)</button>
             </div>
@@ -803,12 +812,7 @@ body {
         <!-- ============ MISSION SELECT SCREEN ============ -->
         <div id="screen-mission-select" class="screen">
             <div class="screen-title">🗡️ Missions</div>
-            <div class="section-title">Story Missions</div>
             <div id="story-missions" class="mission-list"></div>
-            <div class="grind-section">
-                <div class="section-title">Grind Missions</div>
-                <button class="btn-primary" onclick="uiStartGrindMission()">Start Training Mission</button>
-            </div>
         </div>
 
         <!-- ============ COMBAT SCREEN ============ -->
