@@ -674,8 +674,9 @@ function uiDoSingleRoll() {
     var result = doSingleRoll(sd);
     if (!result.success) return;
 
-    var container = document.getElementById('gacha-results');
-    container.innerHTML = '';
+    var container = document.getElementById('gacha-roll-results');
+    container.style.display = 'flex';
+    container.innerHTML = '<div class="gacha-roll-header">Summoned 1 unit</div>';
     container.appendChild(createGachaCard(result.unitKey, result.unitTemplate));
 
     renderGachaScreen();
@@ -687,8 +688,9 @@ function uiDoMultiRoll() {
     var result = doMultiRoll(sd);
     if (!result.success) return;
 
-    var container = document.getElementById('gacha-results');
-    container.innerHTML = '';
+    var container = document.getElementById('gacha-roll-results');
+    container.style.display = 'flex';
+    container.innerHTML = '<div class="gacha-roll-header">Summoned 10 units!</div>';
     for (var i = 0; i < result.results.length; i++) {
         var r = result.results[i];
         var card = createGachaCard(r.unitKey, r.unitTemplate);
@@ -707,20 +709,22 @@ function createGachaCard(unitKey, tmpl) {
     var isEvolved = !!EVOLVED_TEMPLATES[unitKey];
     var unitCost = tmpl.cost || tmpl.baseCost || 1;
 
+    var tierStars = '';
+    for (var s = 0; s < unitCost; s++) tierStars += '★';
+
     var div = document.createElement('div');
-    div.className = 'gacha-card cost-' + unitCost + (isNew ? ' new-unit' : '') + (isEvolved ? ' evolved-card' : '');
+    div.className = 'gacha-card cost-' + unitCost;
     if (isEvolved) {
         div.style.border = '2px solid #e2b714';
-        div.style.boxShadow = '0 0 8px rgba(226,183,20,0.4)';
+        div.style.boxShadow = '0 0 10px rgba(226,183,20,0.3)';
     }
-    var typeLabel = tmpl.type.charAt(0).toUpperCase() + tmpl.type.slice(1);
     div.innerHTML =
-        (isEvolved ? '<div style="font-size:10px; color:#e2b714; font-weight:bold;">✨ Evolved Copy!</div>' : '') +
-        '<div class="unit-element">' + ELEMENTS[tmpl.element].emoji + ' ' + ARCHETYPES[tmpl.archetype].emoji + '</div>' +
-        '<div class="unit-name">' + tmpl.name + '</div>' +
-        '<div style="font-size:10px; color:#aaa;">' + typeLabel + '</div>' +
-        '<div class="unit-cost">Cost ' + unitCost + '</div>' +
-        (isNew ? '<div class="text-green" style="font-size:10px;">NEW!</div>' : '');
+        (isNew ? '<div class="card-new-badge">NEW</div>' : '') +
+        (isEvolved ? '<div class="card-evolved-badge">✨ EVO</div>' : '') +
+        '<div class="card-element-icon">' + getElementEmoji(tmpl.element) + '</div>' +
+        '<div class="card-unit-name">' + tmpl.name + '</div>' +
+        '<div class="card-tier-stars">' + tierStars + '</div>' +
+        '<div class="card-archetype">' + ARCHETYPES[tmpl.archetype].emoji + ' ' + ARCHETYPES[tmpl.archetype].name + '</div>';
     return div;
 }
 
@@ -3319,7 +3323,7 @@ function renderCollectionGrid(unitKeys) {
 
 function renderShopUI() {
     var sd = getSaveData();
-    var container = document.getElementById('gacha-results');
+    var container = document.getElementById('gacha-shop');
     if (!container) return;
 
     // Initialize shop if empty
@@ -3330,46 +3334,45 @@ function renderShopUI() {
     container.innerHTML = '';
 
     var shopHeader = document.createElement('div');
-    shopHeader.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;';
+    shopHeader.style.cssText = 'width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #2a3a5e;';
     shopHeader.innerHTML =
-        '<span style="color:#888; font-size:12px;">Shop (5 units)</span>' +
-        '<button id="shop-refresh-btn" style="padding:4px 10px; border-radius:4px; border:1px solid #444; background:#222; color:#ccc; cursor:pointer; font-size:11px;">🔄 Refresh (' + SHOP_REFRESH_COST + 'g)</button>';
+        '<span style="color:#aaa; font-size:13px; font-weight:bold;">Shop</span>' +
+        '<button id="shop-refresh-btn" style="padding:4px 12px; border-radius:6px; border:1px solid #444; background:#222; color:#ccc; cursor:pointer; font-size:11px; transition:background 0.15s;">🔄 Refresh (' + SHOP_REFRESH_COST + 'g)</button>';
     container.appendChild(shopHeader);
-
-    var grid = document.createElement('div');
-    grid.style.cssText = 'display:grid; grid-template-columns:repeat(5, 1fr); gap:6px;';
 
     for (var i = 0; i < 5; i++) {
         var unitKey = currentShopUnits[i];
-        var card = document.createElement('div');
-        card.style.cssText = 'background:#16213e; border:1px solid #333; border-radius:6px; padding:8px; text-align:center; min-height:100px;';
 
         if (!unitKey) {
-            card.innerHTML = '<div style="color:#555; font-size:12px;">Sold</div>';
-            grid.appendChild(card);
+            var soldCard = document.createElement('div');
+            soldCard.className = 'gacha-card';
+            soldCard.style.cssText += 'opacity:0.3; border-style:dashed;';
+            soldCard.innerHTML = '<div style="color:#555; font-size:12px; padding:20px 0;">Sold</div>';
+            container.appendChild(soldCard);
             continue;
         }
 
         var tmpl = UNIT_TEMPLATES[unitKey];
-        if (!tmpl) { grid.appendChild(card); continue; }
+        if (!tmpl) continue;
 
         var goldCost = UNIT_COSTS[tmpl.cost] || 3;
         var tierStars = '';
         for (var ts = 0; ts < tmpl.cost; ts++) tierStars += '★';
+        var canAfford = sd.player.gold >= goldCost;
 
-        card.className = 'shop-card cost-' + tmpl.cost;
+        var card = document.createElement('div');
+        card.className = 'gacha-card cost-' + tmpl.cost;
+        card.style.cursor = canAfford ? 'pointer' : 'default';
         card.innerHTML =
-            '<div style="font-size:16px;">' + getElementEmoji(tmpl.element) + '</div>' +
-            '<div style="font-size:11px; font-weight:bold; margin:2px 0;">' + tmpl.name + '</div>' +
-            '<div style="font-size:10px; color:#e2b714;">' + tierStars + '</div>' +
-            '<div style="font-size:10px; color:#888;">' + ARCHETYPES[tmpl.archetype].emoji + ' ' + ARCHETYPES[tmpl.archetype].name + '</div>' +
-            '<button class="shop-buy-btn" data-slot="' + i + '" data-key="' + unitKey + '" data-cost="' + goldCost + '" style="margin-top:4px; padding:2px 8px; border-radius:4px; border:1px solid #444; background:' + (sd.player.gold >= goldCost ? '#2a5a2a' : '#3a2a2a') + '; color:#ccc; cursor:pointer; font-size:11px;">' +
+            '<div class="card-element-icon">' + getElementEmoji(tmpl.element) + '</div>' +
+            '<div class="card-unit-name">' + tmpl.name + '</div>' +
+            '<div class="card-tier-stars">' + tierStars + '</div>' +
+            '<div class="card-archetype">' + ARCHETYPES[tmpl.archetype].emoji + ' ' + ARCHETYPES[tmpl.archetype].name + '</div>' +
+            '<button class="shop-buy-btn" data-slot="' + i + '" data-key="' + unitKey + '" data-cost="' + goldCost + '" style="margin-top:6px; padding:3px 12px; border-radius:6px; border:none; background:' + (canAfford ? '#2e7d32' : '#333') + '; color:' + (canAfford ? '#fff' : '#666') + '; cursor:' + (canAfford ? 'pointer' : 'default') + '; font-size:11px; font-weight:bold; transition:background 0.15s;"' + (canAfford ? '' : ' disabled') + '>' +
             'Buy ' + goldCost + 'g</button>';
 
-        grid.appendChild(card);
+        container.appendChild(card);
     }
-
-    container.appendChild(grid);
 
     // Bind buy buttons
     var buyBtns = container.querySelectorAll('.shop-buy-btn');

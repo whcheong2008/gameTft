@@ -17,7 +17,11 @@
 
 ---
 
-## Current Status: V2 — Combat Engine Rebuild Complete (6/6 chunks), Roster Expansion Design + Prompts Complete (5/5 ready)
+## Current Status: V2 — Phase 1 Complete, Phase 2 Roster Expansion IMPLEMENTED (5/5 prompts done), Git initialized
+
+**Repository**: https://github.com/whcheong2008/gameTft
+**Current tag**: `v0.2.0-phase1-complete` (initial commit)
+**Next tag**: `v0.3.0-phase2-roster` (after verification)
 
 ### What's Working (V2 Game — game-v2.html)
 The game is **fully playable** with this core loop:
@@ -108,7 +112,7 @@ Five major systems designed to publishable depth. Hub & Social doc not needed pe
 - [x] Scope separation → SCOPE.md (prototype-core vs future expansion, 6-phase implementation priority)
 - **SCOPE PIVOT**: Single-player marketing prototype, not full live-service. Arena, seasonal events, IAP, content pipeline are "future expansion". See SCOPE.md for full breakdown.
 
-**Phase 1 — Combat Engine Rebuild** (COMPLETE — 6/6 chunks done, prompt 16 ready for final polish):
+**Phase 1 — Combat Engine Rebuild** (COMPLETE — 6/6 chunks done, all implemented):
 The combat engine is being rebuilt from scratch per COMBAT-DESIGN.md. Implementation is broken into 6 sequential chunks, each as a separate Claude Code prompt. See SCOPE.md § Implementation Priority Order for the full roadmap.
 
 | Chunk | Name | Scope | Prompt | Status |
@@ -118,7 +122,7 @@ The combat engine is being rebuilt from scratch per COMBAT-DESIGN.md. Implementa
 | 3 | Mana & Abilities | Mana system (10 mana/attack + damage-taken mana), ability casting framework, all 20 base + 16 evolved abilities implemented, basic status effects (burn/slow/stun/freeze/root/taunt/dodge/reflect/atkMod/drMod/regen/vulnerability), passive abilities (Phoenix/World Tree/Volcano Titan), mana bar rendering | `13` | **DONE** |
 | 4 | Status Effects | Diminishing returns on CC (2nd=50%, 3rd=25% within 8s), CC immunity (1s after stun/freeze), tenacity stat, new types (Silence/Blind/Poison/Bleed), DoT tick normalization (1/sec), atkBuff/atkMod split, spdMod, dodge highest-wins, visual status icons on units (emoji, max 3 + overflow) | `14` | **DONE** |
 | 5 | Boss Framework | 2×2 boss grid occupation, multi-phase boss fights, telegraph system (red danger zones 1.5-2s before damage), minion spawning, phase transitions with invulnerability, enrage timers, 6 boss data definitions (3 fully implemented: Veil Guardian, Infernal Wyvern, Tidal Leviathan; 3 data stubs: Stone Colossus, Storm Phoenix, Void Sovereign), boss missions on story_7 and story_14 | `15` | **DONE** |
-| 6 | Speed Controls & Visual Polish | 1×/2×/4× speed toggle, auto-battle for cleared content, floating damage numbers, smooth movement via CSS transitions on absolute-positioned overlays, death animations, ability cast glow, AoE cell flashes, combat start/end polish | `16` | **READY** |
+| 6 | Speed Controls & Visual Polish | 1×/2×/4× speed toggle, auto-battle for cleared content, floating damage numbers, smooth movement via CSS transitions on absolute-positioned overlays, death animations, ability cast glow, AoE cell flashes, combat start/end polish | `16` | **DONE** |
 
 **Key technical notes for chunks 2-6:**
 - All changes are combat-engine-only — save format doesn't change (combat state is ephemeral)
@@ -129,7 +133,7 @@ The combat engine is being rebuilt from scratch per COMBAT-DESIGN.md. Implementa
 - Source of truth for ability/status/damage specs: COMBAT-DESIGN.md sections 3-7
 - Source of truth for boss encounter details: CONTENT-DESIGN.md section 4
 
-**Phase 2 — Expanded Roster** (REDESIGNED — see UNITS-DESIGN.md, implementation prompts COMPLETE):
+**Phase 2 — Expanded Roster** (IMPLEMENTED — all 5 prompts done, see UNITS-DESIGN.md):
 - **Full roster redesign**: 60 base units (up from 20), all evolve → 120 total
 - **2 new elements**: Lightning (crits/chain), Force (physical/neutral) — requires new ELEMENT_SYNERGIES, ARCHETYPES data
 - **9 archetypes** (was 6): +Ranger, +Sorcerer, +Duelist, +Warden, -Striker
@@ -142,11 +146,11 @@ The combat engine is being rebuilt from scratch per COMBAT-DESIGN.md. Implementa
 
 | Chunk | Name | Scope | Prompt | Status |
 |-------|------|-------|--------|--------|
-| 1 | Systems Foundation | 6 elements+matchups, ELEMENT_SYNERGIES 2/4/7/10, 9 ARCHETYPES, prismatic detection, team size rework, one-family-one-slot, synergy sidebar UI, save migration | `17` | **READY** |
-| 2 | Unit Data Layer | 60 UNIT_TEMPLATES, 60 EVOLVED_TEMPLATES, 60 EVOLUTIONS, 100 ABILITY_DATA, 60 PASSIVE_DATA, 60 EVOLVED_PASSIVE_DATA, gacha verification | `18` | **READY** |
-| 3a | Passive System + T1-T2 Abilities | Passive framework (6 trigger types), processPassives(), 72 abilities (21 T1 base + 21 T1 evolved + 15 T2 base + 15 T2 evolved), 72 passives, reentry guards | `19a` | **READY** |
-| 3b | T3-T5 Abilities + Legendaries | 12 T3 + 6 T4 abilities, 24 T3-T5 passives, T5 legendary ability system (MaxMana 0), Phoenix revive, Leviathan submerge, Void Wyrm trigger | `19b` | **READY** |
-| 4 | Integration & Polish | Gacha pool update, mission enemy generation, team builder UI overhaul, synergy sidebar, save migration v3→v4, balance pass | `20` | **READY** |
+| 1 | Systems Foundation | 6 elements+matchups, ELEMENT_SYNERGIES 2/4/7/10, 9 ARCHETYPES, prismatic detection, team size rework, one-family-one-slot, synergy sidebar UI, save migration | `17` | **DONE** |
+| 2 | Unit Data Layer | 60 UNIT_TEMPLATES, 60 EVOLVED_TEMPLATES, 60 EVOLUTIONS, 120 ABILITY_DATA, 60 PASSIVE_DATA, 60 EVOLVED_PASSIVE_DATA, gacha verification | `18` | **DONE** |
+| 3a | Passive System + T1-T2 Abilities | Passive framework (6 trigger types), processPassives(), 72 abilities (21 T1 base + 21 T1 evolved + 15 T2 base + 15 T2 evolved), 72 passives, reentry guards | `19a` | **DONE** |
+| 3b | T3-T5 Abilities + Legendaries | 12 T3 + 6 T4 abilities, 24 T3-T5 passives, T5 legendary ability system (MaxMana 0), Phoenix revive, Leviathan submerge, Void Wyrm trigger | `19b` | **DONE** |
+| 4 | Integration & Polish | Gacha pool update, mission enemy generation, team builder UI overhaul, synergy sidebar, save migration v3→v4, balance pass | `20` | **DONE** |
 
 **Phase 3 — Expanded Items** (from SCOPE.md):
 - 4 new components + 13 new recipes
@@ -183,10 +187,12 @@ The combat engine is being rebuilt from scratch per COMBAT-DESIGN.md. Implementa
 2. ~~Some evolved abilities are stat-based approximations~~: FIXED in Chunk 3
 3. ~~No smooth pixel interpolation~~: Addressed in Chunk 6
 4. ~~Mountain Lord taunt not implemented~~: Addressed in Chunk 4
-5. **Current code has 20 base units + 16 evolved**: Needs massive expansion to 60+60 for Phase 2
-6. **Element system is 4 elements**: Needs expansion to 6 (Lightning, Force)
-7. **Archetype system is 6 archetypes**: Needs expansion to 9 (+Ranger, Sorcerer, Duelist, Warden, -Striker)
-8. **Team size starts at ~5-7**: Needs rework to start at 2, scale with level, Barracks at lvl 10
+5. ~~**Current code has 20 base units + 16 evolved**~~: DONE — expanded to 60+60=120 (prompts 17-20)
+6. ~~**Element system is 4 elements**~~: DONE — expanded to 6 (Lightning, Force) (prompt 17)
+7. ~~**Archetype system is 6 archetypes**~~: DONE — expanded to 9 (prompt 17)
+8. ~~**Team size starts at ~5-7**~~: DONE — reworked to start at 2, +1/2 levels, Barracks at lvl 10 (prompt 17)
+9. **Phase 2 needs playtesting**: All code landed but no smoke test or balance verification yet
+10. **Boss reconciliation pending**: Prompt 15 bosses vs MISSIONS-DESIGN.md bosses — see Open Design Questions
 
 ### Key Design Decisions (V2)
 - **Persistent progression**: Units, buildings, progress all persist via localStorage
@@ -242,7 +248,9 @@ Game TFT/
 │   ├── 18-unit-data-layer.md         ← Phase 2 Chunk 2: All 120 unit definitions + data tables (READY)
 │   ├── 19a-passives-and-t1t2-abilities.md ← Phase 2 Chunk 3a: Passive framework + T1-T2 abilities (READY)
 │   ├── 19b-t3t5-abilities-and-legendaries.md ← Phase 2 Chunk 3b: T3-T5 abilities + T5 legendaries (READY)
-│   └── 20-integration-and-polish.md  ← Phase 2 Chunk 4: Gacha/UI/save migration/balance (READY)
+│   ├── 20-integration-and-polish.md  ← Phase 2 Chunk 4: Gacha/UI/save migration/balance (DONE)
+│   └── 21-git-init.md              ← Git initialization, .gitignore, remote setup (DONE)
+├── .gitignore            ← Excludes .claude/, fibery api.txt, OS/editor files
 ├── orchestrators/        ← V1 domain orchestrator docs (historical)
 ├── DESIGN-V2.md          ← V2 game design document (authoritative)
 ├── COMBAT-DESIGN.md      ← Deep combat system design (mana, abilities, status effects, movement)
@@ -324,3 +332,12 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
   - **BUG**: Grid orientation was wrong — implemented as 4×14 horizontal (left-to-right) instead of vertical (top-to-bottom). Enemy units not appearing on their side.
   - Created prompt 11b (fix-grid-orientation): Corrective prompt to change grid from 4×14 horizontal to 8×7 vertical (rows 0-3 enemy, rows 4-7 player). Maps team builder row→combat row via `7-teamRow`. Adds enemy zone preview to team builder.
   - Remaining: hub/social
+- **Session 8 (2026-03-17 → 2026-03-18)**: Roster expansion design + Phase 2 implementation prompts + Git init.
+  - Expanded roster: 60 base → 120 total (all tiers evolve, fixing T3+ inconsistency)
+  - Created prompts 17-20 (5 chunks: systems foundation, unit data, passives+abilities, legendaries, integration)
+  - MISSIONS-DESIGN.md created in separate session — reviewed, non-mission info extracted to CONTINUITY.md
+  - 9 open design questions captured (boss reconciliation, feature gating, war room, grind missions, etc.)
+  - **Claude Code implemented ALL Phase 2 prompts (17, 18, 19a, 19b, 20)**: 6 elements, 9 archetypes, 60+60 units, passive system, legendary abilities, gacha/UI overhaul, save migration v4
+  - Git initialized: repo at https://github.com/whcheong2008/gameTft, tagged `v0.2.0-phase1-complete`
+  - Created prompt 21 (git-init) for Claude Code handoff
+  - Project folder moving out of Dropbox to local directory (GitHub is now the backup)

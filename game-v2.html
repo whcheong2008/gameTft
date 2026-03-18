@@ -73,28 +73,52 @@ body {
 .gacha-btn:disabled { background: #555; color: #999; cursor: not-allowed; }
 .gacha-rates { color: #888; font-size: 13px; margin: 6px 0; }
 .gacha-results {
-    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; min-height: 80px;
+    display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; min-height: 0;
+    justify-content: center;
+}
+.gacha-roll-header {
+    width: 100%; text-align: center; font-size: 14px; color: #aaa;
+    margin-bottom: 4px; padding-bottom: 6px; border-bottom: 1px solid #2a3a5e;
 }
 .gacha-card {
-    background: #16213e; border: 2px solid #2a3a5e; border-radius: 8px;
-    padding: 10px; text-align: center; width: 100px;
-    animation: cardReveal 0.3s ease-out;
+    background: linear-gradient(135deg, #16213e 0%, #1a2744 100%);
+    border: 2px solid #2a3a5e; border-radius: 10px;
+    padding: 12px 10px 10px; text-align: center; width: 110px;
+    animation: cardReveal 0.4s ease-out both;
+    position: relative; overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.gacha-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.4); }
+.gacha-card .card-element-icon { font-size: 26px; margin-bottom: 4px; line-height: 1; }
+.gacha-card .card-unit-name { font-size: 12px; font-weight: bold; color: #fff; margin: 3px 0; line-height: 1.2; }
+.gacha-card .card-tier-stars { font-size: 11px; color: #e2b714; letter-spacing: 1px; margin: 2px 0; }
+.gacha-card .card-archetype { font-size: 10px; color: #8899aa; margin: 2px 0; }
+.gacha-card .card-type { font-size: 9px; color: #667; text-transform: uppercase; letter-spacing: 0.5px; }
+.gacha-card .card-new-badge {
+    position: absolute; top: 4px; right: 4px;
+    background: #4caf50; color: #fff; font-size: 9px; font-weight: bold;
+    padding: 1px 5px; border-radius: 4px;
+}
+.gacha-card .card-evolved-badge {
+    position: absolute; top: 4px; left: 4px;
+    font-size: 9px; color: #e2b714; font-weight: bold;
 }
 @keyframes cardReveal {
-    from { opacity: 0; transform: scale(0.8) rotateY(90deg); }
+    from { opacity: 0; transform: scale(0.7) rotateY(90deg); }
     to { opacity: 1; transform: scale(1) rotateY(0); }
 }
-.gacha-card .unit-name { font-size: 12px; font-weight: bold; }
-.gacha-card .unit-element { font-size: 20px; }
-.gacha-card .unit-cost { font-size: 11px; color: #ffd93d; }
-.gacha-card.new-unit { border-color: #6bcb77; }
 
-/* Cost tier colors */
-.cost-1 { border-color: #888; }
+/* Cost tier colors — border + subtle top glow */
+.cost-1 { border-color: #667788; }
+.cost-1::before { content:''; position:absolute; top:0; left:10%; right:10%; height:2px; background:#667788; border-radius:0 0 4px 4px; }
 .cost-2 { border-color: #4488ff; }
+.cost-2::before { content:''; position:absolute; top:0; left:10%; right:10%; height:2px; background:#4488ff; border-radius:0 0 4px 4px; }
 .cost-3 { border-color: #aa44ff; }
+.cost-3::before { content:''; position:absolute; top:0; left:10%; right:10%; height:2px; background:#aa44ff; border-radius:0 0 4px 4px; }
 .cost-4 { border-color: #ff4488; }
-.cost-5 { border-color: #ffd700; }
+.cost-4::before { content:''; position:absolute; top:0; left:10%; right:10%; height:2px; background:#ff4488; border-radius:0 0 4px 4px; }
+.cost-5 { border-color: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.2); }
+.cost-5::before { content:''; position:absolute; top:0; left:10%; right:10%; height:2px; background:#ffd700; border-radius:0 0 4px 4px; }
 
 /* === Roster Screen === */
 .roster-grid {
@@ -751,7 +775,8 @@ body {
                 <button class="gacha-btn" id="btn-roll-1" onclick="uiDoSingleRoll()">Roll x1 (5g)</button>
                 <button class="gacha-btn" id="btn-roll-10" onclick="uiDoMultiRoll()">Roll x10 (45g)</button>
             </div>
-            <div id="gacha-results" class="gacha-results"></div>
+            <div id="gacha-roll-results" class="gacha-results" style="display:none;"></div>
+            <div id="gacha-shop" class="gacha-results"></div>
         </div>
 
         <!-- ============ ROSTER SCREEN ============ -->
@@ -840,7 +865,7 @@ body {
     <script src="js/items.js"></script>
     <script src="js/missions.js"></script>
     <!-- V2 uses simplified combat in main-v2.js, not V1 combat.js -->
-    <script src="js/ui-v2.js"></script>
+    <script src="js/ui-v2.js?v=2"></script>
     <script src="js/main-v2.js"></script>
 </body>
 </html>
