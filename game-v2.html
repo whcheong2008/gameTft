@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Battler V2</title>
+    <style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #1a1a2e; color: #e0e0e0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh; display: flex; justify-content: center;
+    align-items: flex-start; padding: 10px;
+}
+#game-container { width: 100%; max-width: 960px; display: flex; flex-direction: column; gap: 6px; }
+
+/* === Top Bar === */
+#top-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #16213e; padding: 10px 20px; border-radius: 8px; font-size: 15px;
+    flex-wrap: wrap; gap: 6px;
+}
+#player-info { display: flex; gap: 14px; }
+#player-gold { color: #ffd93d; font-weight: bold; }
+#player-level { color: #6bcb77; font-weight: bold; }
+#player-xp { color: #8bbcff; font-size: 13px; }
+#nav-back { cursor: pointer; background: #2a3a5e; border: none; color: #e0e0e0;
+    padding: 5px 14px; border-radius: 6px; font-size: 14px; display: none; }
+#nav-back:hover { background: #3a4a7e; }
+
+/* === Screens (common) === */
+.screen { display: none; }
+.screen.active { display: block; }
+.screen-title { font-size: 22px; font-weight: bold; color: #e2b714; margin: 12px 0 8px; }
+.section-title { font-size: 16px; font-weight: 600; color: #aac; margin: 10px 0 6px; }
+
+/* === Hub Screen === */
+.hub-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    margin-top: 10px;
+}
+.hub-building {
+    background: #16213e; border: 2px solid #2a3a5e; border-radius: 10px;
+    padding: 16px; text-align: center; cursor: pointer;
+    transition: border-color 0.2s, transform 0.1s;
+}
+.hub-building:hover { border-color: #e2b714; transform: translateY(-2px); }
+.hub-building .emoji { font-size: 36px; }
+.hub-building .bld-name { font-weight: bold; margin-top: 6px; }
+.hub-building .bld-level { color: #6bcb77; font-size: 13px; }
+.hub-building .bld-effect { color: #999; font-size: 12px; margin-top: 4px; }
+
+.hub-nav {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    margin-top: 16px;
+}
+.hub-nav-btn {
+    background: #0f3460; border: 2px solid #1a5276; border-radius: 10px;
+    padding: 18px 10px; text-align: center; cursor: pointer; color: #e0e0e0;
+    font-size: 15px; font-weight: 600;
+    transition: background 0.2s, border-color 0.2s;
+}
+.hub-nav-btn:hover { background: #1a5276; border-color: #e2b714; }
+.hub-nav-btn .nav-emoji { font-size: 28px; display: block; margin-bottom: 6px; }
+
+/* === Gacha Screen === */
+.gacha-controls { display: flex; gap: 10px; margin: 12px 0; }
+.gacha-btn {
+    background: #e2b714; color: #1a1a2e; border: none; border-radius: 8px;
+    padding: 12px 24px; font-size: 16px; font-weight: bold; cursor: pointer;
+}
+.gacha-btn:hover { background: #f0c830; }
+.gacha-btn:disabled { background: #555; color: #999; cursor: not-allowed; }
+.gacha-rates { color: #888; font-size: 13px; margin: 6px 0; }
+.gacha-results {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; min-height: 80px;
+}
+.gacha-card {
+    background: #16213e; border: 2px solid #2a3a5e; border-radius: 8px;
+    padding: 10px; text-align: center; width: 100px;
+    animation: cardReveal 0.3s ease-out;
+}
+@keyframes cardReveal {
+    from { opacity: 0; transform: scale(0.8) rotateY(90deg); }
+    to { opacity: 1; transform: scale(1) rotateY(0); }
+}
+.gacha-card .unit-name { font-size: 12px; font-weight: bold; }
+.gacha-card .unit-element { font-size: 20px; }
+.gacha-card .unit-cost { font-size: 11px; color: #ffd93d; }
+.gacha-card.new-unit { border-color: #6bcb77; }
+
+/* Cost tier colors */
+.cost-1 { border-color: #888; }
+.cost-2 { border-color: #4488ff; }
+.cost-3 { border-color: #aa44ff; }
+.cost-4 { border-color: #ff4488; }
+.cost-5 { border-color: #ffd700; }
+
+/* === Roster Screen === */
+.roster-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;
+    margin-top: 10px;
+}
+.roster-card {
+    background: #16213e; border: 2px solid #2a3a5e; border-radius: 8px;
+    padding: 10px; cursor: pointer;
+    transition: border-color 0.2s;
+}
+.roster-card:hover { border-color: #e2b714; }
+.roster-card .r-name { font-weight: bold; font-size: 13px; }
+.roster-card .r-info { color: #aaa; font-size: 11px; }
+.roster-card .r-stars { color: #ffd93d; font-size: 14px; }
+.roster-card .r-copies { color: #6bcb77; font-size: 11px; }
+.star-up-btn {
+    background: #6bcb77; color: #1a1a2e; border: none; border-radius: 4px;
+    padding: 3px 8px; font-size: 11px; cursor: pointer; font-weight: bold; margin-top: 4px;
+}
+.star-up-btn:hover { background: #7de88a; }
+.sell-btn {
+    background: #2a2a3e; color: #e2b714; border: 1px solid #555; border-radius: 4px;
+    padding: 3px 8px; font-size: 11px; cursor: pointer; margin-top: 4px;
+}
+.sell-btn:hover { background: #3a3a5e; }
+
+/* === Team Builder Screen === */
+.team-builder-layout { display: flex; gap: 12px; margin-top: 10px; }
+.team-roster-panel { flex: 0 0 200px; max-height: 500px; overflow-y: auto; }
+.team-board-panel { flex: 1; }
+.team-roster-item {
+    background: #16213e; border: 1px solid #2a3a5e; border-radius: 6px;
+    padding: 6px 8px; margin-bottom: 4px; cursor: pointer; font-size: 12px;
+    transition: background 0.15s;
+}
+.team-roster-item:hover { background: #1e2d50; }
+.team-roster-item.on-team { border-color: #6bcb77; background: #1a3328; }
+.team-synergy-preview {
+    background: #16213e; padding: 8px 12px; border-radius: 6px; margin-top: 8px;
+    font-size: 13px;
+}
+
+/* Board grid */
+.board-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 3px; margin-top: 6px;
+}
+.board-cell {
+    aspect-ratio: 1; background: #0a0a1a; border: 1px solid #2a3a5e;
+    border-radius: 4px; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; cursor: pointer; min-height: 52px;
+    transition: background 0.15s;
+}
+.board-cell:hover { background: #1a1a3e; }
+.board-cell.occupied { background: #162840; border-color: #3a6a9e; }
+.board-cell .cell-unit { text-align: center; font-size: 10px; line-height: 1.3; }
+
+/* === Mission Select Screen === */
+.mission-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.mission-card {
+    background: #16213e; border: 2px solid #2a3a5e; border-radius: 8px;
+    padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+    transition: border-color 0.2s;
+}
+.mission-card:hover { border-color: #e2b714; }
+.mission-card.completed { border-color: #2a5a3e; }
+.mission-card.locked { opacity: 0.5; cursor: not-allowed; }
+.mission-card .m-name { font-weight: bold; }
+.mission-card .m-desc { color: #999; font-size: 12px; }
+.mission-card .m-stars { color: #ffd93d; font-size: 18px; }
+.mission-card .m-reward { color: #6bcb77; font-size: 12px; }
+.grind-section { margin-top: 20px; }
+
+/* === Combat Screen === */
+#combat-area {
+    position: relative; min-height: 400px;
+    background: #0d1117; border-radius: 8px; padding: 10px;
+}
+.wave-info {
+    text-align: center; padding: 6px; background: #16213e;
+    border-radius: 6px; margin-bottom: 8px; font-size: 14px; font-weight: bold;
+}
+.combat-board {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 2px; flex: 1; min-width: 0;
+}
+.combat-cell {
+    min-height: 36px; min-width: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; border-radius: 3px; padding: 1px;
+}
+.player-row { background: #0a1628; }
+.enemy-row { background: #1a0a0a; }
+.combat-unit { text-align: center; line-height: 1.1; }
+.combat-unit .hp-bar {
+    width: 28px; height: 3px; background: #333; border-radius: 2px;
+    margin: 1px auto 0; overflow: hidden;
+}
+.combat-unit .hp-fill { height: 100%; background: #6bcb77; transition: width 0.2s; }
+.combat-unit .hp-fill.low { background: #ff6b6b; }
+.combat-unit .mana-bar {
+    width: 28px; height: 3px; background: #1a1a3a; border-radius: 1px;
+    margin: 1px auto 0; overflow: hidden;
+}
+.combat-unit .mana-fill {
+    height: 100%; background: #4488ff; border-radius: 1px;
+    transition: width 0.05s linear;
+}
+.status-icons {
+    display: flex;
+    justify-content: center;
+    gap: 1px;
+    font-size: 8px;
+    line-height: 1;
+    margin-top: 1px;
+    height: 12px;
+    overflow: hidden;
+}
+.status-icon {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    text-align: center;
+    font-size: 9px;
+    line-height: 12px;
+}
+.status-overflow {
+    font-size: 7px;
+    color: #888;
+    line-height: 12px;
+}
+
+/* Results overlay */
+.combat-results {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85); display: none; flex-direction: column;
+    align-items: center; justify-content: center; border-radius: 8px;
+    z-index: 10;
+}
+.combat-results.show { display: flex; }
+.results-title { font-size: 28px; font-weight: bold; margin-bottom: 12px; animation: resultsBounce 0.5s ease-out; }
+.results-title.victory { color: #6bcb77; }
+.results-title.defeat { color: #ff6b6b; }
+.results-stars { font-size: 36px; margin: 8px 0; }
+.results-rewards { font-size: 16px; margin: 8px 0; }
+.results-btn {
+    background: #e2b714; color: #1a1a2e; border: none; border-radius: 8px;
+    padding: 10px 28px; font-size: 16px; font-weight: bold; cursor: pointer;
+    margin-top: 12px;
+}
+.results-btn:hover { background: #f0c830; }
+
+/* Combat start overlay */
+.combat-start-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.55); display: none; flex-direction: column;
+    align-items: center; justify-content: center; border-radius: 8px; z-index: 5;
+}
+.combat-start-overlay.show { display: flex; }
+.combat-start-overlay .wave-text { font-size: 24px; font-weight: bold; color: #e2b714; }
+.combat-start-overlay .wave-subtext { color: #aaa; margin-top: 6px; }
+
+/* Wave transition */
+.wave-transition {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7); display: none; flex-direction: column;
+    align-items: center; justify-content: center; border-radius: 8px; z-index: 5;
+}
+.wave-transition.show { display: flex; }
+.wave-transition .wave-text { font-size: 24px; font-weight: bold; color: #e2b714; }
+.wave-transition .wave-subtext { color: #aaa; margin-top: 6px; }
+
+/* === Combat Log === */
+#combat-log {
+    background: #0d1117; border-radius: 6px; padding: 8px;
+    max-height: 120px; overflow-y: auto; font-size: 12px;
+    margin-top: 6px;
+}
+#combat-log .log-entry { padding: 1px 0; }
+.log-info { color: #8bbcff; }
+.log-damage { color: #ff6b6b; }
+.log-heal { color: #6bcb77; }
+.log-kill { color: #ffd93d; }
+.log-combat { color: #ccc; }
+.log-warning { color: #ff8844; }
+
+/* === Utility === */
+.btn-row { display: flex; gap: 8px; margin: 8px 0; }
+.btn-primary {
+    background: #e2b714; color: #1a1a2e; border: none; border-radius: 6px;
+    padding: 8px 18px; font-weight: bold; cursor: pointer;
+}
+.btn-primary:hover { background: #f0c830; }
+.btn-secondary {
+    background: #2a3a5e; color: #e0e0e0; border: none; border-radius: 6px;
+    padding: 8px 18px; cursor: pointer;
+}
+.btn-secondary:hover { background: #3a4a7e; }
+/* === Sell Panel === */
+#sell-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+.sell-panel {
+    background: #1a1a2e;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 20px;
+    min-width: 280px;
+    text-align: center;
+}
+.sell-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; }
+.sell-info { color: #aaa; font-size: 13px; margin-bottom: 12px; }
+.sell-amount { margin-bottom: 12px; }
+.sell-amt-btn {
+    background: #2a2a3e;
+    border: 1px solid #555;
+    color: #fff;
+    padding: 6px 14px;
+    margin: 0 4px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.sell-amt-btn:hover { background: #3a3a5e; }
+.sell-preview { font-size: 15px; color: #e2b714; margin-bottom: 14px; }
+.sell-actions button { margin: 0 6px; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+.btn-green { background: #44aa44; border: none; color: #fff; }
+.btn-green:hover { background: #55bb55; }
+#sell-cancel { background: #555; border: none; color: #fff; }
+#sell-cancel:hover { background: #666; }
+
+/* === Unit Detail Panel === */
+#unit-detail-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 900;
+    justify-content: center;
+    align-items: center;
+}
+#unit-detail-overlay[style*="display: flex"],
+#unit-detail-overlay[style*="display:flex"] {
+    display: flex !important;
+}
+#unit-detail-panel {
+    background: #1a1a2e;
+    border: 1px solid #444;
+    border-radius: 10px;
+    padding: 20px;
+    max-width: 420px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+}
+#unit-detail-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 18px;
+    cursor: pointer;
+}
+#unit-detail-close:hover { color: #fff; }
+
+.ud-header {
+    text-align: center;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #333;
+}
+.ud-name { font-size: 20px; font-weight: bold; }
+.ud-stars { font-size: 16px; margin: 4px 0; }
+.ud-meta { font-size: 12px; color: #aaa; }
+
+.ud-section {
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #222;
+}
+.ud-section:last-child { border-bottom: none; }
+.ud-section-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #e2b714;
+    margin-bottom: 6px;
+}
+.ud-stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 2px 0;
+}
+.ud-stat-label { color: #aaa; }
+.ud-stat-value { color: #fff; }
+.ud-stat-bonus { color: #6bcb77; font-size: 11px; }
+
+.ud-type-desc {
+    font-size: 12px;
+    color: #bbb;
+    line-height: 1.4;
+    font-style: italic;
+}
+
+.ud-item-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    padding: 3px 0;
+}
+
+.ud-evo-box {
+    background: #16213e;
+    border-radius: 6px;
+    padding: 8px;
+}
+.ud-evo-met { color: #6bcb77; }
+.ud-evo-unmet { color: #e2b714; }
+.ud-evo-ability {
+    font-size: 12px;
+    color: #8bbcff;
+    margin-top: 4px;
+}
+
+/* === Combat Scoreboard === */
+.combat-scoreboard {
+    width: 180px;
+    min-width: 180px;
+    max-height: 400px;
+    overflow-y: auto;
+    background: #0d1b2a;
+    border: 1px solid #1b2838;
+    border-radius: 6px;
+    padding: 6px;
+    font-size: 11px;
+}
+.combat-scoreboard .sb-header {
+    font-size: 12px;
+    font-weight: bold;
+    color: #ffd700;
+    text-align: center;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #1b2838;
+    margin-bottom: 4px;
+}
+.combat-scoreboard .sb-unit {
+    padding: 3px 4px;
+    border-bottom: 1px solid #111a2a;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+.combat-scoreboard .sb-unit.dead {
+    opacity: 0.4;
+}
+.combat-scoreboard .sb-name {
+    font-weight: bold;
+    color: #e0e0e0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.combat-scoreboard .sb-name.enemy {
+    color: #ff6b6b;
+}
+.combat-scoreboard .sb-stats {
+    display: flex;
+    gap: 6px;
+    font-size: 10px;
+    color: #888;
+}
+.combat-scoreboard .sb-stats .dmg { color: #ff7043; }
+.combat-scoreboard .sb-stats .taken { color: #ef5350; }
+.combat-scoreboard .sb-stats .heal { color: #66bb6a; }
+
+/* Boss unit */
+.boss-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle, #2a0a0a 0%, #1a0a0a 100%);
+    border: 2px solid #ff4444;
+    border-radius: 6px;
+    padding: 4px;
+    z-index: 2;
+}
+.boss-emoji { font-size: 28px; line-height: 1; }
+.boss-name { font-size: 11px; font-weight: bold; color: #ff6666; }
+.boss-phase { font-size: 9px; color: #ff9999; }
+.boss-hp-bar {
+    width: 90%;
+    height: 6px;
+    background: #333;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 2px;
+}
+.boss-hp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff2222 0%, #ff6644 100%);
+    transition: width 0.1s;
+}
+.boss-shield-bar {
+    width: 90%;
+    height: 3px;
+    background: #1a1a3a;
+    border-radius: 1px;
+    overflow: hidden;
+}
+.boss-shield-fill { height: 100%; background: #4488ff; }
+.boss-enrage {
+    font-size: 8px;
+    color: #ff0000;
+    font-weight: bold;
+    animation: pulse 0.5s infinite;
+}
+.boss-occupied {
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 0, 0, 0.05);
+    border: 1px dashed rgba(255, 68, 68, 0.3);
+}
+
+/* Telegraph danger zones */
+.danger-zone {
+    background: rgba(255, 0, 0, 0.25) !important;
+    border: 1px solid rgba(255, 0, 0, 0.6) !important;
+    animation: dangerPulse 0.5s infinite;
+}
+@keyframes dangerPulse {
+    0%, 100% { background: rgba(255, 0, 0, 0.15); }
+    50% { background: rgba(255, 0, 0, 0.35); }
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Phase transition flash */
+.phase-transition-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255, 100, 0, 0.3);
+    pointer-events: none;
+    animation: phaseFlash 2s ease-out forwards;
+    z-index: 10;
+}
+@keyframes phaseFlash {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* Speed button */
+.speed-btn {
+    background: #1b2838;
+    color: #ffd700;
+    border: 1px solid #ffd700;
+    border-radius: 4px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    min-width: 36px;
+}
+.speed-btn:hover { background: #2a3848; }
+
+/* Damage numbers */
+#combat-main { position: relative; }
+.dmg-number {
+    position: absolute;
+    font-weight: bold;
+    font-size: 13px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    pointer-events: none;
+    animation: floatUp 0.8s ease-out forwards;
+    z-index: 20;
+    white-space: nowrap;
+}
+.dmg-normal { color: #ffffff; }
+.dmg-crit { color: #ffdd00; font-size: 16px; }
+.dmg-dot { color: #ff6633; font-size: 11px; }
+.dmg-heal { color: #44ee44; }
+.dmg-shield { color: #4488ff; font-size: 11px; }
+.dmg-dodge { color: #999999; font-style: italic; font-size: 11px; }
+.dmg-ability { color: #ff88ff; }
+.dmg-boss { color: #ff4444; font-size: 15px; }
+@keyframes floatUp {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    20% { transform: translateY(-8px) scale(1.1); opacity: 1; }
+    100% { transform: translateY(-30px) scale(0.8); opacity: 0; }
+}
+
+/* Death markers */
+.death-marker {
+    font-size: 10px;
+    opacity: 0.2;
+    text-align: center;
+    line-height: 36px;
+}
+
+/* Unit overlay layer */
+.combat-unit-overlay {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: left 0.15s ease-out, top 0.15s ease-out, opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+    z-index: 5;
+    font-size: 10px;
+    text-align: center;
+    padding: 1px;
+    box-sizing: border-box;
+}
+
+/* Combat start text */
+.combat-start-text {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 36px;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    z-index: 30;
+    pointer-events: none;
+    animation: combatStartAnim 1s ease-out forwards;
+}
+@keyframes combatStartAnim {
+    0% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+    20% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* Results title animation */
+@keyframes resultsBounce {
+    0% { transform: scale(0); }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* Element colors */
+.element-fire { color: #ff4444; }
+.element-water { color: #4488ff; }
+.element-earth { color: #44aa44; }
+.element-wind { color: #aa44ff; }
+.element-lightning { color: #ffcc00; }
+.element-force { color: #cc8844; }
+
+/* Prismatic highlight for 10-count element synergy */
+.synergy-item.prismatic {
+    background: linear-gradient(90deg, #ffcc00, #ff6600, #ffcc00);
+    background-size: 200% 100%;
+    animation: prismatic-glow 2s ease-in-out infinite;
+    font-weight: bold;
+    border-radius: 4px;
+    padding: 2px 4px;
+}
+.prismatic-text {
+    animation: prismatic-text-glow 2s ease-in-out infinite;
+    font-weight: bold;
+}
+@keyframes prismatic-glow {
+    0%, 100% { background-position: 0% 0%; }
+    50% { background-position: 100% 0%; }
+}
+@keyframes prismatic-text-glow {
+    0%, 100% { text-shadow: 0 0 4px #ffcc00; }
+    50% { text-shadow: 0 0 8px #ff6600, 0 0 12px #ffcc00; }
+}
+
+.text-gold { color: #ffd93d; }
+.text-green { color: #6bcb77; }
+.text-red { color: #ff6b6b; }
+.text-muted { color: #888; }
+.mt-sm { margin-top: 6px; }
+.mt-md { margin-top: 12px; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Top Bar (always visible) -->
+        <div id="top-bar">
+            <button id="nav-back" onclick="goBack()">← Back</button>
+            <div id="player-info">
+                <span id="player-level">Lv. 1</span>
+                <span id="player-xp">XP: 0/100</span>
+                <span id="player-gold">💰 100</span>
+            </div>
+        </div>
+
+        <!-- ============ HUB SCREEN ============ -->
+        <div id="screen-hub" class="screen active">
+            <div class="screen-title">🏠 Base Camp</div>
+
+            <div class="hub-nav">
+                <div class="hub-nav-btn" onclick="showScreen('gacha')">
+                    <span class="nav-emoji">🎲</span> Summon Units
+                </div>
+                <div class="hub-nav-btn" onclick="showScreen('roster')">
+                    <span class="nav-emoji">📋</span> Collection
+                </div>
+                <div class="hub-nav-btn" onclick="showScreen('team-builder')">
+                    <span class="nav-emoji">⚔️</span> Team Builder
+                </div>
+                <div class="hub-nav-btn" onclick="uiToggleItemBench()">
+                    <span class="nav-emoji">🎒</span> Item Bench
+                </div>
+            </div>
+
+            <!-- Item Bench Overlay -->
+            <div id="item-bench-overlay" style="display:none; background:#1a1a2e; border:1px solid #333; border-radius:8px; padding:12px; margin-top:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div class="section-title" style="margin:0;">🎒 Item Bench</div>
+                    <button class="btn-secondary" onclick="uiToggleItemBench()" style="font-size:11px; padding:2px 8px;">Close</button>
+                </div>
+                <div id="item-bench-info" style="font-size:12px; color:#888; margin-bottom:6px;"></div>
+                <div id="item-bench-grid" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:4px;"></div>
+                <div id="item-detail-panel" style="display:none; margin-top:8px; padding:8px; background:#16213e; border-radius:6px; font-size:12px;"></div>
+            </div>
+
+            <div class="section-title mt-md">Buildings</div>
+            <div class="hub-grid" id="buildings-grid"></div>
+
+            <div class="hub-nav mt-md">
+                <div class="hub-nav-btn" onclick="showScreen('mission-select')" style="grid-column: 1 / -1;">
+                    <span class="nav-emoji">🗡️</span> Deploy to Mission
+                </div>
+            </div>
+
+            <div style="text-align:center; margin-top:20px;">
+                <button class="btn-secondary" onclick="uiResetGame()" style="font-size:12px; opacity:0.6;">Reset Game (Start Over)</button>
+            </div>
+        </div>
+
+        <!-- ============ GACHA SCREEN ============ -->
+        <div id="screen-gacha" class="screen">
+            <div class="screen-title">🎲 Summoning Circle</div>
+            <div class="gacha-rates" id="gacha-rates"></div>
+            <div class="gacha-controls">
+                <button class="gacha-btn" id="btn-roll-1" onclick="uiDoSingleRoll()">Roll x1 (5g)</button>
+                <button class="gacha-btn" id="btn-roll-10" onclick="uiDoMultiRoll()">Roll x10 (45g)</button>
+            </div>
+            <div id="gacha-results" class="gacha-results"></div>
+        </div>
+
+        <!-- ============ ROSTER SCREEN ============ -->
+        <div id="screen-roster" class="screen">
+            <div class="screen-title">📋 Unit Collection</div>
+            <div id="roster-stats" class="text-muted" style="font-size:13px;"></div>
+            <div id="roster-grid" class="roster-grid"></div>
+        </div>
+
+        <!-- ============ TEAM BUILDER SCREEN ============ -->
+        <div id="screen-team-builder" class="screen">
+            <div class="screen-title">⚔️ Team Builder</div>
+            <div id="team-info" class="text-muted" style="font-size:13px;"></div>
+            <div class="team-builder-layout">
+                <div class="team-roster-panel" id="team-roster-panel"></div>
+                <div class="team-board-panel">
+                    <div class="board-grid" id="team-board"></div>
+                    <div class="team-synergy-preview" id="team-synergy-preview"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ MISSION SELECT SCREEN ============ -->
+        <div id="screen-mission-select" class="screen">
+            <div class="screen-title">🗡️ Missions</div>
+            <div class="section-title">Story Missions</div>
+            <div id="story-missions" class="mission-list"></div>
+            <div class="grind-section">
+                <div class="section-title">Grind Missions</div>
+                <button class="btn-primary" onclick="uiStartGrindMission()">Start Training Mission</button>
+            </div>
+        </div>
+
+        <!-- ============ COMBAT SCREEN ============ -->
+        <div id="screen-combat" class="screen">
+            <div id="combat-controls" style="display:flex; justify-content:space-between; align-items:center; padding:4px 8px; background:#16213e; border-radius:6px; margin-bottom:6px;">
+                <div class="wave-info" id="wave-info" style="margin-bottom:0;">Wave 1 / 1</div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span id="enrage-timer" style="color:#ff6644; font-size:11px;"></span>
+                    <button id="speed-btn" class="speed-btn" onclick="toggleCombatSpeed()">1×</button>
+                </div>
+            </div>
+            <div id="combat-synergy-bar" style="display:flex; flex-wrap:wrap; gap:6px; padding:4px 8px; background:#16213e; border-radius:6px; margin-bottom:6px; font-size:12px; min-height:20px;"></div>
+            <div id="combat-area">
+                <div id="combat-main" style="display:flex; gap:8px;">
+                    <div class="combat-board" id="combat-board"></div>
+                    <div id="damage-numbers" style="position:absolute; top:0; left:0; right:0; bottom:0; pointer-events:none; overflow:hidden;"></div>
+                    <div id="combat-scoreboard" class="combat-scoreboard"></div>
+                </div>
+                <div class="combat-results" id="combat-results">
+                    <div class="results-title" id="results-title">Victory!</div>
+                    <div class="results-stars" id="results-stars"></div>
+                    <div class="results-rewards" id="results-rewards"></div>
+                    <button class="results-btn" id="results-btn" onclick="uiReturnFromCombat()">Continue</button>
+                </div>
+                <div class="combat-start-overlay" id="combat-start-overlay">
+                    <div class="wave-text">Ready?</div>
+                    <div class="wave-subtext">Review unit positions before battle</div>
+                    <button class="btn-primary mt-md" onclick="uiStartCombatLoop()">Start Combat</button>
+                </div>
+                <div class="wave-transition" id="wave-transition">
+                    <div class="wave-text" id="wave-text">Wave 2</div>
+                    <div class="wave-subtext">Tap to reposition units, then continue</div>
+                    <button class="btn-primary mt-md" onclick="uiNextWave()">Start Next Wave</button>
+                </div>
+            </div>
+            <div id="combat-log"></div>
+        </div>
+    </div>
+
+    <!-- Unit Detail Panel (shared between roster and team builder) -->
+    <div id="unit-detail-overlay" onclick="if(event.target===this)closeUnitDetail()">
+        <div id="unit-detail-panel">
+            <button id="unit-detail-close" onclick="closeUnitDetail()">✕</button>
+            <div id="unit-detail-content"></div>
+        </div>
+    </div>
+
+    <!-- Scripts: load order matters (global scope, no modules) -->
+    <script src="js/units.js"></script>
+    <!-- synergies.js not loaded — V2 handles synergies in main-v2.js and teams.js -->
+    <script src="js/save.js"></script>
+    <script src="js/gacha.js"></script>
+    <script src="js/teams.js"></script>
+    <script src="js/hub.js"></script>
+    <script src="js/items.js"></script>
+    <script src="js/missions.js"></script>
+    <!-- V2 uses simplified combat in main-v2.js, not V1 combat.js -->
+    <script src="js/ui-v2.js"></script>
+    <script src="js/main-v2.js"></script>
+</body>
+</html>

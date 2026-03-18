@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Battler</title>
+    <style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #1a1a2e; color: #e0e0e0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh; display: flex; justify-content: center;
+    align-items: flex-start; padding: 10px;
+}
+#game-container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 6px; }
+
+/* === Top Bar === */
+#top-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #16213e; padding: 10px 20px; border-radius: 8px; font-size: 15px;
+    flex-wrap: wrap; gap: 6px;
+}
+#phase-info { font-weight: bold; color: #e2b714; font-size: 18px; }
+#player-info { display: flex; gap: 14px; }
+#player-hp { color: #ff6b6b; } #player-gold { color: #ffd93d; } #player-level { color: #6bcb77; }
+
+/* === Streak Display === */
+.streak-display {
+    font-size: 12px; font-weight: 600;
+    padding: 2px 10px; border-radius: 10px;
+    display: none;
+}
+.streak-win {
+    background: rgba(255, 107, 53, 0.2); color: #ff8c42;
+    border: 1px solid rgba(255, 107, 53, 0.4);
+}
+.streak-loss {
+    background: rgba(255, 107, 107, 0.2); color: #ff6b6b;
+    border: 1px solid rgba(255, 107, 107, 0.4);
+}
+
+/* === Income Breakdown === */
+#income-breakdown {
+    width: 100%; text-align: center;
+    font-size: 12px; color: #ffd93d;
+    padding: 4px 0; display: none;
+    transition: opacity 0.5s;
+}
+#income-breakdown.income-flash {
+    animation: income-glow 0.6s ease;
+}
+@keyframes income-glow {
+    0% { color: #fff; text-shadow: 0 0 8px #ffd93d; }
+    100% { color: #ffd93d; text-shadow: none; }
+}
+
+/* === Synergy Bar === */
+#synergy-bar {
+    background: #16213e; border-radius: 8px; padding: 8px 12px;
+    display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px;
+}
+.synergy-badge {
+    display: flex; align-items: center; gap: 4px; padding: 3px 8px;
+    border-radius: 12px; font-size: 11px; font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+.synergy-badge.inactive { opacity: 0.35; }
+.synergy-badge.bronze { background: #5c3a1e; border-color: #8b5e34; }
+.synergy-badge.silver { background: #3a3a4a; border-color: #7a7a8a; }
+.synergy-badge.gold { background: #5c4a0e; border-color: #c9a832; }
+.synergy-badge .syn-icon { font-size: 13px; }
+.synergy-badge .syn-count { color: #ffd93d; }
+
+/* === Board === */
+#main-area { display: flex; flex-direction: column; gap: 4px; }
+.board-half { background: #16213e; border-radius: 8px; padding: 8px 12px; }
+.board-label { font-size: 11px; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+.grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(4, 1fr); gap: 4px; }
+.cell {
+    aspect-ratio: 1; background: #0f3460; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; position: relative; transition: background 0.15s; min-height: 48px;
+}
+.cell:hover { background: #1a4a7a; }
+.cell.selected { outline: 2px solid #e2b714; outline-offset: -2px; }
+.cell.valid-target { background: #1a5a3a; }
+
+/* === Unit === */
+.unit {
+    width: 88%; height: 88%; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 18px; position: relative; cursor: grab;
+    transition: transform 0.08s; border: 2px solid rgba(255,255,255,0.2);
+}
+.unit:hover { transform: scale(1.1); }
+.unit .unit-emoji { font-size: 20px; line-height: 1; }
+.unit .unit-star { font-size: 8px; position: absolute; top: -3px; color: #ffd93d; }
+.unit .hp-bar-bg { position: absolute; bottom: -4px; width: 80%; height: 3px; background: #333; border-radius: 2px; overflow: hidden; }
+.unit .hp-bar { height: 100%; background: #6bcb77; border-radius: 2px; transition: width 0.2s; }
+.unit .hp-bar.low { background: #ff6b6b; } .unit .hp-bar.mid { background: #ffd93d; }
+/* Element border glow */
+.unit.elem-fire { border-color: #ff6b3588; box-shadow: 0 0 6px #ff6b3533; }
+.unit.elem-water { border-color: #4ea8de88; box-shadow: 0 0 6px #4ea8de33; }
+.unit.elem-earth { border-color: #6bcb7788; box-shadow: 0 0 6px #6bcb7733; }
+.unit.elem-wind { border-color: #c9b8ff88; box-shadow: 0 0 6px #c9b8ff33; }
+.unit.cost-1 { background: #444; } .unit.cost-2 { background: #2d5a4f; }
+.unit.cost-3 { background: #1d3557; } .unit.cost-4 { background: #5a1b8a; }
+.unit.cost-5 { background: #9f360c; }
+.unit.enemy { border-color: #ff6b6b44; }
+.unit.evolved { box-shadow: 0 0 10px #ffd93d66; }
+.unit.attacking { animation: attack-pulse 0.3s ease; }
+@keyframes attack-pulse { 0%{transform:scale(1)} 50%{transform:scale(1.25)} 100%{transform:scale(1)} }
+.unit.taking-damage { animation: shake 0.2s ease; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-3px)} 75%{transform:translateX(3px)} }
+
+/* === Bench === */
+#bench-area { background: #16213e; border-radius: 8px; padding: 6px 12px; }
+#bench-slots { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; }
+.bench-slot {
+    aspect-ratio: 1; background: #0f3460; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; min-height: 48px; transition: background 0.15s;
+}
+.bench-slot:hover { background: #1a4a7a; }
+.bench-slot.selected { outline: 2px solid #e2b714; outline-offset: -2px; }
+
+/* === Shop === */
+#shop-area { background: #16213e; border-radius: 8px; padding: 8px 12px; }
+#shop-controls { display: flex; gap: 8px; margin-bottom: 6px; }
+#shop-controls button {
+    padding: 7px 14px; border: none; border-radius: 6px;
+    cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s;
+}
+#refresh-btn { background: #2d6a4f; color: white; }
+#buy-xp-btn { background: #1d3557; color: white; }
+#start-combat-btn { background: #e2b714; color: #1a1a2e; margin-left: auto; }
+#shop-controls button:hover { filter: brightness(1.2); transform: translateY(-1px); }
+#shop-controls button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+#shop-units { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.shop-card {
+    background: #0f3460; border-radius: 8px; padding: 8px 6px;
+    text-align: center; cursor: pointer; transition: all 0.15s; border: 2px solid transparent;
+}
+.shop-card:hover { border-color: #e2b714; transform: translateY(-2px); }
+.shop-card.sold { opacity: 0.3; pointer-events: none; }
+.shop-card .card-emoji { font-size: 26px; margin-bottom: 3px; }
+.shop-card .card-name { font-size: 11px; font-weight: 600; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shop-card .card-cost { font-size: 10px; color: #ffd93d; }
+.shop-card .card-tags { font-size: 9px; color: #aaa; margin-top: 3px; }
+.shop-card.cost-1 { border-bottom: 3px solid #888; }
+.shop-card.cost-2 { border-bottom: 3px solid #2d6a4f; }
+.shop-card.cost-3 { border-bottom: 3px solid #1d3557; }
+.shop-card.cost-4 { border-bottom: 3px solid #6a1b9a; }
+.shop-card.cost-5 { border-bottom: 3px solid #bf360c; }
+
+/* Element tag colors in shop */
+.elem-tag-fire { color: #ff8c42; } .elem-tag-water { color: #4ea8de; }
+.elem-tag-earth { color: #6bcb77; } .elem-tag-wind { color: #c9b8ff; }
+
+/* === Affinity Indicator === */
+.affinity-indicator {
+    font-size: 10px; margin-left: 2px;
+    cursor: help; vertical-align: middle;
+}
+
+/* === Combat Log === */
+#combat-log { background: #16213e; border-radius: 8px; padding: 6px 12px; max-height: 80px; overflow-y: auto; }
+#log-messages { font-size: 11px; color: #aaa; display: flex; flex-direction: column; gap: 1px; }
+.log-entry { padding: 1px 0; }
+.log-entry.damage { color: #ff6b6b; } .log-entry.kill { color: #e2b714; }
+.log-entry.info { color: #4ea8de; } .log-entry.gold { color: #ffd93d; }
+.log-entry.evolve { color: #ff8c42; font-weight: bold; }
+
+/* === Tooltip === */
+.tooltip {
+    position: fixed; background: #0a0a1a; border: 1px solid #444; border-radius: 6px;
+    padding: 10px; font-size: 11px; pointer-events: none; z-index: 100;
+    max-width: 220px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.tooltip .tt-name { font-weight: bold; font-size: 13px; margin-bottom: 4px; }
+.tooltip .tt-tags { font-size: 10px; color: #aaa; margin-bottom: 4px; }
+.tooltip .tt-stats { color: #ccc; line-height: 1.5; }
+.tooltip .tt-evolve { color: #ff8c42; font-size: 10px; margin-top: 4px; border-top: 1px solid #333; padding-top: 4px; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #16213e; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <header id="top-bar">
+            <div id="round-info">Round <span id="round-number">1</span></div>
+            <div id="phase-info">Planning Phase</div>
+            <div id="player-info">
+                <span id="player-hp">❤️ 100</span>
+                <span id="player-gold">🪙 10</span>
+                <span id="player-level">⭐ Lv 1</span>
+                <span id="streak-info" class="streak-display"></span>
+            </div>
+            <div id="income-breakdown"></div>
+        </header>
+        <div id="synergy-bar"></div>
+        <div id="main-area">
+            <div id="enemy-board" class="board-half">
+                <div class="board-label">Enemy Side</div>
+                <div id="enemy-grid" class="grid"></div>
+            </div>
+            <div id="player-board" class="board-half">
+                <div class="board-label">Your Side</div>
+                <div id="player-grid" class="grid"></div>
+            </div>
+        </div>
+        <div id="bench-area">
+            <div class="board-label">Bench</div>
+            <div id="bench-slots"></div>
+        </div>
+        <div id="shop-area">
+            <div id="shop-controls">
+                <button id="refresh-btn">🔄 Refresh (2🪙)</button>
+                <button id="buy-xp-btn">📈 Buy XP (4🪙)</button>
+                <button id="start-combat-btn">⚔️ Start Combat</button>
+            </div>
+            <div id="shop-units"></div>
+        </div>
+        <div id="combat-log"><div id="log-messages"></div></div>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="game-over-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); justify-content:center; align-items:center; z-index:200;">
+        <div style="background:#16213e; border:2px solid #ff6b6b; border-radius:12px; padding:30px 40px; text-align:center;">
+            <h1 style="color:#ff6b6b; margin-bottom:10px;">Game Over</h1>
+            <p style="font-size:18px; margin-bottom:20px;">You reached Round <strong id="final-round">1</strong></p>
+            <button onclick="resetGame()" style="font-size:16px; padding:10px 24px; background:#2d6a4f; color:white; border:none; border-radius:6px; cursor:pointer;">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Script imports in dependency order -->
+    <script src="js/units.js"></script>
+    <script src="js/synergies.js"></script>
+    <script src="js/enemies.js"></script>
+    <script src="js/economy.js"></script>
+    <script src="js/shop.js"></script>
+    <script src="js/board.js"></script>
+    <script src="js/combat.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

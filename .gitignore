@@ -1,0 +1,20 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Claude internal
+.claude/
+
+# Sensitive
+fibery api.txt
+
+# Node (future-proofing)
+node_modules/
