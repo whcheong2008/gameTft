@@ -1532,7 +1532,7 @@ function startMissionCombat(playerBoard, enemies) {
         }
     }
 
-    // Place enemies on the enemy rows (rows 4-7)
+    // Place enemies on the enemy rows (rows 0-3)
     placeEnemiesOnBoard(enemies);
 
     // Init combat
@@ -1545,11 +1545,17 @@ function startMissionCombat(playerBoard, enemies) {
     // Render synergy bar
     renderCombatSynergyBar();
 
-    // Render initial board so player can see positions
-    renderCombatBoard();
-
     // Show start overlay instead of immediately starting combat
     document.getElementById('combat-start-overlay').className = 'combat-start-overlay show';
+
+    // Defer initial board render until after the browser has laid out the combat screen.
+    // On first load after refresh, offsetWidth/offsetHeight are 0 if we render synchronously,
+    // which causes all unit overlays to stack at (0,0).
+    requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+            renderCombatBoard();
+        });
+    });
 }
 
 var COMBAT_TICK_MS = 50; // 20 fps
@@ -1572,6 +1578,10 @@ function uiStartCombatLoop() {
     if (combatState && typeof initCombatSynergySidebars === 'function') {
         initCombatSynergySidebars(combatState.playerUnits || [], combatState.enemyUnits || []);
     }
+
+    // Re-render board with correct dimensions before combat starts
+    // (sidebars may have changed the board width)
+    renderCombatBoard();
 
     // Show FIGHT! text
     showCombatStartText();
@@ -2195,10 +2205,10 @@ function renderCombatBoard() {
     if (!combatState) return;
 
     var grid = combatState.grid;
-    var boardW = boardEl.offsetWidth;
-    var boardH = boardEl.offsetHeight;
-    var cellW = boardW / 7;
-    var cellH = boardH / 8;
+
+    // Use percentage-based positioning so units are correct regardless of board size/timing
+    var cellWPct = 100 / 7;
+    var cellHPct = 100 / 8;
 
     // Collect telegraph danger cells
     var dangerCells = {};
@@ -2262,21 +2272,21 @@ function renderCombatBoard() {
             unitLayer.appendChild(el);
         }
 
-        // Position with transition
-        var targetX = unit.gridCol * cellW;
-        var targetY = unit.gridRow * cellH;
+        // Position with percentage-based layout (immune to board resize/timing issues)
+        var targetXPct = unit.gridCol * cellWPct;
+        var targetYPct = unit.gridRow * cellHPct;
 
         // Boss: span 2x2
         if (unit.isBoss) {
-            el.style.width = (cellW * 2) + 'px';
-            el.style.height = (cellH * 2) + 'px';
+            el.style.width = (cellWPct * 2) + '%';
+            el.style.height = (cellHPct * 2) + '%';
         } else {
-            el.style.width = cellW + 'px';
-            el.style.height = cellH + 'px';
+            el.style.width = cellWPct + '%';
+            el.style.height = cellHPct + '%';
         }
 
-        el.style.left = targetX + 'px';
-        el.style.top = targetY + 'px';
+        el.style.left = targetXPct + '%';
+        el.style.top = targetYPct + '%';
 
         // Death animation
         if (unit.deathAnimating) {
