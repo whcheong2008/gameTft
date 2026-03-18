@@ -3,7 +3,7 @@
 // =============================================================================
 
 var SAVE_KEY = 'autobattler_v2_save';
-var SAVE_VERSION = 5;
+var SAVE_VERSION = 6;
 
 // ---- Default State Factory ----
 
@@ -44,7 +44,19 @@ function createDefaultSaveData() {
             storyProgress: 0,
             storyStars: {},    // { missionId: bestStarRating }
             grindBest: {},     // { missionId: bestStarRating }
-            milestonesClaimed: []  // Array of mission IDs that gave milestone rewards
+            milestonesClaimed: [],  // Array of mission IDs that gave milestone rewards
+            regionProgress: {
+                1: { completed: [], bossCleared: false },
+                2: { completed: [], bossCleared: false },
+                3: { completed: [], bossCleared: false },
+                4: { completed: [], bossCleared: false },
+                5: { completed: [], bossCleared: false },
+                6: { completed: [], bossCleared: false },
+                7: { completed: [], bossCleared: false },
+                8: { completed: [], bossCleared: false }
+            },
+            starRatings: {},
+            regionRewardsClaimed: []
         },
         // Item inventory
         items: {
@@ -222,6 +234,63 @@ function migrateSave(data) {
         data.version = 5;
         console.log('Migration v4→v5 complete.');
     }
+    if (data.version < 6) {
+        console.log('Migrating save from v5 to v6 (Region system)');
+
+        // Initialize regionProgress from old storyProgress
+        if (!data.missions.regionProgress) {
+            data.missions.regionProgress = {};
+            for (var r = 1; r <= 8; r++) {
+                data.missions.regionProgress[r] = { completed: [], bossCleared: false };
+            }
+        }
+        // Map old storyProgress (0-14) to new region progress (best effort)
+        var oldProgress = data.missions.storyProgress || 0;
+        // Region 1: old missions 0-3 (4 stages)
+        if (oldProgress >= 1) data.missions.regionProgress[1].completed.push('r1_s1');
+        if (oldProgress >= 2) data.missions.regionProgress[1].completed.push('r1_s2');
+        if (oldProgress >= 3) data.missions.regionProgress[1].completed.push('r1_s3');
+        if (oldProgress >= 4) { data.missions.regionProgress[1].completed.push('r1_s4'); data.missions.regionProgress[1].completed.push('r1_boss'); data.missions.regionProgress[1].bossCleared = true; }
+        // Region 2: old missions 4-6
+        if (oldProgress >= 5) data.missions.regionProgress[2].completed.push('r2_s1');
+        if (oldProgress >= 6) data.missions.regionProgress[2].completed.push('r2_s2');
+        if (oldProgress >= 7) { data.missions.regionProgress[2].completed.push('r2_s3'); data.missions.regionProgress[2].completed.push('r2_s4'); data.missions.regionProgress[2].completed.push('r2_s5'); data.missions.regionProgress[2].completed.push('r2_boss'); data.missions.regionProgress[2].bossCleared = true; }
+        // Region 3-4: old missions 7-10
+        if (oldProgress >= 8) { data.missions.regionProgress[3].completed.push('r3_s1'); data.missions.regionProgress[3].completed.push('r3_s2'); }
+        if (oldProgress >= 9) { data.missions.regionProgress[3].completed.push('r3_s3'); data.missions.regionProgress[3].completed.push('r3_s4'); data.missions.regionProgress[3].completed.push('r3_boss'); data.missions.regionProgress[3].bossCleared = true; }
+        if (oldProgress >= 10) data.missions.regionProgress[4].completed.push('r4_s1');
+        if (oldProgress >= 11) { data.missions.regionProgress[4].completed.push('r4_s2'); data.missions.regionProgress[4].completed.push('r4_s3'); data.missions.regionProgress[4].completed.push('r4_s4'); data.missions.regionProgress[4].completed.push('r4_s5'); data.missions.regionProgress[4].completed.push('r4_boss'); data.missions.regionProgress[4].bossCleared = true; }
+        // Region 5-8: old missions 11-14
+        if (oldProgress >= 12) { data.missions.regionProgress[5].completed.push('r5_s1'); data.missions.regionProgress[5].completed.push('r5_s2'); data.missions.regionProgress[5].completed.push('r5_s3'); data.missions.regionProgress[5].completed.push('r5_s4'); data.missions.regionProgress[5].completed.push('r5_boss'); data.missions.regionProgress[5].bossCleared = true; }
+        if (oldProgress >= 13) { data.missions.regionProgress[6].completed.push('r6_s1'); data.missions.regionProgress[6].completed.push('r6_s2'); data.missions.regionProgress[6].completed.push('r6_s3'); data.missions.regionProgress[6].completed.push('r6_s4'); data.missions.regionProgress[6].completed.push('r6_s5'); data.missions.regionProgress[6].completed.push('r6_s6'); data.missions.regionProgress[6].completed.push('r6_boss'); data.missions.regionProgress[6].bossCleared = true; }
+        if (oldProgress >= 14) {
+            for (var rs = 1; rs <= 5; rs++) data.missions.regionProgress[7].completed.push('r7_s' + rs);
+            data.missions.regionProgress[7].completed.push('r7_boss');
+            data.missions.regionProgress[7].bossCleared = true;
+            for (var rs2 = 1; rs2 <= 6; rs2++) data.missions.regionProgress[8].completed.push('r8_s' + rs2);
+            data.missions.regionProgress[8].completed.push('r8_boss');
+            data.missions.regionProgress[8].bossCleared = true;
+        }
+
+        // Initialize starRatings
+        if (!data.missions.starRatings) data.missions.starRatings = {};
+
+        // Convert chapter rewards to region rewards
+        if (data.missions.chapterRewardsClaimed) {
+            if (!data.missions.regionRewardsClaimed) data.missions.regionRewardsClaimed = [];
+            var chapterToRegion = { 1: 1, 2: 2, 3: 3, 4: 5 };
+            for (var ci = 0; ci < data.missions.chapterRewardsClaimed.length; ci++) {
+                var mappedRegion = chapterToRegion[data.missions.chapterRewardsClaimed[ci]];
+                if (mappedRegion && data.missions.regionRewardsClaimed.indexOf(mappedRegion) < 0) {
+                    data.missions.regionRewardsClaimed.push(mappedRegion);
+                }
+            }
+        }
+        if (!data.missions.regionRewardsClaimed) data.missions.regionRewardsClaimed = [];
+
+        data.version = 6;
+        console.log('Migration v5→v6 complete.');
+    }
     return data;
 }
 
@@ -276,6 +345,14 @@ function validateSaveData(data) {
     if (!data.missions.storyStars) data.missions.storyStars = {};
     if (!data.missions.grindBest) data.missions.grindBest = {};
     if (!data.missions.milestonesClaimed) data.missions.milestonesClaimed = [];
+    if (!data.missions.regionProgress) {
+        data.missions.regionProgress = {};
+        for (var rr = 1; rr <= 8; rr++) {
+            data.missions.regionProgress[rr] = { completed: [], bossCleared: false };
+        }
+    }
+    if (!data.missions.starRatings) data.missions.starRatings = {};
+    if (!data.missions.regionRewardsClaimed) data.missions.regionRewardsClaimed = [];
     if (!data.stats) data.stats = defaults.stats;
     if (typeof data.stats.rollsSincePity !== 'number') data.stats.rollsSincePity = 0;
     if (typeof data.stats.totalGoldSpent !== 'number') data.stats.totalGoldSpent = 0;
