@@ -3,5 +3,7 @@ In region 4, a discovery regarding their fundamental understanding of how the wa
 
 Region 5 is about gathering the group back.
 
-The group reunites even though their ideology is split and due to B's death
+The group reunites even though their ideology is split and due to B's death. Because they have to complete the journey and stop the end of the world.
+
+At the end, i dont know which is more impactful, the hero sacrificing his life to join his friend. Or the hero survives to ponder over his choices.
 
