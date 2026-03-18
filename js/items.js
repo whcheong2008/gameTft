@@ -937,6 +937,198 @@ function getEnhancedStatMultiplier(item) {
     return 1 + enhanceBonus;
 }
 
+// ---- Gem Socket System ----
+
+var GEM_TYPES = {
+    ruby:      { name: 'Ruby',      emoji: '❤️',  stat: 'hp',              value: 100, minMissionLevel: 5 },
+    sapphire:  { name: 'Sapphire',  emoji: '💙', stat: 'attack',          value: 8,   minMissionLevel: 5 },
+    emerald:   { name: 'Emerald',   emoji: '💚', stat: 'damageReduction', value: 0.05, minMissionLevel: 8 },
+    topaz:     { name: 'Topaz',     emoji: '💛', stat: 'attackSpd',       value: -0.05, minMissionLevel: 8 },
+    diamond:   { name: 'Diamond',   emoji: '💎', stat: 'critChance',      value: 0.08, minMissionLevel: 10 },
+    amethyst:  { name: 'Amethyst',  emoji: '💜', stat: 'startMana',       value: 10,  minMissionLevel: 10 },
+    opal:      { name: 'Opal',      emoji: '🤍', stat: 'healPower',       value: 0.10, minMissionLevel: 12 },
+    onyx:      { name: 'Onyx',      emoji: '🖤', stat: 'tenacity',        value: 0.10, minMissionLevel: 12 },
+    prismatic: { name: 'Prismatic', emoji: '🌈', stat: 'multi',           value: null, minMissionLevel: 99, bossOnly: true,
+                 multiStats: { hp: 50, attack: 5, critChance: 0.03 } }
+};
+
+// Socket count by item type
+var SOCKET_COUNTS = {
+    component: 0,
+    combined: 1,
+    set: 1,
+    ability: 2,
+    mythic: 2
+};
+
+// Gem rarity multipliers (same tiers as items)
+var GEM_RARITY_MULTIPLIERS = { standard: 1, uncommon: 1.25, rare: 1.50, epic: 2.00 };
+
+function getGemSocketCount(item) {
+    return SOCKET_COUNTS[item.type] || 0;
+}
+
+function getGemSockets(item) {
+    if (!item.gems) item.gems = [];
+    return item.gems;
+}
+
+function socketGem(saveData, itemId, gemId) {
+    var item = findBenchItem(saveData, itemId);
+    if (!item) return { success: false, reason: 'Item not found' };
+
+    var maxSockets = getGemSocketCount(item);
+    if (maxSockets === 0) return { success: false, reason: 'Item has no sockets' };
+
+    if (!item.gems) item.gems = [];
+    if (item.gems.length >= maxSockets) return { success: false, reason: 'All sockets full' };
+
+    // Find and remove gem from gem inventory
+    if (!saveData.items.gemInventory) return { success: false, reason: 'No gems available' };
+    var gemIdx = -1;
+    for (var i = 0; i < saveData.items.gemInventory.length; i++) {
+        if (saveData.items.gemInventory[i].id === gemId) { gemIdx = i; break; }
+    }
+    if (gemIdx < 0) return { success: false, reason: 'Gem not found in inventory' };
+
+    var gem = saveData.items.gemInventory.splice(gemIdx, 1)[0];
+    item.gems.push(gem);
+    autoSave(saveData);
+    return { success: true, gem: gem };
+}
+
+function unsocketGem(saveData, itemId, socketIndex) {
+    var item = findBenchItem(saveData, itemId);
+    if (!item) return { success: false, reason: 'Item not found' };
+    if (!item.gems || socketIndex >= item.gems.length) return { success: false, reason: 'No gem in that socket' };
+
+    var cost = 10;
+    if (saveData.player.gold < cost) return { success: false, reason: 'Not enough gold (10g)' };
+    spendGold(saveData, cost);
+
+    var gem = item.gems.splice(socketIndex, 1)[0];
+    if (!saveData.items.gemInventory) saveData.items.gemInventory = [];
+    saveData.items.gemInventory.push(gem);
+    autoSave(saveData);
+    return { success: true, gem: gem, cost: cost };
+}
+
+// Combine 3 gems of same type and rarity → 1 gem of next rarity
+function forgeGemCombine(saveData, gemType, gemRarity) {
+    var forgeLevel = getBuildingLevel(saveData, 'forge');
+    if (forgeLevel < 3) return { success: false, reason: 'Forge level 3 required' };
+
+    if (gemRarity === 'epic') return { success: false, reason: 'Max rarity reached' };
+
+    var cost = 15;
+    if (saveData.player.gold < cost) return { success: false, reason: 'Not enough gold (15g)' };
+
+    if (!saveData.items.gemInventory) return { success: false, reason: 'No gems' };
+
+    // Find 3 matching gems
+    var matches = [];
+    for (var i = 0; i < saveData.items.gemInventory.length; i++) {
+        var g = saveData.items.gemInventory[i];
+        if (g.gemType === gemType && g.rarity === gemRarity) {
+            matches.push(i);
+        }
+        if (matches.length >= 3) break;
+    }
+    if (matches.length < 3) return { success: false, reason: 'Need 3 ' + gemRarity + ' ' + gemType + ' gems' };
+
+    spendGold(saveData, cost);
+
+    // Remove 3 gems (remove from end to avoid index shifting)
+    matches.sort(function(a, b) { return b - a; });
+    for (var r = 0; r < matches.length; r++) {
+        saveData.items.gemInventory.splice(matches[r], 1);
+    }
+
+    // Create upgraded gem
+    var rarityOrder = ['standard', 'uncommon', 'rare', 'epic'];
+    var nextRarity = rarityOrder[rarityOrder.indexOf(gemRarity) + 1];
+    var newGem = createGemInstance(gemType, nextRarity);
+    saveData.items.gemInventory.push(newGem);
+
+    autoSave(saveData);
+    return { success: true, gem: newGem, cost: cost };
+}
+
+function createGemInstance(gemType, rarity) {
+    return {
+        id: 'gem_' + generateItemId(),
+        gemType: gemType,
+        rarity: rarity || 'standard'
+    };
+}
+
+function getGemStatValue(gem) {
+    var gemDef = GEM_TYPES[gem.gemType];
+    if (!gemDef) return {};
+    var rarityMult = GEM_RARITY_MULTIPLIERS[gem.rarity] || 1;
+
+    if (gemDef.stat === 'multi') {
+        // Prismatic: multiple stats
+        var result = {};
+        var mKeys = Object.keys(gemDef.multiStats);
+        for (var i = 0; i < mKeys.length; i++) {
+            result[mKeys[i]] = gemDef.multiStats[mKeys[i]] * rarityMult;
+        }
+        return result;
+    }
+    var r = {};
+    r[gemDef.stat] = gemDef.value * rarityMult;
+    return r;
+}
+
+function rollGemDrop(missionLevel, starRating) {
+    // Determine eligible gem types by mission level
+    var eligible = [];
+    var gemKeys = Object.keys(GEM_TYPES);
+    for (var i = 0; i < gemKeys.length; i++) {
+        var gDef = GEM_TYPES[gemKeys[i]];
+        if (gDef.bossOnly) continue; // Prismatic only from bosses
+        if (missionLevel >= gDef.minMissionLevel) {
+            eligible.push(gemKeys[i]);
+        }
+    }
+    if (eligible.length === 0) return null;
+
+    var gemType = eligible[Math.floor(Math.random() * eligible.length)];
+    var rarity = rollItemRarity(missionLevel, starRating);
+    return createGemInstance(gemType, rarity);
+}
+
+function rollBossGemDrop() {
+    // 5% chance for Prismatic, otherwise random standard gem at rare+ rarity
+    if (Math.random() < 0.05) {
+        var rarity = Math.random() < 0.5 ? 'rare' : 'epic';
+        return createGemInstance('prismatic', rarity);
+    }
+    // Normal gem at higher quality
+    var gemKeys = Object.keys(GEM_TYPES);
+    var nonBoss = [];
+    for (var i = 0; i < gemKeys.length; i++) {
+        if (!GEM_TYPES[gemKeys[i]].bossOnly) nonBoss.push(gemKeys[i]);
+    }
+    var type = nonBoss[Math.floor(Math.random() * nonBoss.length)];
+    var rarityRoll = Math.random();
+    var rarity2 = rarityRoll < 0.3 ? 'epic' : (rarityRoll < 0.65 ? 'rare' : 'uncommon');
+    return createGemInstance(type, rarity2);
+}
+
+// Apply gem stats to unit during combat
+function applyGemStatsToUnit(unit, item) {
+    var gems = getGemSockets(item);
+    for (var g = 0; g < gems.length; g++) {
+        var stats = getGemStatValue(gems[g]);
+        var sKeys = Object.keys(stats);
+        for (var s = 0; s < sKeys.length; s++) {
+            applyStatToUnit(unit, sKeys[s], stats[sKeys[s]]);
+        }
+    }
+}
+
 // ---- Set Bonus Calculation ----
 
 function calculateActiveSetBonuses(playerUnits, saveData) {
@@ -1331,6 +1523,9 @@ function applyItemStats(unit, saveData) {
                 unit.itemSpecials.push(setRecipe.special);
             }
         }
+
+        // Apply gem stats for socketed items
+        applyGemStatsToUnit(unit, item);
     }
 
     // Post-processing: apply spellAmp (Rabadon's) after all stats
