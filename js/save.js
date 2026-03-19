@@ -1019,12 +1019,37 @@ function getXPToNextLevel(saveData) {
     return getXPForLevel(saveData.player.level + 1) - saveData.player.xp;
 }
 
+// Hard level caps by highest region unlocked (regions gate levels, not reverse)
+var REGION_LEVEL_CAPS = { 1: 4, 2: 7, 3: 10, 4: 13, 5: 16, 6: 18, 7: 20, 8: 20 };
+
+function getPlayerLevelCap(saveData) {
+    // Find highest region unlocked (R1 boss cleared = R2 unlocked, etc.)
+    var highestRegion = 1;
+    if (saveData.missions && saveData.missions.regionProgress) {
+        for (var r = 1; r <= 8; r++) {
+            var rp = saveData.missions.regionProgress[r];
+            if (rp && rp.bossCleared) {
+                highestRegion = Math.min(r + 1, 8); // Clearing R1 boss unlocks R2's cap
+            }
+        }
+    }
+    return REGION_LEVEL_CAPS[highestRegion] || 20;
+}
+
 function addPlayerXP(saveData, amount) {
+    var levelCap = getPlayerLevelCap(saveData);
+    // Don't add XP if already at cap
+    if (saveData.player.level >= levelCap) return false;
     saveData.player.xp += amount;
     var leveled = false;
-    while (saveData.player.level < 20 && saveData.player.xp >= getXPForLevel(saveData.player.level + 1)) {
+    while (saveData.player.level < levelCap && saveData.player.xp >= getXPForLevel(saveData.player.level + 1)) {
         saveData.player.level++;
         leveled = true;
+    }
+    // Clamp XP at the threshold if at cap (don't accumulate excess)
+    if (saveData.player.level >= levelCap) {
+        var capXP = getXPForLevel(levelCap);
+        if (saveData.player.xp > capXP) saveData.player.xp = capXP;
     }
     return leveled;
 }

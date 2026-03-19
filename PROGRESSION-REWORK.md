@@ -67,17 +67,19 @@ Team size is gated by player level (Veilborn sustaining capacity), with one camp
 
 ### Level Caps — Hard + Soft
 
-**Hard cap per region.** Stages stop giving XP once the player hits the region's max level. The XP bar grays out with "Max level for this region." Advancing to the next region lifts the cap. This prevents any amount of grinding from breaking the progression curve.
+**Hard level cap per region.** The player's level is capped based on the highest region they've unlocked (cleared the previous region's boss). Stages stop giving XP once the player hits the current cap. The XP bar grays out with "Max level for this region." Clearing the boss and entering the next region raises the cap.
 
-| Region | Hard Level Cap | Notes |
-|--------|---------------|-------|
-| R1 | 4 | Can't outlevel R2's content |
-| R2 | 7 | Can't skip R3's team size unlock |
-| R3 | 10 | Can't trivialize R4's crisis |
-| R4 | 13 | Can't skip R5's rebuild |
-| R5 | 16 | Can't access T5 gacha early |
-| R6 | 18 | Can't skip R7's optimization phase |
-| R7-R8 | 20 | **No cap.** Grind freely. |
+**Regions are NOT level-gated.** Progression is purely sequential: beat stage N → unlock stage N+1, beat boss → unlock next region. If you can beat the boss underleveled, you deserve to proceed.
+
+| Highest Region Unlocked | Hard Level Cap | Notes |
+|-------------------------|---------------|-------|
+| R1 (start) | 4 | Can't outlevel R1's content by much |
+| R2 (R1 boss cleared) | 7 | Can't skip R3's team size unlock |
+| R3 (R2 boss cleared) | 10 | Can't trivialize R4's crisis |
+| R4 (R3 boss cleared) | 13 | Can't skip R5's rebuild |
+| R5 (R4 boss cleared) | 16 | Can't access T5 gacha early |
+| R6 (R5 boss cleared) | 18 | Can't skip R7's optimization phase |
+| R7+ (R6 boss cleared) | 20 | **No cap.** Grind freely. |
 
 **Soft diminishing returns** (in addition to hard cap). Stages give reduced XP when the player is overleveled relative to the stage's intended range. This makes grinding within a region feel progressively less rewarding even before hitting the hard cap.
 

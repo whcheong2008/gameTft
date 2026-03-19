@@ -46,9 +46,11 @@ function renderTopBar() {
     document.getElementById('player-level').textContent = 'Lv. ' + sd.player.level;
     document.getElementById('player-gold').textContent = '✨ ' + sd.player.veilEssence + ' VE';
 
-    var xpNext = getXPToNextLevel(sd);
+    var levelCap = typeof getPlayerLevelCap === 'function' ? getPlayerLevelCap(sd) : 20;
     if (sd.player.level >= 20) {
         document.getElementById('player-xp').textContent = 'XP: MAX';
+    } else if (sd.player.level >= levelCap) {
+        document.getElementById('player-xp').textContent = 'XP: CAPPED (clear boss to raise)';
     } else {
         var xpForNext = getXPForLevel(sd.player.level + 1);
         document.getElementById('player-xp').textContent = 'XP: ' + sd.player.xp + '/' + xpForNext;
@@ -2169,13 +2171,12 @@ function renderStageListScreen() {
 
         var unlocked = isStageUnlocked(sd, stageId);
         var completed = isStageCompleted(sd, stageId);
-        var levelLocked = sd.player.level < stage.requiredLevel;
         var lockCheck = stage.lock ? checkLock(sd, stage.lock) : { passed: true, reason: '' };
         var isBoss = !!stage.boss;
         var bestStars = (sd.missions.starRatings && sd.missions.starRatings[stageId]) || 0;
 
         var div = document.createElement('div');
-        div.className = 'mission-card' + (!unlocked || levelLocked ? ' locked' : '') + (completed ? ' completed' : '');
+        div.className = 'mission-card' + (!unlocked ? ' locked' : '') + (completed ? ' completed' : '');
         if (isBoss) {
             div.style.borderColor = completed ? '#4a8a5e' : '#884422';
             div.style.borderWidth = '2px';
@@ -2188,11 +2189,8 @@ function renderStageListScreen() {
 
         var waveText = isBoss ? '👑 Boss Fight' : stage.waves.length + ' wave' + (stage.waves.length > 1 ? 's' : '');
         var lockText = '';
-        if (!lockCheck.passed && unlocked && !levelLocked) {
+        if (!lockCheck.passed && unlocked) {
             lockText = '<div style="font-size:11px; color:#ff8844; margin-top:2px;">🔒 ' + lockCheck.reason + '</div>';
-        }
-        if (levelLocked) {
-            lockText = '<div style="font-size:11px; color:#888; margin-top:2px;">Requires Lv.' + stage.requiredLevel + '</div>';
         }
 
         var veReward = stage.rewards.ve || stage.rewards.gold || 0;
@@ -2202,7 +2200,7 @@ function renderStageListScreen() {
 
         div.innerHTML =
             '<div>' +
-                '<div class="m-name">' + stage.name + (isBoss ? ' 👑' : '') + (!unlocked || levelLocked ? ' 🔒' : '') + typeTag + '</div>' +
+                '<div class="m-name">' + stage.name + (isBoss ? ' 👑' : '') + (!unlocked ? ' 🔒' : '') + typeTag + '</div>' +
                 '<div class="m-desc">' + stage.description + '</div>' +
                 '<div class="m-reward">Reward: ' + veReward + ' VE · ' + xpReward + ' XP' + dropText + ' · ' + waveText + '</div>' +
                 lockText +
@@ -2211,7 +2209,7 @@ function renderStageListScreen() {
                 '<div class="m-stars">' + starsHtml + '</div>' +
             '</div>';
 
-        if (unlocked && !levelLocked && lockCheck.passed) {
+        if (unlocked && lockCheck.passed) {
             div.onclick = (function(idx) {
                 return function() { uiStartStoryMission(idx); };
             })(stageIndex);
