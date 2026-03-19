@@ -18,3 +18,26 @@ fibery api.txt
 
 # Node (future-proofing)
 node_modules/
+
+# Unity
+unity/*/Library/
+unity/*/Temp/
+unity/*/Logs/
+unity/*/UserSettings/
+unity/*/Builds/
+unity/*/obj/
+unity/*/Assets/Plugins/Editor/JetBrains*
+*.csproj
+*.sln
+*.slnx
+*.pidb
+*.pdb
+*.userprefs
+*.booproj
+*.svd
+*.unityproj
+*.suo
+*.tmp
+*.user
+*.pidb.meta
+*.pdb.meta
