@@ -5379,6 +5379,12 @@ function combatTick(dt) {
         processStatusEffects(unit, dt);
         if (unit.hp <= 0) continue; // may have died from burn
 
+        // Decrement stasis timer for ALL units (burrow, stealth, etc.)
+        if (unit.stasis && unit.stasis > 0 && !unit.isBoss) {
+            unit.stasis -= dt;
+            if (unit.stasis <= 0) unit.stasis = 0;
+        }
+
         // Boss units: run boss AI instead of normal unit logic
         if (unit.isBoss) {
             // Decrement stasis timer for boss (used during phase transitions)
