@@ -225,7 +225,7 @@ namespace ShatteredVeil.Tests.EditMode.Combat
 
             system.OnCombatStart(state);
 
-            var events = system.OnHeal(healer, target, 50f, state);
+            var events = system.OnHeal(healer, target, 50, state);
 
             bool foundShield = false;
             foreach (var ev in events)

@@ -345,12 +345,17 @@ namespace ShatteredVeil.Core.Combat
         }
 
         public List<PassiveEvent> OnHeal(CombatUnit healer, CombatUnit target,
-            float healAmount, CombatState state)
+            int healAmount, CombatState state)
         {
             var events = new List<PassiveEvent>();
             if (_reentryDepth >= MAX_REENTRY_DEPTH) return events;
             if (!healer.IsAlive) return events;
 
+            // Template-based passive dispatch (Prompt 45)
+            var templateEvents = OnTemplateHeal(healer, target, healAmount, state);
+            events.AddRange(templateEvents);
+
+            // Legacy passive dispatch
             var passive = PassiveCatalog.Get(healer.UnitId);
             if (passive == null || passive.Trigger != PassiveTrigger.OnHeal) return events;
 
@@ -624,6 +629,122 @@ namespace ShatteredVeil.Core.Combat
                     _usedFlags[key] = new HashSet<string>();
                 _usedFlags[key].Add("firstCastBonus");
             }
+        }
+
+        // =====================================================================
+        // Template-based passive triggers (Prompt 45 rework)
+        // =====================================================================
+
+        /// <summary>
+        /// Fire template OnHit passive when attacker lands an auto-attack.
+        /// </summary>
+        public List<PassiveEvent> OnTemplateHit(CombatUnit attacker, CombatUnit target,
+            int damage, CombatState state)
+        {
+            var events = new List<PassiveEvent>();
+            if (_reentryDepth >= MAX_REENTRY_DEPTH) return events;
+            if (!attacker.IsAlive) return events;
+
+            var template = AbilityTemplateCatalog.Get(attacker.AbilityTemplateId);
+            if (template == null) return events;
+
+            _reentryDepth++;
+            try
+            {
+                var data = new TemplatePassiveData
+                {
+                    Target = target,
+                    Damage = damage
+                };
+                events = template.ProcessPassive(attacker, TemplateTrigger.OnHit, data, state, new Random());
+            }
+            finally
+            {
+                _reentryDepth--;
+            }
+            return events;
+        }
+
+        /// <summary>
+        /// Fire template OnKill passive when attacker kills an enemy.
+        /// </summary>
+        public List<PassiveEvent> OnTemplateKill(CombatUnit attacker, CombatUnit killed,
+            CombatState state)
+        {
+            var events = new List<PassiveEvent>();
+            if (_reentryDepth >= MAX_REENTRY_DEPTH) return events;
+            if (!attacker.IsAlive) return events;
+
+            var template = AbilityTemplateCatalog.Get(attacker.AbilityTemplateId);
+            if (template == null) return events;
+
+            _reentryDepth++;
+            try
+            {
+                var data = new TemplatePassiveData { Killed = killed };
+                events = template.ProcessPassive(attacker, TemplateTrigger.OnKill, data, state, new Random());
+            }
+            finally
+            {
+                _reentryDepth--;
+            }
+            return events;
+        }
+
+        /// <summary>
+        /// Fire template OnAbilityCast passive when a unit casts their ability.
+        /// </summary>
+        public List<PassiveEvent> OnAbilityCast(CombatUnit caster, CombatState state)
+        {
+            var events = new List<PassiveEvent>();
+            if (_reentryDepth >= MAX_REENTRY_DEPTH) return events;
+            if (!caster.IsAlive) return events;
+
+            var template = AbilityTemplateCatalog.Get(caster.AbilityTemplateId);
+            if (template == null) return events;
+
+            _reentryDepth++;
+            try
+            {
+                var data = new TemplatePassiveData();
+                events = template.ProcessPassive(caster, TemplateTrigger.OnAbilityCast, data, state, new Random());
+            }
+            finally
+            {
+                _reentryDepth--;
+            }
+            return events;
+        }
+
+        /// <summary>
+        /// Fire template OnHeal passive for healer auto-heals.
+        /// Extends the existing OnHeal with template dispatch.
+        /// </summary>
+        public List<PassiveEvent> OnTemplateHeal(CombatUnit healer, CombatUnit target,
+            int healAmount, CombatState state)
+        {
+            var events = new List<PassiveEvent>();
+            if (_reentryDepth >= MAX_REENTRY_DEPTH) return events;
+            if (!healer.IsAlive) return events;
+
+            var template = AbilityTemplateCatalog.Get(healer.AbilityTemplateId);
+            if (template == null) return events;
+
+            _reentryDepth++;
+            try
+            {
+                var data = new TemplatePassiveData
+                {
+                    Target = target,
+                    Amount = healAmount
+                };
+                events = template.ProcessPassive(healer, TemplateTrigger.OnHeal, data, state, new Random());
+            }
+            finally
+            {
+                _reentryDepth--;
+            }
+            return events;
         }
 
         /// <summary>

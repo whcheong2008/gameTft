@@ -17,6 +17,11 @@ namespace ShatteredVeil.Core.Combat
         public BattlePhase EndPhase;
         public bool UsedAbility;
         public AbilityResult AbilityResult;
+
+        // Healer auto-heal (Prompt 45)
+        public bool IsHeal;
+        public int HealAmount;
+        public CombatUnit HealTarget;
     }
 
     public class BattleResult
