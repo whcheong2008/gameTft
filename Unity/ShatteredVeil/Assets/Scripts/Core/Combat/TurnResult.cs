@@ -15,6 +15,8 @@ namespace ShatteredVeil.Core.Combat
         public string SkipReason;
         public bool BattleOver;
         public BattlePhase EndPhase;
+        public bool UsedAbility;
+        public AbilityResult AbilityResult;
     }
 
     public class BattleResult
