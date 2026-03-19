@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bab5fc3d7d6dc3b458719cee86bb70d5, type: 3}
+  m_Name: lightning
+  m_EditorClassIdentifier: GameData::ShatteredVeil.Data.SynergyDefinition
+  type: 0
+  synergyId: lightning
+  tiers:
+  - requiredCount: 2
+    description: +10% crit chance
+    bonuses:
+    - stat: 4
+      modType: 1
+      value: 0.1
+  - requiredCount: 4
+    description: +18% crit. +15% crit damage
+    bonuses:
+    - stat: 4
+      modType: 1
+      value: 0.18
+    - stat: 5
+      modType: 1
+      value: 0.15
+  - requiredCount: 7
+    description: +30% crit. +30% crit damage
+    bonuses:
+    - stat: 4
+      modType: 1
+      value: 0.3
+    - stat: 5
+      modType: 1
+      value: 0.3
+  - requiredCount: 10
+    description: 'Prismatic: Superconductor'
+    bonuses:
+    - stat: 4
+      modType: 1
+      value: 0.5
+    - stat: 5
+      modType: 1
+      value: 0.6

@@ -1,0 +1,722 @@
+[
+  {
+    "synergyId": "fire",
+    "type": 0,
+    "tiers": [
+      {
+        "requiredCount": 2,
+        "description": "Attacks apply Burn (10 DPS, 3s)",
+        "bonuses": []
+      },
+      {
+        "requiredCount": 4,
+        "description": "Burn 20 DPS. On kill, enemy explodes for 15% max HP to adjacent",
+        "bonuses": []
+      },
+      {
+        "requiredCount": 7,
+        "description": "Burn 35 DPS, 5s. Fire abilities apply Burn. Fire units +20% ATK",
+        "bonuses": [
+          {
+            "stat": 1,
+            "modType": 1,
+            "value": 0.2
+          }
+        ]
+      },
+      {
+        "requiredCount": 10,
+        "description": "Prismatic: Conflagration",
+        "bonuses": []
+      }
+    ]
+  },
+  {
+    "synergyId": "water",
+    "type": 0,
+    "tiers": [
+      {
+        "requiredCount": 2,
+        "description": "Enemy attack speed -15%",
+        "bonuses": []
+      },
+      {
+        "requiredCount": 4,
+        "description": "Enemy attack speed -25%. Allies heal 1.5% max HP/s",
+        "bonuses": []
+      },
+      {
+        "requiredCount": 7,
+        "description": "Enemy attack speed -40%. Heal 3%/s",
+        "bonuses": []
+      },
+      {
+        "requiredCount": 10,
+        "description": "Prismatic: Absolute Zero",
+        "bonuses": []
+      }
+    ]
+  },
+  {
+    "synergyId": "earth",
+    "type": 0,
+    "tiers": [
+      {
+        "requiredCount": 2,
+        "description": "Shield: 15% max HP at combat start",
+        "bonuses": [
+          {
+            "stat": 0,
+            "modType": 1,
+            "value": 0.15
+          }
+        ]
+      },
+      {
+        "requiredCount": 4,
+        "description": "Shield 25% max HP. +8% DR",
+        "bonuses": [
+          {
+            "stat": 7,
+            "modType": 1,
+            "value": 0.08
+          }
+        ]
+      },
+      {
+        "requiredCount": 7,
+        "description": "Shield 40% max HP. +15% DR",
+        "bonuses": [
+          {
+            "stat": 7,
+            "modType": 1,
+            "value": 0.15
+          }
+        ]
+      },
+      {
+        "requiredCount": 10,
+        "description": "Prismatic: Tectonic Fortress",
+        "bonuses": [
+          {
+            "stat": 7,
+            "modType": 1,
+            "value": 0.25
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "synergyId": "wind",
+    "type": 0,
+    "tiers": [
+      {
+        "requiredCount": 2,
+        "description": "+15% attack speed",
+        "bonuses": [
+          {
+            "stat": 6,
+            "modType": 1,
+            "value": 0.15
+          }
+        ]
+      },
+      {
+        "requiredCount": 4,
+        "description": "+25% ATK speed. +12% dodge",
+        "bonuses": [
+          {
+            "stat": 6,
+            "modType": 1,
+            "value": 0.25
+          },
+          {
+            "stat": 8,
+            "modType": 1,
+            "value": 0.12
+          }
+        ]
+      },
+      {
+        "requiredCount": 7,
+        "description": "+40% ATK speed. +25% dodge",
+        "bonuses": [
+          {
+            "stat": 6,
+            "modType": 1,
+            "value": 0.4
+          },
+          {
+            "stat": 8,
+            "modType": 1,
+            "value": 0.25
+          }
+        ]
+      },
+      {
+        "requiredCount": 10,
+        "description": "Prismatic: Eye of the Storm",
+        "bonuses": [
+          {
+            "stat": 6,
+            "modType": 1,
+            "value": 0.6
+          },
+          {
+            "stat": 8,
+            "modType": 1,
+            "value": 0.4
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "synergyId": "lightning",
+    "type": 0,
+    "tiers": [
+      {
+        "requiredCount": 2,
+        "description": "+10% crit chance",
+        "bonuses": [
+          {
+            "stat": 4,
+            "modType": 1,
+            "value": 0.1
+          }
+        ]
+      },
+      {
+        "requiredCount": 4,
+        "description": "+18% crit. +15% crit damage",
+        "bonuses": [
+          {
+            "stat": 4,
+            "modType": 1,
+            "value": 0.18
+          },
+          {
+            "stat": 5,
+            "modType": 1,
+            "value": 0.15
+          }
+        ]
+      },
+      {
+        "requiredCount": 7,
+        "description": "+30% crit. +30% crit damage",
+        "bonuses": [
+          {
+            "stat": 4,
+            "modType": 1,
+            "value": 0.3
+          },
+          {
+            "stat": 5,
+            "modType": 1,
+            "value": 0.3
+          }
+        ]
+      },
+      {
+        "requiredCount": 10,
+        "description": "Prismatic: Superconductor",
+        "bonuses": [
+          {
+            "stat": 4,
+            "modType": 1,
+            "value": 0.5
+          },
+          {
+            "stat": 5,
+            "modType": 1,
+            "value": 0.6
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "synergyId": "force",
+    "type": 0,
+    "tiers": [
+      {
+        "requiredCount": 2,
+        "description": "+10% ATK, +10% HP",
+        "bonuses": [
+          {
+            "stat": 1,
+            "modType": 1,
+            "value": 0.1
+          },
+          {
+            "stat": 0,
+            "modType": 1,
+            "value": 0.1
+          }
+        ]
+      },
+      {
+        "requiredCount": 4,
+        "description": "+18% ATK, +18% HP",
+        "bonuses": [
+          {
+            "stat": 1,
+            "modType": 1,
+            "value": 0.18
+          },
+          {
+            "stat": 0,
+            "modType": 1,
+            "value": 0.18
+          }
+        ]
+      },
+      {
+        "requiredCount": 7,
+        "description": "+30% ATK, +30% HP",
+        "bonuses": [
+          {
+            "stat": 1,
+            "modType": 1,
+            "value": 0.3
+          },
+          {
+            "stat": 0,
+            "modType": 1,
+            "value": 0.3
+          }
+        ]
+      },
+      {
+        "requiredCount": 10,
+        "description": "Prismatic: Unstoppable",
+        "bonuses": [
+          {
+            "stat": 1,
+            "modType": 1,
+            "value": 0.5
+          },
+          {
+            "stat": 0,
+            "modType": 1,
+            "value": 0.5
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "synergyId": "guardian",
+    "type": 1,
+    "tiers": [
+      {
+        "requiredCount": 2,
+        "description": "Guardians +250 HP +5% DR",
+        "bonuses": [
+          {
+            "stat": 0,
+            "modType": 0,
+            "value": 250
+          },
+          {
+            "stat": 7,
+            "modType": 1,
+            "value": 0.05
+          }
+        ]
+      },
+      {
+        "requiredCount": 4,
+        "description": "Guardians +550 HP +10% DR",
+        "bonuses": [
+          {
+            "stat": 0,
+            "modType": 0,
+            "value": 550
+          },
+          {
+            "stat": 7,
+            "modType": 1,
+            "value": 0.1
+          }
+        ]
+      },
+      {
+        "requiredCount": 6,
+        "description": "Guardians +900 HP +15% DR",
+        "bonuses": [
+          {
+            "stat": 0,
+            "modType": 0,
+            "value": 900
+          },
+          {
+            "stat": 7,
+            "modType": 1,
+            "value": 0.15
+          }
+        ]
+      },
+      {
+        "requiredCount": 8,
+        "description": "Guardians +1300 HP +20% DR",
+        "bonuses": [
+          {
+            "stat": 0,
+            "modType": 0,
+            "value": 1300
+          },
+          {
+            "stat": 7,
+            "modType": 1,
+            "value": 0.2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "synergyId": "warden",
+    "type": 1,
+    "tiers": [
+      {
+        "requiredCount": 2,
+        "description": "Wardens +20% CC duration, +15% tenacity",
+        "bonuses": []
+      },
+      {
+        "requiredCount": 4,
+        "description": "Wardens +35% CC duration, +30% tenacity",
+        "bonuses": []
+      },
+      {
+        "requiredCount": 6,
+        "description": "Wardens +50% CC, +45% tenacity",
+        "bonuses": []
+      },
+      {
+        "requiredCount": 8,
+        "description": "Wardens +65% CC, CC immune",
+        "bonuses": []
+      }
+    ]
+  },
+  {
+    "synergyId": "vanguard",
+    "type": 1,
+    "tiers": [
+      {
+        "requiredCount": 2,
+        "description": "Vanguards +200 HP +20 ATK (x2 front row)",
+        "bonuses": [
+          {
+            "stat": 0,
+            "modType": 0,
+            "value": 200
+          },
+          {
+            "stat": 1,
+            "modType": 0,
+            "value": 20
+          }
+        ]
+      },
+      {
+        "requiredCount": 4,
+        "description": "Vanguards +400 HP +35 ATK (x2 front)",
+        "bonuses": [
+          {
+            "stat": 0,
+            "modType": 0,
+            "value": 400
+          },
+          {
+            "stat": 1,
+            "modType": 0,
+            "value": 35
+          }
+        ]
+      },
+      {
+        "requiredCount": 6,
+        "description": "Vanguards +650 HP +55 ATK (x2 front)",
+        "bonuses": [
+          {
+            "stat": 0,
+            "modType": 0,
+            "value": 650
+          },
+          {
+            "stat": 1,
+            "modType": 0,
+            "value": 55
+          }
+        ]
+      },
+      {
+        "requiredCount": 8,
+        "description": "Vanguards +950 HP +80 ATK (x2 front)",
+        "bonuses": [
+          {
+            "stat": 0,
+            "modType": 0,
+            "value": 950
+          },
+          {
+            "stat": 1,
+            "modType": 0,
+            "value": 80
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "synergyId": "duelist",
+    "type": 1,
+    "tiers": [
+      {
+        "requiredCount": 2,
+        "description": "Duelists 15% double-strike",
+        "bonuses": []
+      },
+      {
+        "requiredCount": 4,
+        "description": "Duelists 30% double-strike, 10% lifesteal",
+        "bonuses": []
+      },
+      {
+        "requiredCount": 6,
+        "description": "Duelists 40% double-strike, 15% lifesteal",
+        "bonuses": []
+      },
+      {
+        "requiredCount": 8,
+        "description": "Duelists 55% double-strike, 20% lifesteal",
+        "bonuses": []
+      }
+    ]
+  },
+  {
+    "synergyId": "predator",
+    "type": 1,
+    "tiers": [
+      {
+        "requiredCount": 2,
+        "description": "Predators +25% ATK spd",
+        "bonuses": [
+          {
+            "stat": 6,
+            "modType": 1,
+            "value": 0.25
+          }
+        ]
+      },
+      {
+        "requiredCount": 4,
+        "description": "Predators +40% ATK spd",
+        "bonuses": [
+          {
+            "stat": 6,
+            "modType": 1,
+            "value": 0.4
+          }
+        ]
+      },
+      {
+        "requiredCount": 6,
+        "description": "Predators +55% ATK spd",
+        "bonuses": [
+          {
+            "stat": 6,
+            "modType": 1,
+            "value": 0.55
+          }
+        ]
+      },
+      {
+        "requiredCount": 8,
+        "description": "Predators +70% ATK spd",
+        "bonuses": [
+          {
+            "stat": 6,
+            "modType": 1,
+            "value": 0.7
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "synergyId": "ranger",
+    "type": 1,
+    "tiers": [
+      {
+        "requiredCount": 2,
+        "description": "Rangers +1 range, +15% dmg to furthest",
+        "bonuses": []
+      },
+      {
+        "requiredCount": 4,
+        "description": "Rangers +1 range, +25% furthest, +15% ATK spd",
+        "bonuses": [
+          {
+            "stat": 6,
+            "modType": 1,
+            "value": 0.15
+          }
+        ]
+      },
+      {
+        "requiredCount": 6,
+        "description": "Rangers +2 range, +35% furthest, +25% ATK spd",
+        "bonuses": [
+          {
+            "stat": 6,
+            "modType": 1,
+            "value": 0.25
+          }
+        ]
+      },
+      {
+        "requiredCount": 8,
+        "description": "Rangers +3 range, +50% furthest",
+        "bonuses": [
+          {
+            "stat": 6,
+            "modType": 1,
+            "value": 0.35
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "synergyId": "sorcerer",
+    "type": 1,
+    "tiers": [
+      {
+        "requiredCount": 2,
+        "description": "Sorcerers +15% ability dmg, +10 starting mana",
+        "bonuses": [
+          {
+            "stat": 10,
+            "modType": 1,
+            "value": 0.15
+          }
+        ]
+      },
+      {
+        "requiredCount": 4,
+        "description": "Sorcerers +30% ability dmg, +20 mana",
+        "bonuses": [
+          {
+            "stat": 10,
+            "modType": 1,
+            "value": 0.3
+          }
+        ]
+      },
+      {
+        "requiredCount": 6,
+        "description": "Sorcerers +50% ability, +30 mana",
+        "bonuses": [
+          {
+            "stat": 10,
+            "modType": 1,
+            "value": 0.5
+          }
+        ]
+      },
+      {
+        "requiredCount": 8,
+        "description": "Sorcerers +75% ability, +40 mana",
+        "bonuses": [
+          {
+            "stat": 10,
+            "modType": 1,
+            "value": 0.75
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "synergyId": "mystic",
+    "type": 1,
+    "tiers": [
+      {
+        "requiredCount": 2,
+        "description": "Mystics +20% elem resist",
+        "bonuses": []
+      },
+      {
+        "requiredCount": 4,
+        "description": "Mystics +35% elem resist",
+        "bonuses": []
+      },
+      {
+        "requiredCount": 6,
+        "description": "Mystics +50% elem resist",
+        "bonuses": []
+      },
+      {
+        "requiredCount": 8,
+        "description": "Mystics +65% resist",
+        "bonuses": []
+      }
+    ]
+  },
+  {
+    "synergyId": "sage",
+    "type": 1,
+    "tiers": [
+      {
+        "requiredCount": 2,
+        "description": "Sages +35% healing power",
+        "bonuses": [
+          {
+            "stat": 9,
+            "modType": 1,
+            "value": 0.35
+          }
+        ]
+      },
+      {
+        "requiredCount": 4,
+        "description": "Sages +70% healing",
+        "bonuses": [
+          {
+            "stat": 9,
+            "modType": 1,
+            "value": 0.7
+          }
+        ]
+      },
+      {
+        "requiredCount": 6,
+        "description": "Sages +110% healing",
+        "bonuses": [
+          {
+            "stat": 9,
+            "modType": 1,
+            "value": 1.1
+          }
+        ]
+      },
+      {
+        "requiredCount": 8,
+        "description": "Sages +160% healing",
+        "bonuses": [
+          {
+            "stat": 9,
+            "modType": 1,
+            "value": 1.6
+          }
+        ]
+      }
+    ]
+  }
+]

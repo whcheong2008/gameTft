@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bab5fc3d7d6dc3b458719cee86bb70d5, type: 3}
+  m_Name: sorcerer
+  m_EditorClassIdentifier: GameData::ShatteredVeil.Data.SynergyDefinition
+  type: 1
+  synergyId: sorcerer
+  tiers:
+  - requiredCount: 2
+    description: Sorcerers +15% ability dmg, +10 starting mana
+    bonuses:
+    - stat: 10
+      modType: 1
+      value: 0.15
+  - requiredCount: 4
+    description: Sorcerers +30% ability dmg, +20 mana
+    bonuses:
+    - stat: 10
+      modType: 1
+      value: 0.3
+  - requiredCount: 6
+    description: Sorcerers +50% ability, +30 mana
+    bonuses:
+    - stat: 10
+      modType: 1
+      value: 0.5
+  - requiredCount: 8
+    description: Sorcerers +75% ability, +40 mana
+    bonuses:
+    - stat: 10
+      modType: 1
+      value: 0.75

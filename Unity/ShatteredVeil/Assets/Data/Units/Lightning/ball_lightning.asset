@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28d868f14ace0e24faf393112f6c6125, type: 3}
+  m_Name: ball_lightning
+  m_EditorClassIdentifier: GameData::ShatteredVeil.Data.UnitTemplate
+  unitId: ball_lightning
+  displayName: Ball Lightning
+  element: 4
+  archetype: 7
+  secondaryArchetype: 6
+  hasSecondaryArchetype: 1
+  tier: 3
+  evolvedFromId: 
+  evolvesIntoId: plasma_core
+  isEvolved: 0
+  baseHP: 480
+  baseATK: 75
+  baseDEF: 0
+  baseSPD: 0
+  baseAttackSpeed: 0.9
+  baseCritChance: 0
+  baseCritDamage: 1.5
+  maxMana: 70
+  attackRange: 3
+  moveSpeed: 1.6
+  defaultTargeting: 4
+  abilityId: ball_lightning
+  passiveId: ball_lightning
