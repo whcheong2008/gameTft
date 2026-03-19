@@ -788,14 +788,14 @@ function renderForgeTabContent(sd, tabIndex, forgeLevel) {
     } else if (tabIndex === 5 && forgeLevel >= 5) {
         // Mythic Forge
         html += '<div style="font-size:14px; font-weight:bold; margin-bottom:8px;">Mythic Forge (Legendary + Material + 250 VE)</div>';
-        var mythicKeys = Object.keys(MYTHIC_EQUIPMENT);
+        var mythicKeys = Object.keys(MYTHIC_ITEMS);
         for (var mi = 0; mi < mythicKeys.length; mi++) {
             var mk = mythicKeys[mi];
-            var mDef = MYTHIC_EQUIPMENT[mk];
+            var mDef = MYTHIC_ITEMS[mk];
             html += '<div style="padding:6px 10px; margin-bottom:4px; background:#16213e; border-radius:6px; border:1px solid #ff4500;">';
             html += '<div style="font-size:13px;">' + mDef.emoji + ' <strong style="color:#fb923c;">' + mDef.name + '</strong></div>';
-            html += '<div style="font-size:10px; color:#aaa;">Slot: ' + mDef.slot + ' · Material: ' + MYTHIC_MATERIALS[mDef.recipe.material].emoji + ' ' + MYTHIC_MATERIALS[mDef.recipe.material].name + ' + 250 VE</div>';
-            html += '<div style="font-size:10px; color:#8bbcff;">🌟 ' + mDef.passive.desc + '</div>';
+            html += '<div style="font-size:10px; color:#aaa;">Slot: ' + mDef.slot + ' · Material: ' + MYTHIC_MATERIALS[mDef.craftSource.materials[0]].emoji + ' ' + MYTHIC_MATERIALS[mDef.craftSource.materials[0]].name + ' + ' + mDef.craftSource.goldCost + ' VE</div>';
+            html += '<div style="font-size:10px; color:#8bbcff;">🌟 ' + mDef.majorPassive.desc + '</div>';
             html += '</div>';
         }
     } else {
@@ -3520,10 +3520,10 @@ function uiShowCodex() {
     // Mythics
     html += '<div style="margin-bottom:8px;">';
     html += '<div style="font-size:13px; font-weight:bold; color:#fb923c; margin-bottom:4px;">🌟 Mythic Equipment</div>';
-    var mythicKeys = Object.keys(MYTHIC_EQUIPMENT);
+    var mythicKeys = Object.keys(MYTHIC_ITEMS);
     for (var mi = 0; mi < mythicKeys.length; mi++) {
         var mk = mythicKeys[mi];
-        var mDef = MYTHIC_EQUIPMENT[mk];
+        var mDef = MYTHIC_ITEMS[mk];
         var mDiscovered = !!discovered[mk];
         if (mDiscovered) {
             html += '<div style="margin-left:8px; font-size:11px; color:#fb923c;">' + mDef.emoji + ' ' + mDef.name + '</div>';

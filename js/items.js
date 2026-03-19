@@ -12,16 +12,19 @@ var TIER_CONFIG = {
 // ---- Rarity Config (RNG per drop) ----
 
 var RARITY_CONFIG = {
-    tiers: ['common', 'uncommon', 'rare', 'epic', 'legendary'],
+    tiers: ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'],
     colors: { common: '#ffffff', uncommon: '#4ade80', rare: '#60a5fa', epic: '#c084fc', legendary: '#fb923c', mythic: '#ff4500' },
-    statMultipliers: { common: 1.0, uncommon: 1.2, rare: 1.5, epic: 1.8, legendary: 2.2 },
-    affixCount: { common: 0, uncommon: 1, rare: 2, epic: 2, legendary: 3 },
-    hasMinorPassive: { common: false, uncommon: false, rare: false, epic: true, legendary: true },
-    hasMajorPassive: { common: false, uncommon: false, rare: false, epic: false, legendary: true },
-    dropWeights: { common: 50, uncommon: 30, rare: 13, epic: 5.5, legendary: 1.5 }
+    statMultipliers: { common: 1.0, uncommon: 1.2, rare: 1.5, epic: 1.8, legendary: 2.2, mythic: 2.8 },
+    affixCount: { common: 0, uncommon: 1, rare: 2, epic: 2, legendary: 3, mythic: 3 },
+    hasMinorPassive: { common: false, uncommon: false, rare: false, epic: true, legendary: true, mythic: true },
+    hasMajorPassive: { common: false, uncommon: false, rare: false, epic: false, legendary: true, mythic: true },
+    dropWeights: {
+        common: 50, uncommon: 30, rare: 13, epic: 5.5, legendary: 1.5,
+        mythic: 0  // mythic weight = 0 normally (craftable only)
+    }
 };
 
-var AFFIX_RARITY_SCALING = { common: 0, uncommon: 0.6, rare: 0.8, epic: 1.0, legendary: 1.0 };
+var AFFIX_RARITY_SCALING = { common: 0, uncommon: 0.6, rare: 0.8, epic: 1.0, legendary: 1.0, mythic: 1.0 };
 
 // ---- Region Drop Config ----
 
@@ -168,14 +171,14 @@ var SLOT_AFFIXES = {
 var EQUIPMENT_SLOTS = ['weapon', 'helm', 'chest', 'gauntlets', 'boots', 'offhand', 'accessory1', 'accessory2'];
 
 var SLOT_DISPLAY = {
-    weapon: { name: 'Weapon', emoji: '⚔️' },
-    helm: { name: 'Helm', emoji: '🪖' },
-    chest: { name: 'Chest', emoji: '🛡️' },
-    gauntlets: { name: 'Gauntlets', emoji: '🥊' },
-    boots: { name: 'Boots', emoji: '👢' },
-    offhand: { name: 'Off-hand', emoji: '🔮' },
-    accessory1: { name: 'Accessory 1', emoji: '💍' },
-    accessory2: { name: 'Accessory 2', emoji: '📿' }
+    weapon: { name: 'Weapon', emoji: '⚔️', type: 'weapon' },
+    helm: { name: 'Helm', emoji: '🪖', type: 'armor' },
+    chest: { name: 'Chest Armor', emoji: '🛡️', type: 'armor' },
+    gauntlets: { name: 'Gauntlets', emoji: '🥊', type: 'armor' },
+    boots: { name: 'Boots', emoji: '👢', type: 'utility' },
+    offhand: { name: 'Off-hand', emoji: '🔮', type: 'utility' },
+    accessory1: { name: 'Accessory 1', emoji: '💍', type: 'accessory' },
+    accessory2: { name: 'Accessory 2', emoji: '📿', type: 'accessory' }
 };
 
 // ---- Item Line Definitions (39 lines) ----
@@ -478,51 +481,51 @@ var EQUIPMENT_SETS = {
 
 // ---- Mythic Equipment ----
 
-var MYTHIC_EQUIPMENT = {
+var MYTHIC_ITEMS = {
     infinity_gauntlet: {
         slot: 'gauntlets', name: 'Infinity Gauntlet', emoji: '🧤✨',
-        stats: { atk: 50 },
-        passive: { key: 'infinityNova', bonusAbilityDmg: 0.50, novaEveryN: 3, desc: 'Abilities deal 50% bonus damage. Every 3rd cast hits ALL enemies.' },
-        recipe: { sourceSlot: 'gauntlets', material: 'dragon_scale', gold: 250 }
+        baseStats: { atk: 50 },
+        majorPassive: { key: 'infinityPower', bonusAbilityDmg: 0.50, novaEveryN: 3, desc: 'Abilities deal 50% bonus damage. Every 3rd cast hits ALL enemies.' },
+        craftSource: { baseItem: 'legendary_gauntlets', materials: ['dragon_scale'], materialCount: 1, goldCost: 250 }
     },
     aegis_of_immortality: {
         slot: 'offhand', name: 'Aegis of Immortality', emoji: '🛡️👼',
-        stats: { hp: 600, dr: 0.15 },
-        passive: { key: 'aegisRevive', revivePct: 0.60, invulnDuration: 3, taunt: true, desc: 'Revive at 60% HP, invulnerable 3s + taunt. Once per combat.' },
-        recipe: { sourceSlot: 'offhand', material: 'dragon_scale', gold: 250 }
+        baseStats: { hp: 600, dr: 0.15 },
+        majorPassive: { key: 'immortalAegis', revivePct: 0.60, invulnDuration: 3, taunt: true, desc: 'Revive at 60% HP, invulnerable 3s + taunt. Once per combat.' },
+        craftSource: { baseItem: 'legendary_shield', materials: ['dragon_scale'], materialCount: 1, goldCost: 250 }
     },
     eclipse: {
         slot: 'weapon', name: 'Eclipse', emoji: '🌑✨',
-        stats: { atk: 35 },
-        passive: { key: 'eclipseLifesteal', lifesteal: 0.20, overhealShieldPct: 0.30, shieldBonusDmg: 0.15, desc: '20% lifesteal. Excess heals → shield (max 30% HP). While shielded, +15% dmg.' },
-        recipe: { sourceSlot: 'weapon', material: 'void_crystal', gold: 250 }
+        baseStats: { atk: 35 },
+        majorPassive: { key: 'eclipsePower', lifesteal: 0.20, overhealShieldPct: 0.30, shieldBonusDmg: 0.15, desc: '20% lifesteal. Excess heals → shield (max 30% HP). While shielded, +15% dmg.' },
+        craftSource: { baseItem: 'legendary_weapon', materials: ['void_crystal'], materialCount: 1, goldCost: 250 }
     },
     staff_of_ages: {
         slot: 'weapon', name: 'Staff of Ages', emoji: '🪄🌟',
-        stats: { atk: 45, startMana: 20 },
-        passive: { key: 'infiniteScaling', dmgPerCast: 0.03, desc: 'Ability damage permanently +3% per cast (no cap).' },
-        recipe: { sourceSlot: 'weapon', material: 'void_crystal', gold: 250 }
+        baseStats: { atk: 45, startMana: 20 },
+        majorPassive: { key: 'staffOfAges', dmgPerCast: 0.03, desc: 'Ability damage permanently +3% per cast (no cap).' },
+        craftSource: { baseItem: 'legendary_weapon', materials: ['void_crystal'], materialCount: 1, goldCost: 250 }
     },
     worldbreaker: {
         slot: 'weapon', name: 'Worldbreaker', emoji: '⚔️🌍',
-        stats: { atk: 30, atkSpd: -0.15 },
-        passive: { key: 'worldbreakerRampage', atkBonus: 0.15, asBonus: 0.15, duration: 8, maxStacks: 5, splashAtMax: true, desc: 'On kill: +15% ATK/AS for 8s (5x max). At 5 stacks, splash.' },
-        recipe: { sourceSlot: 'weapon', material: 'world_shard', gold: 250 }
+        baseStats: { atk: 30, atkSpeed: -0.15 },
+        majorPassive: { key: 'worldbreaker', atkBonus: 0.15, asBonus: 0.15, duration: 8, maxStacks: 5, splashAtMax: true, desc: 'On kill: +15% ATK/AS for 8s (5x max). At 5 stacks, splash.' },
+        craftSource: { baseItem: 'legendary_weapon', materials: ['world_shard'], materialCount: 1, goldCost: 250 }
     },
     crown_of_ages: {
         slot: 'helm', name: 'Crown of Ages', emoji: '👑🌟',
-        stats: { startMana: 40 },
-        passive: { key: 'crownFreeCast', cooldown: 12, drWhileOnCD: 0.15, desc: 'After casting, next ability costs 0 mana (12s CD). While on CD, +15% DR.' },
-        recipe: { sourceSlot: 'helm', material: 'world_shard', gold: 250 }
+        baseStats: { startMana: 40 },
+        majorPassive: { key: 'crownOfAges', cooldown: 12, drWhileOnCD: 0.15, desc: 'After casting, next ability costs 0 mana (12s CD). While on CD, +15% DR.' },
+        craftSource: { baseItem: 'legendary_helm', materials: ['world_shard'], materialCount: 1, goldCost: 250 }
     }
 };
 
 // ---- Mythic Materials ----
 
 var MYTHIC_MATERIALS = {
-    dragon_scale: { name: 'Dragon Scale', emoji: '🐉', desc: 'Drops from boss fights' },
-    void_crystal: { name: 'Void Crystal', emoji: '🔮', desc: 'Drops from 3-starring late missions' },
-    world_shard: { name: 'World Shard', emoji: '🌍', desc: 'Obtained from high achievements' }
+    dragon_scale: { name: 'Dragon Scale', emoji: '🐉', drops: ['R6+'], desc: 'Drops from boss fights in Region 6+' },
+    void_crystal: { name: 'Void Crystal', emoji: '🔮', drops: ['R7+'], desc: 'Drops from 3-starring late missions in Region 7+' },
+    world_shard: { name: 'World Shard', emoji: '🌍', drops: ['R8'], desc: 'Obtained from Region 8 achievements' }
 };
 
 // ---- Essences ----
@@ -602,6 +605,64 @@ function generateEquipmentDrop(regionId, isBoss, is3Star) {
     for (var g = 0; g < sockets; g++) equipment.gems.push(null);
 
     return equipment;
+}
+
+// ---- Prompt 30 API: generateItem / rollRarity / generateMissionItemDrops ----
+
+function generateItem(region, starRating) {
+    // Wrapper matching prompt 30 signature
+    return generateEquipmentDrop(region, false, starRating >= 3);
+}
+
+function rollRarity(region, starRating) {
+    var weights = {
+        common: RARITY_CONFIG.dropWeights.common,
+        uncommon: RARITY_CONFIG.dropWeights.uncommon,
+        rare: RARITY_CONFIG.dropWeights.rare,
+        epic: RARITY_CONFIG.dropWeights.epic,
+        legendary: RARITY_CONFIG.dropWeights.legendary
+    };
+
+    // Add region bonus
+    var bonus = REGION_RARITY_BONUS[region] || { legendary: 0, epic: 0 };
+    weights.legendary += bonus.legendary;
+    weights.epic += bonus.epic;
+
+    // Modify by star rating (higher stars = better rarity)
+    if (starRating >= 3) {
+        weights.legendary *= 1.5;
+        weights.epic *= 1.2;
+    } else if (starRating === 2) {
+        weights.epic *= 1.1;
+    }
+
+    return _weightedRoll(weights);
+}
+
+function generateMissionItemDrops(region, isBoss, starRating) {
+    var drops = DROP_CONFIG.dropsPerMission;
+    if (starRating === 3) drops += DROP_CONFIG.bonusDropOn3Star;
+    if (isBoss) drops += DROP_CONFIG.bossExtraDrop;
+
+    var items = [];
+    for (var i = 0; i < drops; i++) {
+        items.push(generateEquipmentDrop(region, isBoss && i === 0, starRating >= 3));
+    }
+    return items;
+}
+
+function selectItemLineForSlot(slot, tier) {
+    var candidates = getItemLinesForSlot(slot);
+    if (candidates.length === 0) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+function scaleStats(baseStats, tierMult, rarityMult) {
+    var scaled = {};
+    for (var key in baseStats) {
+        scaled[key] = baseStats[key] * tierMult * rarityMult;
+    }
+    return scaled;
 }
 
 // ---- Core: Calculate Equipment Stats ----
@@ -810,6 +871,145 @@ function cleanseSet(saveData, equipmentId) {
     return { success: true };
 }
 
+// ---- Echo Shaping Operations ----
+
+function echoShapingReroll(saveData, itemId) {
+    // Cost: 100 VE — Reroll all affixes on item (keep tier, rarity, slot, passive)
+    var item = _findEquipment(saveData, itemId);
+    if (!item) return { success: false, msg: 'Item not found' };
+    if (item.rarity === 'common') return { success: false, msg: 'Common items have no affixes' };
+
+    var cost = 100;
+    if (saveData.player.veilEssence < cost) {
+        return { success: false, msg: 'Not enough Veil Essence (' + cost + ' VE)' };
+    }
+
+    spendGold(saveData, cost);
+    var affixPool = SLOT_AFFIXES[item.slot] || SLOT_AFFIXES.weapon;
+    var affixCount = RARITY_CONFIG.affixCount[item.rarity] || 0;
+    item.affixes = _rollAffixes(affixPool, affixCount, item.rarity);
+
+    invalidateEquipCache(itemId);
+    autoSave(saveData);
+    return { success: true, msg: 'Affixes rerolled!', affixes: item.affixes };
+}
+
+function echoShapingDisassemble(saveData, itemId) {
+    // Cost: Free — Break item into VE
+    var item = _findEquipment(saveData, itemId);
+    if (!item) return { success: false, msg: 'Item not found' };
+    if (item.equipped) return { success: false, msg: 'Cannot disassemble equipped item' };
+
+    var veValues = { common: 50, uncommon: 100, rare: 200, epic: 500, legendary: 1000, mythic: 2000 };
+    var veGain = veValues[item.rarity] || 0;
+
+    // Return gems before disassembling
+    for (var g = 0; g < item.gems.length; g++) {
+        if (item.gems[g]) {
+            if (!saveData.equipment.gems) saveData.equipment.gems = [];
+            saveData.equipment.gems.push(item.gems[g]);
+        }
+    }
+
+    saveData.player.veilEssence = (saveData.player.veilEssence || 0) + veGain;
+
+    _removeEquipment(saveData, itemId);
+    autoSave(saveData);
+    return { success: true, msg: 'Item disassembled for ' + veGain + ' VE', veGain: veGain };
+}
+
+function echoShapingUpgradeRarity(saveData, itemId) {
+    // Cost: Scales by current rarity
+    var item = _findEquipment(saveData, itemId);
+    if (!item) return { success: false, msg: 'Item not found' };
+    if (item.rarity === 'legendary') return { success: false, msg: 'Already legendary' };
+    if (item.rarity === 'mythic') return { success: false, msg: 'Mythic items cannot be upgraded' };
+
+    var rarities = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+    var currentIdx = rarities.indexOf(item.rarity);
+    if (currentIdx < 0) return { success: false, msg: 'Unknown rarity' };
+    var targetRarity = rarities[currentIdx + 1];
+
+    var costs = { common: 100, uncommon: 200, rare: 400, epic: 800 };
+    var cost = costs[item.rarity] || 0;
+
+    if (saveData.player.veilEssence < cost) {
+        return { success: false, msg: 'Not enough Veil Essence (' + cost + ' VE)' };
+    }
+
+    spendGold(saveData, cost);
+
+    // Upgrade rarity and recalculate everything
+    item.rarity = targetRarity;
+
+    // Add new affix if rarity now has more
+    var oldCount = RARITY_CONFIG.affixCount[rarities[currentIdx]] || 0;
+    var newCount = RARITY_CONFIG.affixCount[targetRarity] || 0;
+    if (newCount > oldCount) {
+        var affixPool = SLOT_AFFIXES[item.slot] || SLOT_AFFIXES.weapon;
+        item.affixes = _rollAffixes(affixPool, newCount, targetRarity);
+    }
+
+    // Add passive if this rarity now has one
+    var lineDef = ITEM_LINES[item.itemKey];
+    if (lineDef) {
+        if (RARITY_CONFIG.hasMinorPassive[targetRarity] && !item.minorPassive) {
+            item.minorPassive = lineDef.minorPassive;
+        }
+        if (RARITY_CONFIG.hasMajorPassive[targetRarity] && !item.majorPassive) {
+            item.majorPassive = lineDef.majorPassive;
+        }
+    }
+
+    // Add socket if rarity grants one
+    var oldSockets = SOCKET_CONFIG.socketsPerRarity[rarities[currentIdx]] || 0;
+    var newSockets = SOCKET_CONFIG.socketsPerRarity[targetRarity] || 0;
+    if (newSockets > oldSockets) {
+        for (var i = oldSockets; i < newSockets; i++) {
+            item.gems.push(null);
+        }
+    }
+
+    invalidateEquipCache(itemId);
+    autoSave(saveData);
+    return { success: true, msg: 'Item upgraded to ' + targetRarity + '!' };
+}
+
+function echoShapingTransmute(saveData, fromItemId, toSlot) {
+    // Cost: 200 VE — Convert item slot to another slot
+    var item = _findEquipment(saveData, fromItemId);
+    if (!item) return { success: false, msg: 'Item not found' };
+    if (item.slot === toSlot) return { success: false, msg: 'Already in that slot' };
+    if (item.equipped) return { success: false, msg: 'Cannot transmute equipped item' };
+    if (item.rarity === 'mythic') return { success: false, msg: 'Cannot transmute mythic items' };
+
+    var cost = 200;
+    if (saveData.player.veilEssence < cost) {
+        return { success: false, msg: 'Not enough Veil Essence (' + cost + ' VE)' };
+    }
+
+    spendGold(saveData, cost);
+
+    item.slot = toSlot;
+    var lines = getItemLinesForSlot(toSlot);
+    if (lines.length === 0) return { success: false, msg: 'No item lines for target slot' };
+    var newLine = lines[Math.floor(Math.random() * lines.length)];
+    item.itemKey = newLine;
+    var lineDef = ITEM_LINES[newLine];
+    if (lineDef) {
+        item.name = lineDef.names[item.tier] || lineDef.names[1];
+    }
+
+    // Reroll affixes for new slot
+    var affixPool = SLOT_AFFIXES[toSlot] || SLOT_AFFIXES.weapon;
+    var affixCount = RARITY_CONFIG.affixCount[item.rarity] || 0;
+    item.affixes = _rollAffixes(affixPool, affixCount, item.rarity);
+
+    invalidateEquipCache(fromItemId);
+    autoSave(saveData);
+    return { success: true, msg: 'Item transmuted to ' + (SLOT_DISPLAY[toSlot] ? SLOT_DISPLAY[toSlot].name : toSlot) + '!' };
+}
+
 // ---- Core: Craft Mythic ----
 
 function craftMythic(saveData, legendaryEquipmentId, mythicKey) {
@@ -821,17 +1021,17 @@ function craftMythic(saveData, legendaryEquipmentId, mythicKey) {
     if (equip.rarity !== 'legendary') return { success: false, reason: 'Requires Legendary equipment' };
     if (equip.equipped) return { success: false, reason: 'Unequip first' };
 
-    var mythicDef = MYTHIC_EQUIPMENT[mythicKey];
+    var mythicDef = MYTHIC_ITEMS[mythicKey];
     if (!mythicDef) return { success: false, reason: 'Unknown mythic' };
 
-    // Check slot match
+    // Check slot match (craftSource uses baseItem like 'legendary_weapon')
     var normalSlot = (equip.slot === 'accessory1' || equip.slot === 'accessory2') ? 'accessory' : equip.slot;
-    if (normalSlot !== mythicDef.recipe.sourceSlot) return { success: false, reason: 'Wrong slot type' };
+    if (normalSlot !== mythicDef.slot && mythicDef.slot !== normalSlot) return { success: false, reason: 'Wrong slot type' };
 
-    var cost = mythicDef.recipe.gold;
+    var cost = mythicDef.craftSource.goldCost;
     if (saveData.player.veilEssence < cost) return { success: false, reason: 'Not enough VE (' + cost + ' VE)' };
 
-    var matKey = mythicDef.recipe.material;
+    var matKey = mythicDef.craftSource.materials[0];
     if (!saveData.equipment.mythicMaterials[matKey] || saveData.equipment.mythicMaterials[matKey] < 1) {
         return { success: false, reason: 'Need 1 ' + MYTHIC_MATERIALS[matKey].name };
     }
@@ -964,18 +1164,18 @@ function applyItemStats(unit, saveData) {
 
         if (eq.isMythic || eq.rarity === 'mythic') {
             // Mythic stats
-            var mythicDef = MYTHIC_EQUIPMENT[eq.itemKey];
+            var mythicDef = MYTHIC_ITEMS[eq.itemKey];
             if (!mythicDef) continue;
             var enhBonus = eq.enhanceLevel > 0 ? ENHANCEMENT_CONFIG.statBonusPct[eq.enhanceLevel - 1] : 0;
             stats = {};
-            var mKeys = Object.keys(mythicDef.stats);
+            var mKeys = Object.keys(mythicDef.baseStats);
             for (var mk = 0; mk < mKeys.length; mk++) {
-                stats[mKeys[mk]] = mythicDef.stats[mKeys[mk]] * (1 + enhBonus);
+                stats[mKeys[mk]] = mythicDef.baseStats[mKeys[mk]] * (1 + enhBonus);
             }
             // Store mythic passive
-            if (mythicDef.passive) {
+            if (mythicDef.majorPassive) {
                 if (!unit.mythicAbilities) unit.mythicAbilities = [];
-                unit.mythicAbilities.push(mythicDef.passive);
+                unit.mythicAbilities.push(mythicDef.majorPassive);
             }
         } else {
             stats = calculateEquipmentStats(eq);
@@ -1091,7 +1291,7 @@ function applySetBonuses(playerUnits, setCounts) { }
 function getItemName(equipment) {
     if (!equipment) return 'Unknown';
     if (equipment.isMythic || equipment.rarity === 'mythic') {
-        var mythicDef = MYTHIC_EQUIPMENT[equipment.itemKey];
+        var mythicDef = MYTHIC_ITEMS[equipment.itemKey];
         var name = mythicDef ? mythicDef.name : equipment.itemKey;
         if (equipment.enhanceLevel > 0) name += ' +' + equipment.enhanceLevel;
         return name;
@@ -1106,7 +1306,7 @@ function getItemName(equipment) {
 function getItemEmoji(equipment) {
     if (!equipment) return '?';
     if (equipment.isMythic || equipment.rarity === 'mythic') {
-        var mythicDef = MYTHIC_EQUIPMENT[equipment.itemKey];
+        var mythicDef = MYTHIC_ITEMS[equipment.itemKey];
         return mythicDef ? mythicDef.emoji : '✨';
     }
     var slotInfo = SLOT_DISPLAY[equipment.slot];
@@ -1129,13 +1329,13 @@ function getItemStatDescription(equipment) {
     var lines = [];
 
     if (equipment.isMythic || equipment.rarity === 'mythic') {
-        var mythicDef = MYTHIC_EQUIPMENT[equipment.itemKey];
+        var mythicDef = MYTHIC_ITEMS[equipment.itemKey];
         if (!mythicDef) return '';
-        var mKeys = Object.keys(mythicDef.stats);
+        var mKeys = Object.keys(mythicDef.baseStats);
         for (var mk = 0; mk < mKeys.length; mk++) {
-            lines.push(_formatEquipStat(mKeys[mk], mythicDef.stats[mKeys[mk]]));
+            lines.push(_formatEquipStat(mKeys[mk], mythicDef.baseStats[mKeys[mk]]));
         }
-        if (mythicDef.passive) lines.push('🌟 ' + mythicDef.passive.desc);
+        if (mythicDef.majorPassive) lines.push('🌟 ' + mythicDef.majorPassive.desc);
         return lines.join(', ');
     }
 
@@ -1556,6 +1756,71 @@ function _rollAffixes(pool, count, rarity) {
     return selected;
 }
 
+// ---- Save Data Init & Migration ----
+
+function initEquipmentSaveData(saveData) {
+    if (!saveData.equipment) {
+        saveData.equipment = {
+            inventory: [],
+            materials: {
+                commonScraps: 0, uncommonScraps: 0, rareScraps: 0, epicScraps: 0,
+                oreShards: 0, refinedOre: 0, elementalDust: 0, prismaticShards: 0
+            },
+            gems: [],
+            mythicMaterials: { dragon_scale: 0, void_crystal: 0, world_shard: 0 },
+            essences: { fire: 0, water: 0, earth: 0, wind: 0, lightning: 0, force: 0, arcane: 0 },
+            slotFocus: { slot: null, remaining: 0 },
+            codex: { discovered: {} }
+        };
+    }
+    // Ensure sub-objects exist
+    if (!saveData.equipment.materials) saveData.equipment.materials = {};
+    if (!saveData.equipment.gems) saveData.equipment.gems = [];
+    if (!saveData.equipment.mythicMaterials) saveData.equipment.mythicMaterials = { dragon_scale: 0, void_crystal: 0, world_shard: 0 };
+    if (!saveData.equipment.essences) saveData.equipment.essences = { fire: 0, water: 0, earth: 0, wind: 0, lightning: 0, force: 0, arcane: 0 };
+    if (!saveData.equipment.slotFocus) saveData.equipment.slotFocus = { slot: null, remaining: 0 };
+    if (!saveData.equipment.codex) saveData.equipment.codex = { discovered: {} };
+}
+
+function migrateOldItems(saveData) {
+    // Old system had: components (base items), combined items
+    // New system has: equipment inventory
+    if (saveData.itemMigrationVersion >= 1) return; // Already migrated
+
+    initEquipmentSaveData(saveData);
+
+    // If old items exist, refund them as VE
+    if (saveData.items && saveData.items.length > 0) {
+        var refund = 0;
+        for (var i = 0; i < saveData.items.length; i++) {
+            var oldItem = saveData.items[i];
+            var value = oldItem.rarity === 'epic' ? 500 :
+                        oldItem.rarity === 'rare' ? 200 :
+                        oldItem.rarity === 'uncommon' ? 100 : 50;
+            refund += value;
+        }
+
+        if (!saveData.player) saveData.player = {};
+        saveData.player.veilEssence = (saveData.player.veilEssence || 0) + refund;
+
+        // Clear old items
+        saveData.items = [];
+    }
+
+    // Mark migration complete
+    saveData.itemMigrationVersion = 1;
+}
+
+// ---- Utility: rollFromWeights (public alias) ----
+
+function rollFromWeights(weights) {
+    return _weightedRoll(weights);
+}
+
+function formatItemStat(key, value) {
+    return _formatEquipStat(key, value);
+}
+
 // ---- Backward Compat: old item system stubs ----
 // These prevent errors from old code that may still reference them
 
@@ -1563,7 +1828,7 @@ var ITEM_COMPONENTS = {};
 var ITEM_RECIPES = {};
 var SET_ITEM_RECIPES = {};
 var ABILITY_ITEMS = {};
-var MYTHIC_ITEMS = {};
+// MYTHIC_ITEMS defined above — do not redeclare
 var ITEM_SETS = {};
 var ITEM_RARITIES = { standard: { name: 'Standard', color: '#aaa', bonus: 0 }, uncommon: { name: 'Uncommon', color: '#4ade80', bonus: 0.12 }, rare: { name: 'Rare', color: '#60a5fa', bonus: 0.25 }, epic: { name: 'Epic', color: '#c084fc', bonus: 0.50 } };
 var ITEM_AFFINITIES = {};
