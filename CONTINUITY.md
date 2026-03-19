@@ -20,8 +20,9 @@
 ## Current Status: V2 — Phases 1-5 Complete, Hero + Item Rework + Progression Rework In Progress
 
 **Repository**: https://github.com/whcheong2008/gameTft
-**Current tag**: `v0.2.0-phase1-complete` (initial commit)
-**Next tag**: `v0.3.0-phase2-roster` (after verification)
+**Current tag**: `v0.5.0-session11-complete`
+**Previous tags**: `v0.4.0-session11` (mid-session), `v0.2.0-phase1-complete` (initial)
+**Next tag**: `v0.6.0-playtested` (after smoke test + bug fixes)
 
 ### What's Working (V2 Game — game-v2.html)
 The game is **fully playable** with this core loop:
@@ -199,12 +200,15 @@ The combat engine is being rebuilt from scratch per COMBAT-DESIGN.md. Implementa
 **Phase 5 — COMPLETE (Progression Polish)**:
 - [x] **3 new buildings + daily quests + achievements** (prompt 23 — feature/phase5-progression branch) — DONE: Gem Workshop, Mana Shrine, Bond Hall, daily quests, 20+ achievements, stats tracking
 
-**Phase 6 — Hero + Item Rework** (IN PROGRESS):
+**Phase 6 — Hero + Item + Progression Rework** (COMPLETE):
 - [x] Unit XP/levels + ascension + secondary archetypes (prompt 26)
 - [x] Archetype synergy rework to 2/4/6/8, archetype-scoped (prompts 25+27)
-- [x] **Hero system REDESIGNED** (Session 11 — HERO-REWORK.md): 6 philosophy-based heroes matched to story cast. Prompt 29 needs revision to match new design.
-- [ ] **Item system rework** (prompt 30 — WRITTEN, awaiting 29): RPG equipment + Diablo loot
-- [x] **Progression/economy rework** (Session 11 — DESIGNED): See PROGRESSION-REWORK.md. Gold→Veil Essence, tiered star-up, 12 T4 units, 74 stages, camp practices replace buildings
+- [x] **Hero system** (prompt 29 — IMPLEMENTED + VERIFIED): 6 philosophy-based heroes, skill trees match HERO-REWORK.md. Tier costs 1/1/2/4/5.
+- [x] **Item system rework** (prompt 30 — IMPLEMENTED): RPG equipment (8 slots), Tier×Rarity loot, random affixes, Echo Shaping, hero-gated equipping
+- [x] **Progression/economy rework** (prompt 31 — IMPLEMENTED): Gold→Veil Essence, 50 VE/roll, tiered star-up, team size 3→8, hard level caps per region
+- [x] **T4 expansion** (prompt 32 — IMPLEMENTED): 6 new T4 units (66 total roster, 132 with evolved), all 9 archetypes at T4
+- [x] **Stage expansion** (prompt 33 — IMPLEMENTED): 74 stages (9-9-9-9-10-10-10-8), XP curve validated, hard level caps
+- [x] **XP curve validated**: Every region hits target level exactly. Monotonically increasing. Hard caps prevent overleveling.
 
 **Phase 7 — Visual & Audio Polish** (deferred, considering Unity port):
 - [ ] Sprite system (replace emoji with art)
@@ -320,6 +324,12 @@ Game TFT/
 ├── HERO-REWORK.md        ← 6 philosophy-based heroes matched to story cast (replaces HERO-SYSTEM-DESIGN.md)
 ├── T4-EXPANSION.md       ← 6 new T4 units (66 total roster), element/archetype coverage
 ├── SCOPE.md              ← Prototype scope: core vs future expansion, 6-phase implementation priority
+├── BUGS.md               ← Bug tracker for playtesting (critical/high/medium/low + deferred to Unity)
+├── STORY-DRAFT-V1.md     ← Story bible: world, characters, 8-region narrative, lore-mechanics bridge
+├── STORY-STAGES.md       ← 74-stage story mapping with Unity storytelling tools
+├── STORY-BEATS-CATALOG-V2.md ← Story beats catalog V2
+├── STORY-STAGES-V2.md    ← Story stages V2
+├── Story V2/             ← Chapter-by-chapter prose (8 chapters)
 ├── DESIGN.md             ← V1 game design (historical reference)
 ├── MECHANICS.md          ← Engine-agnostic mechanics reference (V1)
 └── CONTINUITY.md         ← This file
@@ -468,4 +478,42 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
     - 5 heroes for 8 team slots = 3 units without heroes/items. Meaningful team-building constraint.
     - R4 power dip: 5→2 heroes (Kael + Ren only). Mechanically devastating, matches story.
     - Full skill trees (2 branches × 5 tiers × 2 choices per tier, 20 levels). Tier costs: 1/1/2/4/5. Capstone (5pt) + other branch T4 (4pt) = impossible at 20pt budget — forces real build choices.
-  - **Open design items remaining**: hard mode details, exact XP curve tuning, prompt 29/30 revision for new hero/progression systems
+  - **Prompts 31-33 executed**: All implemented successfully on main. Prompt 30 (items) also executed.
+  - **Prompt 29 VERIFIED**: heroes.js matches HERO-REWORK.md — 6 heroes, correct names, tier costs 1/1/2/4/5, 48×T1 + 24×T3 + 24×T4 + 12×T5 nodes. Vestigial `getFragmentSkillEffects()` stub (returns {}) — harmless.
+  - **XP curve VALIDATED**: Simulated 74-stage playthrough. All 8 regions hit target levels exactly. Monotonically increasing. Hard level caps added (R1→L4, R2→L7, ..., R7-R8→L20). Diminishing returns verified (20 extra R3 stages → still only L12).
+  - **Bug tracker created**: BUGS.md for playtesting. Critical = fix now, else defer to Unity.
+  - **Git committed and pushed**: Main at `e935f73`, tagged `v0.5.0-session11-complete`. 42 files, +14,766/-3,504 lines.
+  - **Prototype is PLAYABLE**: All core systems implemented (progression, heroes, T4 units, stages, items). Ready for smoke testing.
+
+### Prototype Status — Ready for Testing
+
+**All core systems implemented:**
+- [x] Combat engine (grid, movement, mana, abilities, status effects, bosses, speed controls)
+- [x] Unit system (66 base + 66 evolved = 132 units, 6 elements, 9 archetypes)
+- [x] Hero system (6 philosophy heroes, skill trees, item gating)
+- [x] Item system (Tier×Rarity loot, 8 equipment slots, Echo Shaping, enhancement, gems)
+- [x] Progression (VE economy, tiered star-up, team size 3→8, XP curve, hard level caps)
+- [x] Stages (74 stages across 8 regions, boss encounters, lock system)
+- [x] Gacha (level-gated rates, T5 at L15, pity system)
+- [x] Buildings/Camp (practices replacing buildings, lore-appropriate names)
+
+**Not implemented (deferred to Unity):**
+- Story content (cutscenes, dialogue, environmental storytelling)
+- Hard mode stages
+- Endless mode / challenge modes
+- Visual/audio polish (sprites, VFX, music)
+- Many hero skill node combat effects (placeholder `function(unit, hero) {}`)
+
+**Known issues before testing:**
+- Some UI may still reference "gold" instead of "Veil Essence"
+- Fragment stub in heroes.js (harmless)
+- Phase 2 never smoke-tested
+- Boss reconciliation between prompt 15 and MISSIONS-DESIGN.md may cause issues
+
+### Next Steps
+
+1. **Playtest the HTML prototype** — smoke test all systems, log bugs in BUGS.md
+2. **Fix game-breaking bugs** — anything that prevents progression or crashes
+3. **Unity planning session** — engine decisions, porting strategy, story integration architecture
+4. **Hard mode design** (KIV — keep in view, not blocking)
+5. **Balance pass** — after playtesting reveals feel issues
