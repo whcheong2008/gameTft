@@ -106,6 +106,28 @@ function initCombat(gs) {
         applySynergyBonuses(combatState.playerUnits, combatState.activeSynergies, combatState);
     }
 
+    // Apply hero skill effects to player units (philosophy-based system)
+    if (typeof getHeroForUnit === 'function' && typeof applyHeroStatBonuses === 'function') {
+        var sd = getSaveData();
+        for (var hi = 0; hi < combatState.playerUnits.length; hi++) {
+            var hu = combatState.playerUnits[hi];
+            var unitKey = hu.key || hu.templateKey;
+            if (!unitKey) continue;
+
+            var heroInfo = getHeroForUnit(sd, unitKey);
+            if (!heroInfo || heroInfo.data.isDead) continue;
+
+            hu._heroKey = heroInfo.key;
+            hu._heroData = heroInfo.data;
+
+            // Apply static stat bonuses from invested skill nodes
+            applyHeroStatBonuses(hu, heroInfo.key, heroInfo.data);
+
+            // Track hero on unit for combat-triggered effects
+            hu.heroOncePerCombatUsed = {};
+        }
+    }
+
     // Initialize combatStats on every unit (only if not already present, to persist across waves)
     for (var si = 0; si < combatState.allUnits.length; si++) {
         var su = combatState.allUnits[si];

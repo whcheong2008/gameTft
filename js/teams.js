@@ -22,7 +22,7 @@ function getRoster(saveData) {
             template: tmpl,
             stars: entry.stars,
             copiesForNext: entry.copiesForNext,
-            copiesNeeded: getStarUpCost(),
+            copiesNeeded: getCopiesPerStar(key),
             canStarUp: canStarUp(saveData, key),
             isEvolved: isEvolved
         });

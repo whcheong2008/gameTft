@@ -2,708 +2,952 @@
 // missions.js — Mission definitions, wave generation, rewards (v6 — Region system)
 // =============================================================================
 
-// ---- Stage Definitions (replaces STORY_MISSIONS) ----
+// VE reward per stage by region
+var MISSION_VE_PER_STAGE = {
+    1: 200,   // R1
+    2: 350,   // R2
+    3: 550,   // R3
+    4: 750,   // R4
+    5: 1000,  // R5
+    6: 1300,  // R6
+    7: 1600,  // R7
+    8: 2000   // R8
+};
+
+// Unit drop tier weights by region (not player level)
+var MISSION_TIER_WEIGHTS_BY_REGION = {
+    1: [70, 30, 0,  0,  0],
+    2: [50, 40, 10, 0,  0],
+    3: [30, 35, 35, 0,  0],
+    4: [15, 25, 45, 15, 0],
+    5: [5,  15, 40, 35, 5],
+    6: [5,  10, 30, 40, 15],
+    7: [0,  5,  20, 45, 30],
+    8: [0,  0,  15, 45, 40]
+};
+
+// ---- Stage Definitions (74 stages across 8 regions) ----
+// Stage structure: 9-9-9-9-10-10-10-8
+// Fields: id, region, name, stageNumber, stageType, description, requiredLevel, lock,
+//         encounterMechanic, waves, boss, isBoss, canRetry, rewards {ve, xp, unitDrops}, dropWeights
 
 var STAGES = [
-    // ===== REGION 1: The Frontier (4 stages + boss) =====
+    // ===== REGION 1: The Frontier (8 stages + 1 boss = 9) =====
     {
-        id: 'r1_s1',
-        region: 1,
-        name: 'First Steps',
-        description: 'The Veil is thinnest at the frontier edge. Place your units and watch them fight — the basics of command.',
-        requiredLevel: 1,
-        lock: null,
-        encounterMechanic: null,
+        id: 'r1_s1', region: 1, name: 'First Steps', stageNumber: 1, stageType: 'story',
+        description: 'The Veil is thinnest at the frontier edge. Place your units and watch them fight.',
+        requiredLevel: 1, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
             { budget: 3, maxCost: 1, count: 2 },
             { budget: 4, maxCost: 1, count: 2 }
         ],
-        rewards: { gold: 30, xp: 50 }
+        rewards: { ve: 200, xp: 80, unitDrops: 2 },
+        dropWeights: { t1: 70, t2: 30 }
     },
     {
-        id: 'r1_s2',
-        region: 1,
-        name: 'Border Patrol',
+        id: 'r1_s2', region: 1, name: 'Border Patrol', stageNumber: 2, stageType: 'character',
         description: 'More creatures slip through, wave after wave. Reposition between waves to adapt.',
-        requiredLevel: 2,
-        lock: null,
-        encounterMechanic: null,
+        requiredLevel: 1, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
+            { budget: 4, maxCost: 1, count: 2 },
             { budget: 5, maxCost: 1, count: 3 },
-            { budget: 6, maxCost: 1, count: 3 },
-            { budget: 7, maxCost: 1, count: 3 }
+            { budget: 6, maxCost: 1, count: 3 }
         ],
-        rewards: { gold: 50, xp: 80 }
+        rewards: { ve: 200, xp: 80, unitDrops: 2 },
+        dropWeights: { t1: 70, t2: 30 }
     },
     {
-        id: 'r1_s3',
-        region: 1,
-        name: 'The Crossing',
+        id: 'r1_s3', region: 1, name: 'The Crossing', stageNumber: 3, stageType: 'gameplay',
         description: 'Stronger creatures guard the ancient bridge. Cost-2 enemies appear for the first time.',
-        requiredLevel: 3,
-        lock: null,
-        encounterMechanic: null,
+        requiredLevel: 2, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 5, maxCost: 2, count: 3 },
+            { budget: 7, maxCost: 2, count: 3 },
+            { budget: 8, maxCost: 2, count: 4 }
+        ],
+        rewards: { ve: 200, xp: 80, unitDrops: 2 },
+        dropWeights: { t1: 70, t2: 30 }
+    },
+    {
+        id: 'r1_s4', region: 1, name: 'Settling In', stageNumber: 4, stageType: 'story',
+        description: 'Element-biased enemies test your positioning. First exposure to element matchups.',
+        requiredLevel: 2, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 6, maxCost: 2, count: 3, elementBias: 'fire' },
+            { budget: 7, maxCost: 2, count: 3, elementBias: 'water' },
+            { budget: 8, maxCost: 2, count: 4 }
+        ],
+        rewards: { ve: 200, xp: 80, unitDrops: 2 },
+        dropWeights: { t1: 70, t2: 30 }
+    },
+    {
+        id: 'r1_s5', region: 1, name: 'Night Raid', stageNumber: 5, stageType: 'gameplay',
+        description: 'Voidspawn attack the camp at night. Tests what the player has learned so far.',
+        requiredLevel: 3, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 6, maxCost: 2, count: 3 },
+            { budget: 7, maxCost: 2, count: 4 },
+            { budget: 8, maxCost: 2, count: 4 }
+        ],
+        rewards: { ve: 200, xp: 80, unitDrops: 2 },
+        dropWeights: { t1: 70, t2: 30 }
+    },
+    {
+        id: 'r1_s6', region: 1, name: 'The Family', stageNumber: 6, stageType: 'character',
+        description: 'A frontier family refuses to evacuate. Clear the patrol route to keep them safe.',
+        requiredLevel: 3, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
             { budget: 7, maxCost: 2, count: 3 },
-            { budget: 9, maxCost: 2, count: 4 },
-            { budget: 12, maxCost: 2, count: 5 }
+            { budget: 8, maxCost: 2, count: 4 },
+            { budget: 8, maxCost: 2, count: 4 }
         ],
-        rewards: { gold: 70, xp: 120 }
+        rewards: { ve: 200, xp: 80, unitDrops: 2 },
+        dropWeights: { t1: 70, t2: 30 }
     },
     {
-        id: 'r1_s4',
-        region: 1,
-        name: 'Into the Wild',
-        description: 'Mixed creatures with elemental affinities roam beyond the frontier. Your first taste of element advantages.',
-        requiredLevel: 4,
-        lock: null,
-        encounterMechanic: null,
+        id: 'r1_s7', region: 1, name: 'Otho\'s Notes', stageNumber: 7, stageType: 'story',
+        description: 'Voidspawn emergence near the Veilborn quarter. Clue #1 — the precision of the attacks.',
+        requiredLevel: 3, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 8, maxCost: 2, count: 4, elementBias: 'fire' },
-            { budget: 10, maxCost: 2, count: 4, elementBias: 'water' },
-            { budget: 12, maxCost: 2, count: 5 }
+            { budget: 7, maxCost: 2, count: 3 },
+            { budget: 8, maxCost: 2, count: 4 },
+            { budget: 8, maxCost: 2, count: 4 }
         ],
-        rewards: { gold: 100, xp: 180 }
+        rewards: { ve: 200, xp: 80, unitDrops: 2 },
+        dropWeights: { t1: 70, t2: 30 }
     },
     {
-        id: 'r1_boss',
-        region: 1,
-        name: 'The Veil Warden',
+        id: 'r1_s8', region: 1, name: 'Into the Wild', stageNumber: 8, stageType: 'gameplay',
+        description: 'Mixed creatures with elemental affinities. Pre-boss difficulty — element matchups matter.',
+        requiredLevel: 4, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 7, maxCost: 2, count: 3, elementBias: 'fire' },
+            { budget: 8, maxCost: 2, count: 4, elementBias: 'water' },
+            { budget: 8, maxCost: 2, count: 4 }
+        ],
+        rewards: { ve: 200, xp: 80, unitDrops: 2 },
+        dropWeights: { t1: 70, t2: 30 }
+    },
+    {
+        id: 'r1_boss', region: 1, name: 'The Veil Warden', stageNumber: 9, stageType: 'boss',
         description: 'A corrupted entity born from the Shattering guards the frontier gate. Big, telegraphed, dangerous.',
-        requiredLevel: 4,
-        lock: null,
-        encounterMechanic: null,
-        waves: [],
-        boss: 'veil_warden',
-        rewards: { gold: 250, xp: 500 }
+        requiredLevel: 4, lock: null, encounterMechanic: null, isBoss: true, canRetry: true,
+        waves: [], boss: 'veil_warden',
+        rewards: { ve: 500, xp: 200, unitDrops: 2 },
+        dropWeights: { t1: 70, t2: 30 }
     },
 
-    // ===== REGION 2: The Barracks Trials (5 stages + boss) =====
+    // ===== REGION 2: The Barracks Trials (8 stages + 1 boss = 9) =====
     {
-        id: 'r2_s1',
-        region: 2,
-        name: 'Hold the Line',
-        description: 'Heavy melee rushers charge your backline. Guardians absorb the punishment so your damage dealers survive.',
-        requiredLevel: 5,
-        lock: { type: 'archetype', value: 'guardian', count: 2 },
-        encounterMechanic: null,
+        id: 'r2_s1', region: 2, name: 'The Road to the Barracks', stageNumber: 1, stageType: 'story',
+        description: 'Mira joins the group. Guardians absorb the punishment so damage dealers survive.',
+        requiredLevel: 5, lock: { type: 'archetype', value: 'guardian', count: 2 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 8, maxCost: 2, count: 3, synergyBias: 'duelist' },
-            { budget: 10, maxCost: 2, count: 4, synergyBias: 'predator' },
-            { budget: 12, maxCost: 3, count: 4, synergyBias: 'duelist' }
+            { budget: 5, maxCost: 2, count: 3 },
+            { budget: 7, maxCost: 2, count: 3, synergyBias: 'duelist' }
         ],
-        rewards: { gold: 120, xp: 200 }
+        rewards: { ve: 350, xp: 130, unitDrops: 2 },
+        dropWeights: { t1: 50, t2: 40, t3: 10 }
     },
     {
-        id: 'r2_s2',
-        region: 2,
-        name: 'Death from Afar',
-        description: 'Tanky but slow enemies lumber forward. Ranged units chip them down before they reach your line.',
-        requiredLevel: 6,
-        lock: { type: 'archetype', value: 'ranger', count: 2 },
-        encounterMechanic: null,
+        id: 'r2_s2', region: 2, name: 'Hold the Line', stageNumber: 2, stageType: 'character',
+        description: 'Heavy melee rushers charge your backline. Guardians hold the initial charge.',
+        requiredLevel: 5, lock: { type: 'archetype', value: 'guardian', count: 2 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 10, maxCost: 2, count: 3, synergyBias: 'guardian' },
-            { budget: 12, maxCost: 3, count: 4, synergyBias: 'guardian' },
-            { budget: 14, maxCost: 3, count: 5, synergyBias: 'guardian' }
+            { budget: 6, maxCost: 2, count: 3, synergyBias: 'duelist' },
+            { budget: 8, maxCost: 2, count: 4, synergyBias: 'predator' },
+            { budget: 10, maxCost: 3, count: 4, synergyBias: 'duelist' }
         ],
-        rewards: { gold: 140, xp: 240 }
+        rewards: { ve: 350, xp: 130, unitDrops: 2 },
+        dropWeights: { t1: 50, t2: 40, t3: 10 }
     },
     {
-        id: 'r2_s3',
-        region: 2,
-        name: 'The Arcane Barrage',
-        description: 'Spread enemies with a healer in the back. Physical single-target cannot out-damage the healing — bring magic.',
-        requiredLevel: 6,
-        lock: { type: 'archetype_or', value: ['sorcerer', 'mystic'], count: 2 },
-        encounterMechanic: null,
+        id: 'r2_s3', region: 2, name: 'Death from Afar', stageNumber: 3, stageType: 'gameplay',
+        description: 'Tanky but slow enemies lumber forward. Ranged units chip them down.',
+        requiredLevel: 6, lock: { type: 'archetype', value: 'ranger', count: 2 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 10, maxCost: 2, count: 4, synergyBias: 'sage' },
-            { budget: 13, maxCost: 3, count: 5 },
-            { budget: 16, maxCost: 3, count: 5, synergyBias: 'sage' }
+            { budget: 8, maxCost: 2, count: 3, synergyBias: 'guardian' },
+            { budget: 10, maxCost: 3, count: 4, synergyBias: 'guardian' },
+            { budget: 12, maxCost: 3, count: 5, synergyBias: 'guardian' }
         ],
-        rewards: { gold: 150, xp: 260 }
+        rewards: { ve: 350, xp: 130, unitDrops: 2 },
+        dropWeights: { t1: 50, t2: 40, t3: 10 }
     },
     {
-        id: 'r2_s4',
-        region: 2,
-        name: 'The Hunt',
-        description: 'A dangerous backline carry hides behind a wall of tanks. Dive archetypes bypass frontlines to reach priority targets.',
-        requiredLevel: 7,
-        lock: { type: 'archetype_or', value: ['predator', 'duelist'], count: 2 },
-        encounterMechanic: null,
+        id: 'r2_s4', region: 2, name: 'The Arcane Barrage', stageNumber: 4, stageType: 'character',
+        description: 'Spread enemies with a healer in the back. Bring magic to burst through the healing.',
+        requiredLevel: 6, lock: { type: 'archetype_or', value: ['sorcerer', 'mystic'], count: 2 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 12, maxCost: 3, count: 4, synergyBias: 'guardian' },
-            { budget: 14, maxCost: 3, count: 5, synergyBias: 'guardian' },
-            { budget: 18, maxCost: 3, count: 6, synergyBias: 'ranger' }
+            { budget: 8, maxCost: 2, count: 4, synergyBias: 'sage' },
+            { budget: 10, maxCost: 3, count: 5 },
+            { budget: 13, maxCost: 3, count: 5, synergyBias: 'sage' }
         ],
-        rewards: { gold: 160, xp: 280 }
+        rewards: { ve: 350, xp: 130, unitDrops: 2 },
+        dropWeights: { t1: 50, t2: 40, t3: 10 }
     },
     {
-        id: 'r2_s5',
-        region: 2,
-        name: 'Restoration',
-        description: 'Many waves, each individually easy, but damage carries between waves. Sustain keeps the team alive.',
-        requiredLevel: 8,
-        lock: { type: 'archetype', value: 'sage', count: 2 },
-        encounterMechanic: null,
+        id: 'r2_s5', region: 2, name: 'The Hunt', stageNumber: 5, stageType: 'gameplay',
+        description: 'A dangerous backline carry hides behind tanks. Dive archetypes bypass frontlines.',
+        requiredLevel: 7, lock: { type: 'archetype_or', value: ['predator', 'duelist'], count: 2 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 10, maxCost: 3, count: 4, synergyBias: 'guardian' },
+            { budget: 12, maxCost: 3, count: 5, synergyBias: 'guardian' },
+            { budget: 13, maxCost: 3, count: 5, synergyBias: 'ranger' }
+        ],
+        rewards: { ve: 350, xp: 130, unitDrops: 2 },
+        dropWeights: { t1: 50, t2: 40, t3: 10 }
+    },
+    {
+        id: 'r2_s6', region: 2, name: 'Second Chances', stageNumber: 6, stageType: 'character',
+        description: 'Multi-wave sustain check. Damage carries between waves — healing keeps the team alive.',
+        requiredLevel: 7, lock: { type: 'archetype', value: 'sage', count: 2 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 8, maxCost: 2, count: 3 },
+            { budget: 10, maxCost: 2, count: 4 },
+            { budget: 10, maxCost: 3, count: 4 }
+        ],
+        rewards: { ve: 350, xp: 130, unitDrops: 2 },
+        dropWeights: { t1: 50, t2: 40, t3: 10 }
+    },
+    {
+        id: 'r2_s7', region: 2, name: 'The Archive', stageNumber: 7, stageType: 'story',
+        description: 'Voidspawn incursion near the archive. Clue #2 — the Wellspring reference.',
+        requiredLevel: 8, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 10, maxCost: 3, count: 4 },
+            { budget: 12, maxCost: 3, count: 5 }
+        ],
+        rewards: { ve: 350, xp: 130, unitDrops: 2 },
+        dropWeights: { t1: 50, t2: 40, t3: 10 }
+    },
+    {
+        id: 'r2_s8', region: 2, name: 'Restoration', stageNumber: 8, stageType: 'gameplay',
+        description: 'Final training exercise. Extended endurance — sustain across many waves.',
+        requiredLevel: 8, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
             { budget: 8, maxCost: 2, count: 3 },
             { budget: 10, maxCost: 2, count: 4 },
             { budget: 10, maxCost: 3, count: 4 },
             { budget: 12, maxCost: 3, count: 5 }
         ],
-        rewards: { gold: 170, xp: 300 }
+        rewards: { ve: 350, xp: 130, unitDrops: 2 },
+        dropWeights: { t1: 50, t2: 40, t3: 10 }
     },
     {
-        id: 'r2_boss',
-        region: 2,
-        name: 'The Archon',
+        id: 'r2_boss', region: 2, name: 'The Archon', stageNumber: 9, stageType: 'boss',
         description: 'Shifts between archetype stances — Guardian, Predator, Sorcerer. A balanced team handles all three.',
-        requiredLevel: 8,
-        lock: null,
-        encounterMechanic: null,
-        waves: [],
-        boss: 'archon',
-        rewards: { gold: 350, xp: 600 }
+        requiredLevel: 8, lock: null, encounterMechanic: null, isBoss: true, canRetry: true,
+        waves: [], boss: 'archon',
+        rewards: { ve: 700, xp: 300, unitDrops: 2 },
+        dropWeights: { t1: 50, t2: 40, t3: 10 }
     },
 
-    // ===== REGION 3: The Synergy Trials (4 stages + boss) =====
+    // ===== REGION 3: The Synergy Trials (8 stages + 1 boss = 9) =====
     {
-        id: 'r3_s1',
-        region: 3,
-        name: 'Shield and Fang',
+        id: 'r3_s1', region: 3, name: 'Shield and Fang', stageNumber: 1, stageType: 'gameplay',
         description: 'Balanced enemy comp with frontline and backline. Guardians hold while Predators flank.',
-        requiredLevel: 8,
-        lock: { type: 'archetype_pair', value: ['guardian', 'predator'], count: [2, 2] },
-        encounterMechanic: null,
+        requiredLevel: 9, lock: { constraints: [{ type: 'archetype', value: 'guardian', count: 2 }, { type: 'archetype', value: 'predator', count: 2 }] },
+        encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 12, maxCost: 3, count: 4 },
-            { budget: 15, maxCost: 3, count: 5 },
-            { budget: 18, maxCost: 4, count: 5 }
+            { budget: 8, maxCost: 3, count: 4 },
+            { budget: 10, maxCost: 3, count: 4 },
+            { budget: 13, maxCost: 3, count: 5 }
         ],
-        rewards: { gold: 180, xp: 350 }
+        rewards: { ve: 550, xp: 200, unitDrops: 2 },
+        dropWeights: { t1: 30, t2: 35, t3: 35 }
     },
     {
-        id: 'r3_s2',
-        region: 3,
-        name: 'The Long Watch',
-        description: 'Aggressive fast melee rushers. Rangers deal damage from safety, Sages sustain — but positioning is critical.',
-        requiredLevel: 9,
-        lock: { type: 'archetype_pair', value: ['ranger', 'sage'], count: [2, 2] },
-        encounterMechanic: null,
+        id: 'r3_s2', region: 3, name: 'The Long Watch', stageNumber: 2, stageType: 'story',
+        description: 'Aggressive fast rushers. Rangers deal damage from safety, Sages sustain.',
+        requiredLevel: 9, lock: { constraints: [{ type: 'archetype', value: 'ranger', count: 2 }, { type: 'archetype', value: 'sage', count: 2 }] },
+        encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 14, maxCost: 3, count: 5, synergyBias: 'predator' },
-            { budget: 17, maxCost: 3, count: 5, synergyBias: 'duelist' },
-            { budget: 20, maxCost: 4, count: 6, synergyBias: 'predator' }
+            { budget: 9, maxCost: 3, count: 4, synergyBias: 'predator' },
+            { budget: 11, maxCost: 3, count: 5, synergyBias: 'duelist' },
+            { budget: 13, maxCost: 3, count: 5, synergyBias: 'predator' }
         ],
-        rewards: { gold: 200, xp: 380 }
+        rewards: { ve: 550, xp: 200, unitDrops: 2 },
+        dropWeights: { t1: 30, t2: 35, t3: 35 }
     },
     {
-        id: 'r3_s3',
-        region: 3,
-        name: 'Elemental Clash',
+        id: 'r3_s3', region: 3, name: 'Elemental Clash', stageNumber: 3, stageType: 'gameplay',
         description: 'Mono-element enemies test your element coverage. Half your team shreds, half struggles.',
-        requiredLevel: 10,
-        lock: { type: 'element_count', count: 2 },
-        encounterMechanic: null,
+        requiredLevel: 10, lock: { type: 'element_count', count: 2 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 15, maxCost: 3, count: 4, elementBias: 'fire' },
-            { budget: 18, maxCost: 4, count: 5, elementBias: 'water' },
-            { budget: 22, maxCost: 4, count: 6, elementBias: 'earth' }
+            { budget: 10, maxCost: 3, count: 4, elementBias: 'fire' },
+            { budget: 12, maxCost: 3, count: 5, elementBias: 'water' },
+            { budget: 14, maxCost: 4, count: 5, elementBias: 'earth' }
         ],
-        rewards: { gold: 220, xp: 400 }
+        rewards: { ve: 550, xp: 200, unitDrops: 2 },
+        dropWeights: { t1: 30, t2: 35, t3: 35 }
     },
     {
-        id: 'r3_s4',
-        region: 3,
-        name: 'Deep Bonds',
-        description: 'Stack three of one archetype and feel the synergy bonus activate. Deeper stacking changes how the team plays.',
-        requiredLevel: 11,
-        lock: { type: 'archetype_deep', count: 3 },
-        encounterMechanic: null,
+        id: 'r3_s4', region: 3, name: 'Cracks', stageNumber: 4, stageType: 'story',
+        description: 'Stack three of one archetype and feel the synergy bonus activate. Deep stacking changes the game.',
+        requiredLevel: 10, lock: { type: 'archetype_deep', count: 3 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 16, maxCost: 3, count: 5 },
-            { budget: 19, maxCost: 4, count: 5, enemySynergies: true },
-            { budget: 22, maxCost: 4, count: 6, enemySynergies: true }
+            { budget: 10, maxCost: 3, count: 4 },
+            { budget: 12, maxCost: 3, count: 5, enemySynergies: true },
+            { budget: 14, maxCost: 4, count: 5, enemySynergies: true }
         ],
-        rewards: { gold: 240, xp: 420 }
+        rewards: { ve: 550, xp: 200, unitDrops: 2 },
+        dropWeights: { t1: 30, t2: 35, t3: 35 }
     },
     {
-        id: 'r3_boss',
-        region: 3,
-        name: 'The Twin Heralds',
+        id: 'r3_s5', region: 3, name: 'Deep Bonds', stageNumber: 5, stageType: 'gameplay',
+        description: 'A heavily fortified Voidspawn position. Deep archetype synergy needed to crack it.',
+        requiredLevel: 11, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 11, maxCost: 3, count: 5 },
+            { budget: 13, maxCost: 4, count: 5 },
+            { budget: 16, maxCost: 4, count: 6 }
+        ],
+        rewards: { ve: 550, xp: 200, unitDrops: 2 },
+        dropWeights: { t1: 30, t2: 35, t3: 35 }
+    },
+    {
+        id: 'r3_s6', region: 3, name: 'The Veteran', stageNumber: 6, stageType: 'story',
+        description: 'Clue #3 — the veteran soldier notices attacks track Veilborn headcount.',
+        requiredLevel: 11, lock: { type: 'element_count', count: 2 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 12, maxCost: 3, count: 5 },
+            { budget: 14, maxCost: 4, count: 5 },
+            { budget: 16, maxCost: 4, count: 6 }
+        ],
+        rewards: { ve: 550, xp: 200, unitDrops: 2 },
+        dropWeights: { t1: 30, t2: 35, t3: 35 }
+    },
+    {
+        id: 'r3_s7', region: 3, name: 'Convergence', stageNumber: 7, stageType: 'gameplay',
+        description: 'Multiple Voidspawn forces converging on the central settlement. All hands needed.',
+        requiredLevel: 12, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 12, maxCost: 3, count: 5 },
+            { budget: 14, maxCost: 4, count: 5 },
+            { budget: 16, maxCost: 4, count: 6 },
+            { budget: 19, maxCost: 4, count: 6 }
+        ],
+        rewards: { ve: 550, xp: 200, unitDrops: 2 },
+        dropWeights: { t1: 30, t2: 35, t3: 35 }
+    },
+    {
+        id: 'r3_s8', region: 3, name: 'The Horizon', stageNumber: 8, stageType: 'character',
+        description: 'Final sweep before the boss. The Sovereign is sighted for the first time.',
+        requiredLevel: 12, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 13, maxCost: 4, count: 5 },
+            { budget: 15, maxCost: 4, count: 5 },
+            { budget: 16, maxCost: 4, count: 6 }
+        ],
+        rewards: { ve: 550, xp: 200, unitDrops: 2 },
+        dropWeights: { t1: 30, t2: 35, t3: 35 }
+    },
+    {
+        id: 'r3_boss', region: 3, name: 'The Twin Heralds', stageNumber: 9, stageType: 'boss',
         description: 'Two bosses at once. Proximity buff and kill-order puzzle — synergy thinking at its finest.',
-        requiredLevel: 11,
-        lock: null,
-        encounterMechanic: null,
-        waves: [],
-        boss: 'twin_heralds',
-        rewards: { gold: 400, xp: 700 }
+        requiredLevel: 12, lock: null, encounterMechanic: null, isBoss: true, canRetry: true,
+        waves: [], boss: 'twin_heralds',
+        rewards: { ve: 1100, xp: 500, unitDrops: 2 },
+        dropWeights: { t1: 30, t2: 35, t3: 35 }
     },
 
-    // ===== REGION 4: The Shattered Lands (5 stages + boss) =====
+    // ===== REGION 4: The Shattered Lands (8 stages + 1 boss = 9) =====
     {
-        id: 'r4_s1',
-        region: 4,
-        name: 'The Priority',
-        description: 'An enemy healer buffs all allies with +25% ATK and regeneration. Kill the VIP to stop the effect.',
-        requiredLevel: 10,
-        lock: null,
-        encounterMechanic: 'vip_target',
+        id: 'r4_s1', region: 4, name: 'Thin Air', stageNumber: 1, stageType: 'story',
+        description: 'Entering the Shattered Lands. The landscape shifts between worlds. Stronger enemies.',
+        requiredLevel: 13, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 15, maxCost: 3, count: 4 },
-            { budget: 18, maxCost: 4, count: 5 },
-            { budget: 22, maxCost: 4, count: 6 }
+            { budget: 10, maxCost: 3, count: 4 },
+            { budget: 13, maxCost: 4, count: 5 },
+            { budget: 16, maxCost: 4, count: 5 }
         ],
-        rewards: { gold: 220, xp: 400 }
+        rewards: { ve: 750, xp: 280, unitDrops: 3 },
+        dropWeights: { t1: 15, t2: 25, t3: 45, t4: 15 }
     },
     {
-        id: 'r4_s2',
-        region: 4,
-        name: 'Against the Clock',
-        description: 'A Veil Crystal charges a wipe ability. Destroy it before 45 seconds or face devastating damage.',
-        requiredLevel: 11,
-        lock: null,
-        encounterMechanic: 'countdown',
+        id: 'r4_s2', region: 4, name: 'The Observatory', stageNumber: 2, stageType: 'story',
+        description: 'Protect the observatory while Otho researches. Enemies assault the perimeter.',
+        requiredLevel: 13, lock: null, encounterMechanic: 'protect_objective', isBoss: false, canRetry: true,
         waves: [
-            { budget: 17, maxCost: 3, count: 5 },
-            { budget: 20, maxCost: 4, count: 5 },
-            { budget: 24, maxCost: 4, count: 6 }
+            { budget: 11, maxCost: 3, count: 5 },
+            { budget: 14, maxCost: 4, count: 5 },
+            { budget: 16, maxCost: 4, count: 6 }
         ],
-        rewards: { gold: 240, xp: 420 }
+        rewards: { ve: 750, xp: 280, unitDrops: 3 },
+        dropWeights: { t1: 15, t2: 25, t3: 45, t4: 15 }
     },
     {
-        id: 'r4_s3',
-        region: 4,
-        name: 'Endless Tide',
-        description: 'Three spawn points produce new enemies every 8 seconds. Position to intercept or power through the center.',
-        requiredLevel: 12,
-        lock: null,
-        encounterMechanic: 'reinforcement_pressure',
+        id: 'r4_s3', region: 4, name: 'The Sovereign\'s Shadow', stageNumber: 3, stageType: 'story',
+        description: 'Retreat mission — the Sovereign regenerates enemies. Fighting harder makes it stronger.',
+        requiredLevel: 14, lock: null, encounterMechanic: 'reinforcement_pressure', isBoss: false, canRetry: true,
         waves: [
-            { budget: 18, maxCost: 3, count: 5 },
-            { budget: 22, maxCost: 4, count: 6 },
-            { budget: 26, maxCost: 4, count: 7 }
+            { budget: 13, maxCost: 3, count: 5 },
+            { budget: 16, maxCost: 4, count: 5 },
+            { budget: 20, maxCost: 4, count: 6 }
         ],
-        rewards: { gold: 260, xp: 450 }
+        rewards: { ve: 750, xp: 280, unitDrops: 3 },
+        dropWeights: { t1: 15, t2: 25, t3: 45, t4: 15 }
     },
     {
-        id: 'r4_s4',
-        region: 4,
-        name: 'The Ward',
-        description: 'A friendly NPC must survive all waves. Enemies prioritize it. Protect or kill fast.',
-        requiredLevel: 12,
-        lock: null,
-        encounterMechanic: 'protect_objective',
+        id: 'r4_s4', region: 4, name: 'The Silence', stageNumber: 4, stageType: 'character',
+        description: 'The morning after the revelation. Standard enemies, but the fight feels hollow.',
+        requiredLevel: 14, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 20, maxCost: 4, count: 5 },
-            { budget: 24, maxCost: 4, count: 6 },
-            { budget: 28, maxCost: 4, count: 7 }
+            { budget: 13, maxCost: 4, count: 5 },
+            { budget: 16, maxCost: 4, count: 5 },
+            { budget: 18, maxCost: 4, count: 6 }
         ],
-        rewards: { gold: 280, xp: 480 }
+        rewards: { ve: 750, xp: 280, unitDrops: 3 },
+        dropWeights: { t1: 15, t2: 25, t3: 45, t4: 15 }
     },
     {
-        id: 'r4_s5',
-        region: 4,
-        name: 'The Growing Storm',
-        description: 'One elite enemy gains +15% ATK and +10% attack speed every 5 seconds. Kill it first or face the monster.',
-        requiredLevel: 13,
-        lock: null,
-        encounterMechanic: 'escalating_threat',
+        id: 'r4_s5', region: 4, name: 'Midnight', stageNumber: 5, stageType: 'story',
+        description: 'Kael vs Lyric. The fracture. Protect the Veilborn or defeat Lyric.',
+        requiredLevel: 15, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 22, maxCost: 4, count: 5 },
-            { budget: 25, maxCost: 4, count: 6 },
-            { budget: 28, maxCost: 4, count: 7 }
+            { budget: 14, maxCost: 4, count: 5 },
+            { budget: 16, maxCost: 4, count: 5 },
+            { budget: 20, maxCost: 4, count: 6 }
         ],
-        rewards: { gold: 300, xp: 500 }
+        rewards: { ve: 750, xp: 280, unitDrops: 3 },
+        dropWeights: { t1: 15, t2: 25, t3: 45, t4: 15 }
     },
     {
-        id: 'r4_boss',
-        region: 4,
-        name: 'The Shattered Colossus',
+        id: 'r4_s6', region: 4, name: 'The Priority', stageNumber: 6, stageType: 'gameplay',
+        description: 'An enemy healer buffs all allies with +25% ATK and regeneration. Kill the VIP.',
+        requiredLevel: 15, lock: null, encounterMechanic: 'vip_target', isBoss: false, canRetry: true,
+        waves: [
+            { budget: 15, maxCost: 4, count: 5 },
+            { budget: 18, maxCost: 4, count: 6 },
+            { budget: 20, maxCost: 4, count: 6 }
+        ],
+        rewards: { ve: 750, xp: 280, unitDrops: 3 },
+        dropWeights: { t1: 15, t2: 25, t3: 45, t4: 15 }
+    },
+    {
+        id: 'r4_s7', region: 4, name: 'Against the Clock', stageNumber: 7, stageType: 'gameplay',
+        description: 'A Veil Crystal charges a wipe ability. Destroy it before 45 seconds.',
+        requiredLevel: 16, lock: null, encounterMechanic: 'countdown', isBoss: false, canRetry: true,
+        waves: [
+            { budget: 16, maxCost: 4, count: 5 },
+            { budget: 18, maxCost: 4, count: 6 },
+            { budget: 20, maxCost: 4, count: 6 }
+        ],
+        rewards: { ve: 750, xp: 280, unitDrops: 3 },
+        dropWeights: { t1: 15, t2: 25, t3: 45, t4: 15 }
+    },
+    {
+        id: 'r4_s8', region: 4, name: 'Endless Tide', stageNumber: 8, stageType: 'gameplay',
+        description: 'Three spawn points produce new enemies every 8 seconds. Power through the center.',
+        requiredLevel: 16, lock: null, encounterMechanic: 'reinforcement_pressure', isBoss: false, canRetry: true,
+        waves: [
+            { budget: 16, maxCost: 4, count: 5 },
+            { budget: 20, maxCost: 4, count: 6 },
+            { budget: 24, maxCost: 4, count: 7 }
+        ],
+        rewards: { ve: 750, xp: 280, unitDrops: 3 },
+        dropWeights: { t1: 15, t2: 25, t3: 45, t4: 15 }
+    },
+    {
+        id: 'r4_boss', region: 4, name: 'The Shattered Colossus', stageNumber: 9, stageType: 'boss',
         description: 'Cycles through encounter mechanics as phase transitions. The practical exam for adaptive combat.',
-        requiredLevel: 13,
-        lock: null,
-        encounterMechanic: null,
-        waves: [],
-        boss: 'shattered_colossus',
-        rewards: { gold: 500, xp: 800 }
+        requiredLevel: 16, lock: null, encounterMechanic: null, isBoss: true, canRetry: true,
+        waves: [], boss: 'shattered_colossus',
+        rewards: { ve: 1500, xp: 700, unitDrops: 3 },
+        dropWeights: { t1: 15, t2: 25, t3: 45, t4: 15 }
     },
 
-    // ===== REGION 5: The Dual Convergence (4 stages + boss) =====
+    // ===== REGION 5: The Dual Convergence (9 stages + 1 boss = 10) =====
     {
-        id: 'r5_s1',
-        region: 5,
-        name: 'Fire and Ice',
-        description: 'Mono-element enemies challenge your dual-element team. One half dominates, the other struggles.',
-        requiredLevel: 12,
-        lock: { type: 'element_dual' },
-        encounterMechanic: null,
+        id: 'r5_s1', region: 5, name: 'The Theory', stageNumber: 1, stageType: 'story',
+        description: 'Otho presents the seal theory. Mono-element enemies challenge your dual-element team.',
+        requiredLevel: 17, lock: { type: 'element_dual' },
+        encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 18, maxCost: 3, count: 5, elementBias: 'fire' },
-            { budget: 22, maxCost: 4, count: 5, elementBias: 'water' },
-            { budget: 26, maxCost: 4, count: 6 }
+            { budget: 12, maxCost: 3, count: 5, elementBias: 'fire' },
+            { budget: 16, maxCost: 4, count: 5, elementBias: 'water' },
+            { budget: 20, maxCost: 4, count: 6 }
         ],
-        rewards: { gold: 280, xp: 480 }
+        rewards: { ve: 1000, xp: 380, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 15, t3: 40, t4: 35, t5: 5 }
     },
     {
-        id: 'r5_s2',
-        region: 5,
-        name: 'Shifting Tides',
-        description: 'Each wave switches element. Both halves of your team get their moment to shine.',
-        requiredLevel: 13,
-        lock: { type: 'element_dual' },
-        encounterMechanic: null,
+        id: 'r5_s2', region: 5, name: 'Mira\'s Touch', stageNumber: 2, stageType: 'character',
+        description: 'Senna teaches Mira attunement. Wave-switching enemies test element coverage.',
+        requiredLevel: 17, lock: { type: 'element_dual' },
+        encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 20, maxCost: 4, count: 5, elementBias: 'earth' },
-            { budget: 24, maxCost: 4, count: 6, elementBias: 'wind' },
-            { budget: 28, maxCost: 5, count: 6, captain: 'nereus' }
+            { budget: 14, maxCost: 4, count: 5, elementBias: 'earth' },
+            { budget: 18, maxCost: 4, count: 6, elementBias: 'wind' },
+            { budget: 22, maxCost: 5, count: 6 }
         ],
-        rewards: { gold: 300, xp: 520 }
+        rewards: { ve: 1000, xp: 380, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 15, t3: 40, t4: 35, t5: 5 }
     },
     {
-        id: 'r5_s3',
-        region: 5,
-        name: 'The Crucible Pair',
-        description: 'Dual-element enemies mirror your constraint. Enemy synergy bonuses are active. Who built better?',
-        requiredLevel: 14,
-        lock: { type: 'element_dual' },
-        encounterMechanic: null,
+        id: 'r5_s3', region: 5, name: 'Shifting Tides', stageNumber: 3, stageType: 'gameplay',
+        description: 'Each wave switches element. Both halves of your team get their moment.',
+        requiredLevel: 18, lock: { type: 'element_dual' },
+        encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 24, maxCost: 4, count: 5, enemySynergies: true },
+            { budget: 16, maxCost: 4, count: 5, elementBias: 'earth' },
+            { budget: 20, maxCost: 4, count: 6, elementBias: 'wind' },
+            { budget: 24, maxCost: 5, count: 6, captain: 'nereus' }
+        ],
+        rewards: { ve: 1000, xp: 380, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 15, t3: 40, t4: 35, t5: 5 }
+    },
+    {
+        id: 'r5_s4', region: 5, name: 'The River', stageNumber: 4, stageType: 'story',
+        description: 'The ferryman recognizes Senna. Mirror-match with dual-element enemies.',
+        requiredLevel: 18, lock: { type: 'element_dual' },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 18, maxCost: 4, count: 5, enemySynergies: true },
+            { budget: 22, maxCost: 5, count: 6, enemySynergies: true },
+            { budget: 26, maxCost: 5, count: 6, enemySynergies: true }
+        ],
+        rewards: { ve: 1000, xp: 380, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 15, t3: 40, t4: 35, t5: 5 }
+    },
+    {
+        id: 'r5_s5', region: 5, name: 'Silent March', stageNumber: 5, stageType: 'character',
+        description: 'The group pushes on. Nobody talks about the ferryman. Standard difficulty.',
+        requiredLevel: 19, lock: { type: 'element_dual' },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 18, maxCost: 4, count: 5 },
+            { budget: 22, maxCost: 5, count: 6 },
+            { budget: 24, maxCost: 5, count: 6 }
+        ],
+        rewards: { ve: 1000, xp: 380, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 15, t3: 40, t4: 35, t5: 5 }
+    },
+    {
+        id: 'r5_s6', region: 5, name: 'Elemental Pressure', stageNumber: 6, stageType: 'gameplay',
+        description: 'Escalating element diversity across waves. Dual-element synergy vs broader coverage.',
+        requiredLevel: 19, lock: { type: 'element_dual' },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 20, maxCost: 4, count: 5, elementBias: 'lightning' },
+            { budget: 24, maxCost: 5, count: 6 },
+            { budget: 28, maxCost: 5, count: 7 }
+        ],
+        rewards: { ve: 1000, xp: 380, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 15, t3: 40, t4: 35, t5: 5 }
+    },
+    {
+        id: 'r5_s7', region: 5, name: 'The Pack', stageNumber: 7, stageType: 'gameplay',
+        description: 'A pack of evolved Voidspawn blocks the path. Higher tier, more dangerous.',
+        requiredLevel: 20, lock: { type: 'element_dual' },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 22, maxCost: 5, count: 5, enemyEvolutions: true },
+            { budget: 26, maxCost: 5, count: 6, enemyEvolutions: true },
+            { budget: 28, maxCost: 5, count: 6, enemyEvolutions: true }
+        ],
+        rewards: { ve: 1000, xp: 380, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 15, t3: 40, t4: 35, t5: 5 }
+    },
+    {
+        id: 'r5_s8', region: 5, name: 'Senna\'s Burden', stageNumber: 8, stageType: 'character',
+        description: 'Senna can\'t sleep. Standard combat, dual-element constraint.',
+        requiredLevel: 20, lock: { type: 'element_dual' },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 24, maxCost: 5, count: 6 },
+            { budget: 28, maxCost: 5, count: 6 },
+            { budget: 28, maxCost: 5, count: 7 }
+        ],
+        rewards: { ve: 1000, xp: 380, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 15, t3: 40, t4: 35, t5: 5 }
+    },
+    {
+        id: 'r5_s9', region: 5, name: 'Convergence Point', stageNumber: 9, stageType: 'gameplay',
+        description: 'The path narrows toward the Chimera. Hard pre-boss stage with enemy synergies.',
+        requiredLevel: 20, lock: { type: 'element_dual' },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 24, maxCost: 5, count: 5, enemySynergies: true },
             { budget: 28, maxCost: 5, count: 6, enemySynergies: true },
             { budget: 32, maxCost: 5, count: 7, enemySynergies: true }
         ],
-        rewards: { gold: 320, xp: 560 }
+        rewards: { ve: 1000, xp: 380, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 15, t3: 40, t4: 35, t5: 5 }
     },
     {
-        id: 'r5_s4',
-        region: 5,
-        name: 'Elemental Pressure',
-        description: 'Escalating element diversity across waves. Your dual-element synergy bonuses vs broader but shallower coverage.',
-        requiredLevel: 15,
-        lock: { type: 'element_dual' },
-        encounterMechanic: null,
+        id: 'r5_boss', region: 5, name: 'The Elemental Chimera', stageNumber: 10, stageType: 'boss',
+        description: 'Shifts between elements every 20s. Heals from damage matching its current element.',
+        requiredLevel: 20, lock: null, encounterMechanic: null, isBoss: true, canRetry: true,
+        waves: [], boss: 'elemental_chimera',
+        rewards: { ve: 2000, xp: 900, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 15, t3: 40, t4: 35, t5: 5 }
+    },
+
+    // ===== REGION 6: The Elemental Crucible (9 stages + 1 boss = 10) =====
+    {
+        id: 'r6_s1', region: 6, name: 'Four Winds', stageNumber: 1, stageType: 'story',
+        description: 'Entering the Crucible. Ease into 4-element team building with balanced enemies.',
+        requiredLevel: 21, lock: { type: 'element_min', count: 4 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 26, maxCost: 4, count: 5, elementBias: 'lightning' },
-            { budget: 30, maxCost: 5, count: 6 },
+            { budget: 14, maxCost: 4, count: 5 },
+            { budget: 18, maxCost: 4, count: 6 },
+            { budget: 22, maxCost: 5, count: 6 }
+        ],
+        rewards: { ve: 1300, xp: 500, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
+    },
+    {
+        id: 'r6_s2', region: 6, name: 'Fire and Stone', stageNumber: 2, stageType: 'story',
+        description: 'The siblings at the refugee camp. Fire and Earth enemies with active synergies.',
+        requiredLevel: 21, lock: { type: 'element_min', count: 4 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 16, maxCost: 4, count: 5, elementBias: 'fire', enemySynergies: true },
+            { budget: 20, maxCost: 5, count: 6, elementBias: 'earth', enemySynergies: true },
+            { budget: 24, maxCost: 5, count: 6, elementBias: 'fire', enemySynergies: true, captain: 'pyra' }
+        ],
+        rewards: { ve: 1300, xp: 500, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
+    },
+    {
+        id: 'r6_s3', region: 6, name: 'Storm and Sea', stageNumber: 3, stageType: 'gameplay',
+        description: 'Water and Wind enemies with active synergies. Fire and Earth units shine here.',
+        requiredLevel: 22, lock: { type: 'element_min', count: 4 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 18, maxCost: 4, count: 5, elementBias: 'water', enemySynergies: true },
+            { budget: 22, maxCost: 5, count: 6, elementBias: 'wind', enemySynergies: true },
+            { budget: 26, maxCost: 5, count: 7, enemySynergies: true }
+        ],
+        rewards: { ve: 1300, xp: 500, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
+    },
+    {
+        id: 'r6_s4', region: 6, name: 'Mira\'s Question', stageNumber: 4, stageType: 'story',
+        description: '"Do you think Lyric was right?" Lightning and Force enemies.',
+        requiredLevel: 22, lock: { type: 'element_min', count: 4 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 20, maxCost: 4, count: 5, elementBias: 'lightning', enemySynergies: true },
+            { budget: 24, maxCost: 5, count: 6, elementBias: 'force', enemySynergies: true },
+            { budget: 26, maxCost: 5, count: 7, elementBias: 'lightning', enemySynergies: true }
+        ],
+        rewards: { ve: 1300, xp: 500, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
+    },
+    {
+        id: 'r6_s5', region: 6, name: 'Lightning Surge', stageNumber: 5, stageType: 'gameplay',
+        description: 'Lightning and Force enemies. Earth counters Lightning — bring it.',
+        requiredLevel: 23, lock: { type: 'element_min', count: 4 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 22, maxCost: 4, count: 5, elementBias: 'lightning', enemySynergies: true },
+            { budget: 26, maxCost: 5, count: 6, elementBias: 'force', enemySynergies: true },
+            { budget: 30, maxCost: 5, count: 7, elementBias: 'lightning', enemySynergies: true, captain: 'gorath' }
+        ],
+        rewards: { ve: 1300, xp: 500, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
+    },
+    {
+        id: 'r6_s6', region: 6, name: 'The Weight', stageNumber: 6, stageType: 'character',
+        description: 'Senna senses the Veil thinning. Multi-wave endurance check.',
+        requiredLevel: 23, lock: { type: 'element_min', count: 4 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 24, maxCost: 5, count: 6, enemySynergies: true },
+            { budget: 28, maxCost: 5, count: 6, enemySynergies: true },
+            { budget: 30, maxCost: 5, count: 7, enemySynergies: true }
+        ],
+        rewards: { ve: 1300, xp: 500, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
+    },
+    {
+        id: 'r6_s7', region: 6, name: 'The Full Spectrum', stageNumber: 7, stageType: 'gameplay',
+        description: 'All 6 elements represented with active synergies and evolved enemies.',
+        requiredLevel: 24, lock: { type: 'element_min', count: 4 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 26, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+        ],
+        rewards: { ve: 1300, xp: 500, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
+    },
+    {
+        id: 'r6_s8', region: 6, name: 'Crucible\'s Peak', stageNumber: 8, stageType: 'gameplay',
+        description: 'Full synergies, high star levels, multiple waves. Hardest non-boss stage in region.',
+        requiredLevel: 24, lock: { type: 'element_min', count: 4 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 28, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+        ],
+        rewards: { ve: 1300, xp: 500, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
+    },
+    {
+        id: 'r6_s9', region: 6, name: 'Looking East', stageNumber: 9, stageType: 'character',
+        description: 'The Sovereign is visible constantly now. Final sweep before the Sentinel.',
+        requiredLevel: 24, lock: { type: 'element_min', count: 4 },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 28, maxCost: 5, count: 6, enemySynergies: true },
+            { budget: 30, maxCost: 5, count: 7, enemySynergies: true },
+            { budget: 30, maxCost: 5, count: 7, enemySynergies: true }
+        ],
+        rewards: { ve: 1300, xp: 500, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
+    },
+    {
+        id: 'r6_boss', region: 6, name: 'The Prismatic Sentinel', stageNumber: 10, stageType: 'boss',
+        description: 'Rotating element immunity and vulnerability. 2-3 elements must contribute at all times.',
+        requiredLevel: 24, lock: null, encounterMechanic: null, isBoss: true, canRetry: true,
+        waves: [], boss: 'prismatic_sentinel',
+        rewards: { ve: 2600, xp: 1200, unitDrops: 3 },
+        dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
+    },
+
+    // ===== REGION 7: The Proving Grounds (9 stages + 1 boss = 10) =====
+    {
+        id: 'r7_s1', region: 7, name: 'Reunited', stageNumber: 1, stageType: 'story',
+        description: 'The splinter group returns. Escalating threat tests healing endurance.',
+        requiredLevel: 25, lock: { type: 'archetype', value: 'sage', count: 3 },
+        encounterMechanic: 'escalating_threat', isBoss: false, canRetry: true,
+        waves: [
+            { budget: 16, maxCost: 4, count: 5 },
+            { budget: 20, maxCost: 5, count: 6 },
+            { budget: 24, maxCost: 5, count: 6 }
+        ],
+        rewards: { ve: 1600, xp: 650, unitDrops: 3 },
+        dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
+    },
+    {
+        id: 'r7_s2', region: 7, name: 'Voss', stageNumber: 2, stageType: 'story',
+        description: 'Voss confesses. No element synergies allowed. Pure archetype power vs reinforcements.',
+        requiredLevel: 25, lock: { type: 'no_element_synergy' },
+        encounterMechanic: 'reinforcement_pressure', isBoss: false, canRetry: true,
+        waves: [
+            { budget: 18, maxCost: 4, count: 5 },
+            { budget: 22, maxCost: 5, count: 6 },
+            { budget: 28, maxCost: 5, count: 7, captain: 'sylph' }
+        ],
+        rewards: { ve: 1600, xp: 650, unitDrops: 3 },
+        dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
+    },
+    {
+        id: 'r7_s3', region: 7, name: 'Divided Command', stageNumber: 3, stageType: 'gameplay',
+        description: 'Protect a friendly NPC while hunting a dangerous enemy carry.',
+        requiredLevel: 26, lock: { constraints: [{ type: 'archetype', value: 'predator', count: 2 }, { type: 'archetype', value: 'guardian', count: 2 }] },
+        encounterMechanic: 'protect_objective', isBoss: false, canRetry: true,
+        waves: [
+            { budget: 20, maxCost: 5, count: 5 },
+            { budget: 24, maxCost: 5, count: 6 },
+            { budget: 28, maxCost: 5, count: 7 }
+        ],
+        rewards: { ve: 1600, xp: 650, unitDrops: 3 },
+        dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
+    },
+    {
+        id: 'r7_s4', region: 7, name: 'Nosebleed', stageNumber: 4, stageType: 'character',
+        description: 'The terrain warps mid-step. Element distribution puzzle with split formation.',
+        requiredLevel: 26, lock: { type: 'element_min', count: 3 },
+        encounterMechanic: 'split_formation', isBoss: false, canRetry: true,
+        waves: [
+            { budget: 22, maxCost: 5, count: 5 },
+            { budget: 26, maxCost: 5, count: 6 },
+            { budget: 28, maxCost: 5, count: 7 }
+        ],
+        rewards: { ve: 1600, xp: 650, unitDrops: 3 },
+        dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
+    },
+    {
+        id: 'r7_s5', region: 7, name: 'Stripped Down', stageNumber: 5, stageType: 'gameplay',
+        description: 'No element synergies allowed. Pure archetype power and raw team quality.',
+        requiredLevel: 27, lock: { type: 'no_element_synergy' },
+        encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 24, maxCost: 5, count: 6 },
+            { budget: 28, maxCost: 5, count: 6 },
+            { budget: 28, maxCost: 5, count: 7 }
+        ],
+        rewards: { ve: 1600, xp: 650, unitDrops: 3 },
+        dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
+    },
+    {
+        id: 'r7_s6', region: 7, name: 'Fractures', stageNumber: 6, stageType: 'character',
+        description: 'Tension between original group and returned fighters. VIP + Countdown mechanics.',
+        requiredLevel: 27, lock: null,
+        encounterMechanic: ['vip_target', 'countdown'], isBoss: false, canRetry: true,
+        waves: [
+            { budget: 24, maxCost: 5, count: 6 },
+            { budget: 28, maxCost: 5, count: 7 },
+            { budget: 28, maxCost: 5, count: 7 }
+        ],
+        rewards: { ve: 1600, xp: 650, unitDrops: 3 },
+        dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
+    },
+    {
+        id: 'r7_s7', region: 7, name: 'Fractured Elements', stageNumber: 7, stageType: 'gameplay',
+        description: 'Forced split deployment. Choose element distribution across two groups.',
+        requiredLevel: 27, lock: { type: 'element_min', count: 3 },
+        encounterMechanic: 'split_formation', isBoss: false, canRetry: true,
+        waves: [
+            { budget: 26, maxCost: 5, count: 5 },
+            { budget: 28, maxCost: 5, count: 6 },
             { budget: 32, maxCost: 5, count: 7 }
         ],
-        rewards: { gold: 340, xp: 600 }
+        rewards: { ve: 1600, xp: 650, unitDrops: 3 },
+        dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
     },
     {
-        id: 'r5_boss',
-        region: 5,
-        name: 'The Elemental Chimera',
-        description: 'Shifts between elements every 20s. Heals from damage matching its current element. Both halves of your team must carry.',
-        requiredLevel: 15,
-        lock: null,
-        encounterMechanic: null,
-        waves: [],
-        boss: 'elemental_chimera',
-        rewards: { gold: 550, xp: 900 }
-    },
-
-    // ===== REGION 6: The Elemental Crucible (6 stages + boss) =====
-    {
-        id: 'r6_s1',
-        region: 6,
-        name: 'Four Winds',
-        description: 'Balanced enemies at moderate difficulty. Ease into 4-element team building.',
-        requiredLevel: 14,
-        lock: { type: 'element_min', count: 4 },
-        encounterMechanic: null,
+        id: 'r7_s8', region: 7, name: 'Final Judgment', stageNumber: 8, stageType: 'gameplay',
+        description: 'Deep archetype stacking vs a countdown AND a VIP. Capstone stage.',
+        requiredLevel: 28, lock: { type: 'archetype_deep', count: 4 },
+        encounterMechanic: ['countdown', 'vip_target'], isBoss: false, canRetry: true,
         waves: [
-            { budget: 22, maxCost: 4, count: 5 },
-            { budget: 26, maxCost: 4, count: 6 },
-            { budget: 30, maxCost: 5, count: 6 }
+            { budget: 28, maxCost: 5, count: 6 },
+            { budget: 32, maxCost: 5, count: 7 },
+            { budget: 32, maxCost: 5, count: 7, captain: 'arbiter' }
         ],
-        rewards: { gold: 320, xp: 560 }
+        rewards: { ve: 1600, xp: 650, unitDrops: 3 },
+        dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
     },
     {
-        id: 'r6_s2',
-        region: 6,
-        name: 'Fire and Stone',
-        description: 'Fire and Earth enemies with active synergies. Water and Wind units are most effective.',
-        requiredLevel: 15,
-        lock: { type: 'element_min', count: 4 },
-        encounterMechanic: null,
-        elementBias: ['fire', 'earth'],
+        id: 'r7_s9', region: 7, name: 'The Address', stageNumber: 9, stageType: 'story',
+        description: 'Kael presents the seal plan to both factions. Pre-boss stage.',
+        requiredLevel: 28, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 24, maxCost: 4, count: 5, elementBias: 'fire', enemySynergies: true },
-            { budget: 28, maxCost: 5, count: 6, elementBias: 'earth', enemySynergies: true },
-            { budget: 32, maxCost: 5, count: 6, elementBias: 'fire', enemySynergies: true, captain: 'pyra' }
+            { budget: 28, maxCost: 5, count: 6 },
+            { budget: 32, maxCost: 5, count: 7 },
+            { budget: 32, maxCost: 5, count: 7 }
         ],
-        rewards: { gold: 350, xp: 600 }
+        rewards: { ve: 1600, xp: 650, unitDrops: 3 },
+        dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
     },
     {
-        id: 'r6_s3',
-        region: 6,
-        name: 'Storm and Sea',
-        description: 'Water and Wind enemies with active synergies. Fire and Earth/Lightning units shine here.',
-        requiredLevel: 15,
-        lock: { type: 'element_min', count: 4 },
-        encounterMechanic: null,
-        elementBias: ['water', 'wind'],
-        waves: [
-            { budget: 26, maxCost: 4, count: 5, elementBias: 'water', enemySynergies: true },
-            { budget: 30, maxCost: 5, count: 6, elementBias: 'wind', enemySynergies: true },
-            { budget: 34, maxCost: 5, count: 7, enemySynergies: true }
-        ],
-        rewards: { gold: 370, xp: 640 }
-    },
-    {
-        id: 'r6_s4',
-        region: 6,
-        name: 'Lightning Surge',
-        description: 'Lightning and Force enemies prominently featured. Earth counters Lightning — bring it.',
-        requiredLevel: 16,
-        lock: { type: 'element_min', count: 4 },
-        encounterMechanic: null,
-        elementBias: ['lightning', 'force'],
-        waves: [
-            { budget: 28, maxCost: 4, count: 5, elementBias: 'lightning', enemySynergies: true },
-            { budget: 32, maxCost: 5, count: 6, elementBias: 'force', enemySynergies: true },
-            { budget: 36, maxCost: 5, count: 7, elementBias: 'lightning', enemySynergies: true, captain: 'gorath' }
-        ],
-        rewards: { gold: 400, xp: 680 }
-    },
-    {
-        id: 'r6_s5',
-        region: 6,
-        name: 'The Full Spectrum',
-        description: 'All 6 elements represented with active synergies and evolved enemies. Pure team quality check.',
-        requiredLevel: 16,
-        lock: { type: 'element_min', count: 4 },
-        encounterMechanic: null,
-        waves: [
-            { budget: 32, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 36, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 40, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
-        ],
-        rewards: { gold: 420, xp: 720 }
-    },
-    {
-        id: 'r6_s6',
-        region: 6,
-        name: 'Crucible\'s Peak',
-        description: 'Full synergies, high star levels, multiple waves. The hardest non-boss stage in the region.',
-        requiredLevel: 17,
-        lock: { type: 'element_min', count: 4 },
-        encounterMechanic: null,
-        waves: [
-            { budget: 34, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 38, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 40, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
-        ],
-        rewards: { gold: 450, xp: 760 }
-    },
-    {
-        id: 'r6_boss',
-        region: 6,
-        name: 'The Prismatic Sentinel',
-        description: 'Rotating element immunity and vulnerability. You must have 2-3 elements contributing damage at all times.',
-        requiredLevel: 17,
-        lock: null,
-        encounterMechanic: null,
-        waves: [],
-        boss: 'prismatic_sentinel',
-        rewards: { gold: 650, xp: 1000 }
-    },
-
-    // ===== REGION 7: The Proving Grounds (5 stages + boss) =====
-    {
-        id: 'r7_s1',
-        region: 7,
-        name: 'Endurance Under Fire',
-        description: 'An escalating enemy plus a healer lock. Can your sustain outlast the growing threat?',
-        requiredLevel: 16,
-        lock: { type: 'archetype', value: 'sage', count: 3 },
-        encounterMechanic: 'escalating_threat',
-        waves: [
-            { budget: 28, maxCost: 4, count: 5 },
-            { budget: 32, maxCost: 5, count: 6 },
-            { budget: 36, maxCost: 5, count: 6 }
-        ],
-        rewards: { gold: 420, xp: 720 }
-    },
-    {
-        id: 'r7_s2',
-        region: 7,
-        name: 'Stripped Down',
-        description: 'No element synergies allowed. Pure archetype power and unit quality vs reinforcement spawns.',
-        requiredLevel: 17,
-        lock: { type: 'no_element_synergy' },
-        encounterMechanic: 'reinforcement_pressure',
-        waves: [
-            { budget: 30, maxCost: 4, count: 5 },
-            { budget: 34, maxCost: 5, count: 6 },
-            { budget: 38, maxCost: 5, count: 7, captain: 'sylph' }
-        ],
-        rewards: { gold: 440, xp: 760 }
-    },
-    {
-        id: 'r7_s3',
-        region: 7,
-        name: 'Divided Command',
-        description: 'Protect a friendly NPC while hunting a dangerous enemy carry. Split-focus team management.',
-        requiredLevel: 18,
-        lock: { type: 'archetype_pair', value: ['predator', 'guardian'], count: [2, 2] },
-        encounterMechanic: 'protect_objective',
-        waves: [
-            { budget: 32, maxCost: 5, count: 5 },
-            { budget: 36, maxCost: 5, count: 6 },
-            { budget: 40, maxCost: 5, count: 7 }
-        ],
-        rewards: { gold: 460, xp: 800 }
-    },
-    {
-        id: 'r7_s4',
-        region: 7,
-        name: 'Fractured Elements',
-        description: 'Team split into two groups. Wrong element distribution means one side faces bad matchups.',
-        requiredLevel: 18,
-        lock: { type: 'element_min', count: 3 },
-        encounterMechanic: 'split_formation',
-        waves: [
-            { budget: 34, maxCost: 5, count: 5 },
-            { budget: 38, maxCost: 5, count: 6 },
-            { budget: 42, maxCost: 5, count: 7 }
-        ],
-        rewards: { gold: 480, xp: 840 }
-    },
-    {
-        id: 'r7_s5',
-        region: 7,
-        name: 'Final Judgment',
-        description: 'Deep archetype stacking vs a countdown AND a VIP. Two priority targets. Capstone stage.',
-        requiredLevel: 19,
-        lock: { type: 'archetype_deep', count: 4 },
-        encounterMechanic: ['countdown', 'vip_target'],
-        waves: [
-            { budget: 36, maxCost: 5, count: 6 },
-            { budget: 40, maxCost: 5, count: 7 },
-            { budget: 45, maxCost: 5, count: 7, captain: 'arbiter' }
-        ],
-        rewards: { gold: 500, xp: 880 }
-    },
-    {
-        id: 'r7_boss',
-        region: 7,
-        name: 'The Arbiter of Trials',
+        id: 'r7_boss', region: 7, name: 'The Arbiter of Trials', stageNumber: 10, stageType: 'boss',
         description: 'The ultimate puzzle boss. Imposes constraints mid-fight: synergy suppression, split formation, countdown.',
-        requiredLevel: 19,
-        lock: null,
-        encounterMechanic: null,
-        waves: [],
-        boss: 'arbiter_of_trials',
-        rewards: { gold: 750, xp: 1100 }
+        requiredLevel: 28, lock: null, encounterMechanic: null, isBoss: true, canRetry: true,
+        waves: [], boss: 'arbiter_of_trials',
+        rewards: { ve: 3200, xp: 1500, unitDrops: 3 },
+        dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
     },
 
-    // ===== REGION 8: The Abyss Gate (6 stages + boss) =====
+    // ===== REGION 8: The Abyss Gate (7 stages + 1 boss = 8) =====
     {
-        id: 'r8_s1',
-        region: 8,
-        name: 'Descent',
-        description: 'High stats, full synergies, evolved enemies. Raw power check for the endgame.',
-        requiredLevel: 18,
-        lock: null,
-        encounterMechanic: null,
+        id: 'r8_s1', region: 8, name: 'Dawn', stageNumber: 1, stageType: 'story',
+        description: 'The last morning. Mira writes in her notebook. Maximum difficulty enemies.',
+        requiredLevel: 29, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 35, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 40, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 45, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+            { budget: 18, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 22, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 26, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
         ],
-        rewards: { gold: 480, xp: 840 }
+        rewards: { ve: 2000, xp: 800, unitDrops: 4 },
+        dropWeights: { t3: 15, t4: 45, t5: 40 }
     },
     {
-        id: 'r8_s2',
-        region: 8,
-        name: 'The Gauntlet',
-        description: 'Reinforcement spawns plus an escalating elite. Two overlapping pressure sources at endgame power.',
-        requiredLevel: 19,
-        lock: null,
-        encounterMechanic: ['reinforcement_pressure', 'escalating_threat'],
+        id: 'r8_s2', region: 8, name: 'The Gauntlet', stageNumber: 2, stageType: 'gameplay',
+        description: 'Reinforcement spawns plus an escalating elite. Two overlapping pressure sources.',
+        requiredLevel: 29, lock: null,
+        encounterMechanic: ['reinforcement_pressure', 'escalating_threat'], isBoss: false, canRetry: true,
         waves: [
-            { budget: 38, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 42, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 48, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+            { budget: 20, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 24, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 34, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
         ],
-        rewards: { gold: 520, xp: 900 }
+        rewards: { ve: 2000, xp: 800, unitDrops: 4 },
+        dropWeights: { t3: 15, t4: 45, t5: 40 }
     },
     {
-        id: 'r8_s3',
-        region: 8,
-        name: 'Shattered Ground',
-        description: 'Team split plus a VIP on one side. Roster depth and split-team viability required.',
-        requiredLevel: 19,
-        lock: null,
-        encounterMechanic: ['split_formation', 'vip_target'],
+        id: 'r8_s3', region: 8, name: 'Shattered Ground', stageNumber: 3, stageType: 'gameplay',
+        description: 'Team split plus a VIP on one side. Roster depth required.',
+        requiredLevel: 29, lock: null,
+        encounterMechanic: ['split_formation', 'vip_target'], isBoss: false, canRetry: true,
         waves: [
-            { budget: 40, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 45, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 50, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+            { budget: 22, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 26, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 34, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
         ],
-        rewards: { gold: 540, xp: 940 }
+        rewards: { ve: 2000, xp: 800, unitDrops: 4 },
+        dropWeights: { t3: 15, t4: 45, t5: 40 }
     },
     {
-        id: 'r8_s4',
-        region: 8,
-        name: 'The Crucible Returns',
-        description: 'A wipe timer AND a friendly NPC to protect. Balance offense and defense or fail both.',
-        requiredLevel: 19,
-        lock: null,
-        encounterMechanic: ['countdown', 'protect_objective'],
+        id: 'r8_s4', region: 8, name: 'The Crucible Returns', stageNumber: 4, stageType: 'gameplay',
+        description: 'Wipe timer AND a friendly NPC to protect. Balance offense and defense.',
+        requiredLevel: 29, lock: null,
+        encounterMechanic: ['countdown', 'protect_objective'], isBoss: false, canRetry: true,
         waves: [
-            { budget: 42, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 48, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 55, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+            { budget: 24, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 28, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 34, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
         ],
-        rewards: { gold: 560, xp: 980 }
+        rewards: { ve: 2000, xp: 800, unitDrops: 4 },
+        dropWeights: { t3: 15, t4: 45, t5: 40 }
     },
     {
-        id: 'r8_s5',
-        region: 8,
-        name: 'The Threshold',
+        id: 'r8_s5', region: 8, name: 'The Threshold', stageNumber: 5, stageType: 'character',
         description: 'Maximum non-boss difficulty. Full synergies, evolved champions, 4 waves.',
-        requiredLevel: 20,
-        lock: null,
-        encounterMechanic: null,
+        requiredLevel: 29, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 45, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 50, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 55, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 60, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true, captain: 'voidborn_champion' }
+            { budget: 26, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 34, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true, captain: 'voidborn_champion' }
         ],
-        rewards: { gold: 600, xp: 1050 }
+        rewards: { ve: 2000, xp: 800, unitDrops: 4 },
+        dropWeights: { t3: 15, t4: 45, t5: 40 }
     },
     {
-        id: 'r8_s6',
-        region: 8,
-        name: 'The Void\'s Edge',
-        description: 'Void-element enemies negate element advantages. Win on raw team quality, synergy bonuses, and items alone.',
-        requiredLevel: 20,
-        lock: null,
-        encounterMechanic: null,
+        id: 'r8_s6', region: 8, name: 'The Void\'s Edge', stageNumber: 6, stageType: 'gameplay',
+        description: 'Void-element enemies negate element advantages. Win on raw team quality alone.',
+        requiredLevel: 29, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 48, maxCost: 5, count: 6, elementBias: 'force', enemySynergies: true, enemyEvolutions: true },
-            { budget: 52, maxCost: 5, count: 7, elementBias: 'force', enemySynergies: true, enemyEvolutions: true },
-            { budget: 58, maxCost: 5, count: 7, elementBias: 'force', enemySynergies: true, enemyEvolutions: true }
+            { budget: 28, maxCost: 5, count: 6, elementBias: 'force', enemySynergies: true, enemyEvolutions: true },
+            { budget: 30, maxCost: 5, count: 7, elementBias: 'force', enemySynergies: true, enemyEvolutions: true },
+            { budget: 34, maxCost: 5, count: 7, elementBias: 'force', enemySynergies: true, enemyEvolutions: true },
+            { budget: 34, maxCost: 5, count: 7, elementBias: 'force', enemySynergies: true, enemyEvolutions: true }
         ],
-        rewards: { gold: 640, xp: 1100 }
+        rewards: { ve: 2000, xp: 800, unitDrops: 4 },
+        dropWeights: { t3: 15, t4: 45, t5: 40 }
     },
     {
-        id: 'r8_boss',
-        region: 8,
-        name: 'The Eternal Throne',
-        description: 'The Void Sovereign awaits. Three phases: Puppeteer, Commander, Unmaker. Everything you have mastered is tested.',
-        requiredLevel: 20,
-        lock: null,
-        encounterMechanic: null,
-        waves: [],
-        boss: 'void_sovereign',
-        rewards: { gold: 1000, xp: 1500 }
+        id: 'r8_s7', region: 8, name: 'Before the End', stageNumber: 7, stageType: 'character',
+        description: 'The final camp. Senna attunes everyone one last time. Hard but manageable.',
+        requiredLevel: 29, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
+        waves: [
+            { budget: 28, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 34, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 34, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+        ],
+        rewards: { ve: 2000, xp: 800, unitDrops: 4 },
+        dropWeights: { t3: 15, t4: 45, t5: 40 }
+    },
+    {
+        id: 'r8_boss', region: 8, name: 'The Eternal Throne', stageNumber: 8, stageType: 'boss',
+        description: 'The Void Sovereign. Three phases: Puppeteer, Commander, Unmaker. Everything is tested.',
+        requiredLevel: 29, lock: null, encounterMechanic: null, isBoss: true, canRetry: true,
+        waves: [], boss: 'void_sovereign',
+        rewards: { ve: 4000, xp: 2000, unitDrops: 4 },
+        dropWeights: { t3: 15, t4: 45, t5: 40 }
     }
 ];
 
@@ -716,50 +960,50 @@ var REGIONS = {
     1: {
         name: 'The Frontier',
         subtitle: 'Basic combat, positioning',
-        stageIds: ['r1_s1', 'r1_s2', 'r1_s3', 'r1_s4', 'r1_boss'],
+        stageIds: ['r1_s1', 'r1_s2', 'r1_s3', 'r1_s4', 'r1_s5', 'r1_s6', 'r1_s7', 'r1_s8', 'r1_boss'],
         reward: { description: 'Unlock Summoning Circle upgrades + 1 free 10-pull', gold: 0, freeMultiRoll: 1 }
     },
     2: {
         name: 'The Barracks Trials',
         subtitle: 'Archetype roles',
-        stageIds: ['r2_s1', 'r2_s2', 'r2_s3', 'r2_s4', 'r2_s5', 'r2_boss'],
-        reward: { description: 'Unlock Evolution Lab + 500g + 1 random Cost-3 unit', gold: 500, randomUnit: { minCost: 3, maxCost: 3 } }
+        stageIds: ['r2_s1', 'r2_s2', 'r2_s3', 'r2_s4', 'r2_s5', 'r2_s6', 'r2_s7', 'r2_s8', 'r2_boss'],
+        reward: { description: 'Unlock Evolution Lab + 500 VE + 1 random Cost-3 unit', gold: 500, randomUnit: { minCost: 3, maxCost: 3 } }
     },
     3: {
         name: 'The Synergy Trials',
         subtitle: 'Synergy pairing',
-        stageIds: ['r3_s1', 'r3_s2', 'r3_s3', 'r3_s4', 'r3_boss'],
+        stageIds: ['r3_s1', 'r3_s2', 'r3_s3', 'r3_s4', 'r3_s5', 'r3_s6', 'r3_s7', 'r3_s8', 'r3_boss'],
         reward: { description: 'Unlock Forge Level 3 (Transmute) + 1 essence of choice', gold: 0, essenceChoice: 1 }
     },
     4: {
         name: 'The Shattered Lands',
         subtitle: 'Adaptive combat',
-        stageIds: ['r4_s1', 'r4_s2', 'r4_s3', 'r4_s4', 'r4_s5', 'r4_boss'],
-        reward: { description: 'Unlock Forge Level 4 (Set Crafting) + 750g', gold: 750 }
+        stageIds: ['r4_s1', 'r4_s2', 'r4_s3', 'r4_s4', 'r4_s5', 'r4_s6', 'r4_s7', 'r4_s8', 'r4_boss'],
+        reward: { description: 'Unlock Forge Level 4 (Set Crafting) + 750 VE', gold: 750 }
     },
     5: {
         name: 'The Dual Convergence',
         subtitle: 'Element coverage',
-        stageIds: ['r5_s1', 'r5_s2', 'r5_s3', 'r5_s4', 'r5_boss'],
+        stageIds: ['r5_s1', 'r5_s2', 'r5_s3', 'r5_s4', 'r5_s5', 'r5_s6', 'r5_s7', 'r5_s8', 'r5_s9', 'r5_boss'],
         reward: { description: 'Unlock Gem Workshop + 1 random Cost-4 unit', gold: 0, randomUnit: { minCost: 4, maxCost: 4 } }
     },
     6: {
         name: 'The Elemental Crucible',
         subtitle: 'Multi-element orchestration',
-        stageIds: ['r6_s1', 'r6_s2', 'r6_s3', 'r6_s4', 'r6_s5', 'r6_s6', 'r6_boss'],
-        reward: { description: '1,000g + 2 essences of choice', gold: 1000, essenceChoice: 2 }
+        stageIds: ['r6_s1', 'r6_s2', 'r6_s3', 'r6_s4', 'r6_s5', 'r6_s6', 'r6_s7', 'r6_s8', 'r6_s9', 'r6_boss'],
+        reward: { description: '1,000 VE + 2 essences of choice', gold: 1000, essenceChoice: 2 }
     },
     7: {
         name: 'The Proving Grounds',
         subtitle: 'Peak tactical challenge',
-        stageIds: ['r7_s1', 'r7_s2', 'r7_s3', 'r7_s4', 'r7_s5', 'r7_boss'],
+        stageIds: ['r7_s1', 'r7_s2', 'r7_s3', 'r7_s4', 'r7_s5', 'r7_s6', 'r7_s7', 'r7_s8', 'r7_s9', 'r7_boss'],
         reward: { description: 'Unlock Forge Level 5 (Ability Crafting) + Mythic Material', gold: 0, mythicMaterialChoice: 1 }
     },
     8: {
         name: 'The Abyss Gate',
         subtitle: 'Endgame mastery',
-        stageIds: ['r8_s1', 'r8_s2', 'r8_s3', 'r8_s4', 'r8_s5', 'r8_s6', 'r8_boss'],
-        reward: { description: 'Choice of any Cost-5 unit + 2,000g + Mythic Material', gold: 2000, randomUnit: { minCost: 5, maxCost: 5 }, mythicMaterialChoice: 1 }
+        stageIds: ['r8_s1', 'r8_s2', 'r8_s3', 'r8_s4', 'r8_s5', 'r8_s6', 'r8_s7', 'r8_boss'],
+        reward: { description: 'Choice of any Cost-5 unit + 2,000 VE + Mythic Material', gold: 2000, randomUnit: { minCost: 5, maxCost: 5 }, mythicMaterialChoice: 1 }
     }
 };
 
@@ -819,6 +1063,17 @@ function getUniqueElementCount(saveData) {
 
 function checkLock(saveData, lock) {
     if (!lock) return { passed: true, reason: '' };
+
+    // Compound lock: all constraints must pass
+    if (lock.constraints) {
+        var reasons = [];
+        for (var ci = 0; ci < lock.constraints.length; ci++) {
+            var result = checkLock(saveData, lock.constraints[ci]);
+            if (!result.passed) reasons.push(result.reason);
+        }
+        if (reasons.length === 0) return { passed: true, reason: '' };
+        return { passed: false, reason: reasons.join(' + ') };
+    }
 
     var archCounts, elemCounts, keys, i, total;
 
@@ -1279,7 +1534,7 @@ var BOSS_DATA = {
             }
         ],
         minionSpawns: [],
-        loot: { gold: 250, xp: 500, firstClearGold: 500 }
+        loot: { gold: 500, xp: 500, firstClearGold: 500 }
     },
 
     // Challenge mode bosses (kept from original — no region references them)
@@ -1501,7 +1756,7 @@ var BOSS_DATA = {
             }
         ],
         minionSpawns: [],
-        loot: { gold: 350, xp: 600, firstClearGold: 500 }
+        loot: { gold: 700, xp: 600, firstClearGold: 700 }
     },
 
     // Region 3 boss
@@ -1557,7 +1812,7 @@ var BOSS_DATA = {
             ]
         },
         minionSpawns: [],
-        loot: { gold: 400, xp: 700, firstClearGold: 500 }
+        loot: { gold: 1100, xp: 700, firstClearGold: 1100 }
     },
 
     // Region 4 boss
@@ -1604,7 +1859,7 @@ var BOSS_DATA = {
             }
         ],
         minionSpawns: [],
-        loot: { gold: 500, xp: 800, firstClearGold: 500 }
+        loot: { gold: 1500, xp: 800, firstClearGold: 1500 }
     },
 
     // Region 5 boss
@@ -1637,7 +1892,7 @@ var BOSS_DATA = {
             }
         ],
         minionSpawns: [],
-        loot: { gold: 550, xp: 900, firstClearGold: 500 }
+        loot: { gold: 2000, xp: 900, firstClearGold: 2000 }
     },
 
     // Region 6 boss
@@ -1668,7 +1923,7 @@ var BOSS_DATA = {
             }
         ],
         minionSpawns: [],
-        loot: { gold: 650, xp: 1000, firstClearGold: 600 }
+        loot: { gold: 2600, xp: 1000, firstClearGold: 2600 }
     },
 
     // Region 7 boss
@@ -1720,7 +1975,7 @@ var BOSS_DATA = {
             }
         ],
         minionSpawns: [],
-        loot: { gold: 750, xp: 1100, firstClearGold: 700 }
+        loot: { gold: 3200, xp: 1100, firstClearGold: 3200 }
     },
 
     // Region 8 boss (updated from original)
@@ -1777,7 +2032,7 @@ var BOSS_DATA = {
             }
         ],
         minionSpawns: [],
-        loot: { gold: 1000, xp: 1500, firstClearGold: 1000 }
+        loot: { gold: 4000, xp: 1500, firstClearGold: 4000 }
     }
 };
 
@@ -2308,7 +2563,7 @@ function claimRegionReward(saveData, regionNum) {
     saveData.missions.regionRewardsClaimed.push(regionNum);
     var region = REGIONS[regionNum];
     var reward = region.reward;
-    if (reward.gold > 0) saveData.player.gold += reward.gold;
+    if (reward.gold > 0) saveData.player.veilEssence += reward.gold;
     if (reward.freeMultiRoll) {
         if (!saveData.player.freeMultiRolls) saveData.player.freeMultiRolls = 0;
         saveData.player.freeMultiRolls += reward.freeMultiRoll;
@@ -2381,37 +2636,71 @@ function rollEssenceDrops(missionLevel, starRating, elementBias) {
 }
 
 // ---- Reward Calculation ----
+// XP diminishing returns based on player level vs expected region level
+function getXPDiminishingReturnMultiplier(playerLevel, region) {
+    // Expected player level at each region's boss (from PROGRESSION-REWORK)
+    var expectedLevels = { 1: 3, 2: 6, 3: 9, 4: 12, 5: 15, 6: 17, 7: 19, 8: 20 };
+    var expectedLevel = expectedLevels[region] || 1;
+    var levelDiff = playerLevel - expectedLevel;
+
+    if (levelDiff <= 0) return 1.0;
+    if (levelDiff <= 2) return 0.75;
+    if (levelDiff <= 4) return 0.50;
+    return 0.25;
+}
+
 function calculateMissionRewards(saveData, mission, starRating) {
-    var multiplier = 1.0;
-    if (starRating >= 3) multiplier = 2.0;
-    else if (starRating >= 2) multiplier = 1.5;
+    // Star multiplier: 1★=50%, 2★=75%, 3★=100%
+    var starMult = 1.0;
+    if (starRating <= 1) starMult = 0.5;
+    else if (starRating <= 2) starMult = 0.75;
+
+    // VE reward (use ve field if available, fall back to gold for backward compat)
+    var baseVE = mission.rewards.ve || mission.rewards.gold || 0;
+    var baseXP = mission.rewards.xp || 0;
     var goldMult = getGoldMultiplier(saveData);
     var xpMult = getXPMultiplier(saveData);
-    var gold = Math.floor(mission.rewards.gold * multiplier * goldMult);
-    var xp = Math.floor(mission.rewards.xp * multiplier * xpMult);
-    var copyCount = 1 + Math.floor(Math.random() * 3);
+    var gold = Math.floor(baseVE * starMult * goldMult);
+
+    // Apply XP diminishing returns
+    var missionRegion = 1;
+    if (mission.id) {
+        var rMatch = mission.id.match(/r(\d+)/);
+        if (rMatch) missionRegion = parseInt(rMatch[1]);
+    }
+    var xpDiminish = getXPDiminishingReturnMultiplier(saveData.player.level, missionRegion);
+    var xp = Math.floor(baseXP * starMult * xpMult * xpDiminish);
+
+    // Unit drops — use unitDrops count from rewards if available, else random 1-3
+    var copyCount = mission.rewards.unitDrops || (1 + Math.floor(Math.random() * 3));
     var unitCopies = [];
-    for (var i = 0; i < copyCount; i++) { unitCopies.push(rollOneUnit(saveData.player.level)); }
-    var itemDrops = [];
+    // Use region-based tier weights for unit drops
+    var regionWeights = MISSION_TIER_WEIGHTS_BY_REGION[missionRegion] || MISSION_TIER_WEIGHTS_BY_REGION[1];
+    for (var i = 0; i < copyCount; i++) {
+        var tier = rollTier(regionWeights);
+        var pool = UNITS_BY_COST[tier];
+        if (!pool || pool.length === 0) pool = UNITS_BY_COST[1];
+        unitCopies.push(pool[Math.floor(Math.random() * pool.length)]);
+    }
+    // Equipment drops (new system)
     var missionLevel = STAGES.indexOf(mission);
     if (missionLevel < 0) missionLevel = saveData.player.level;
-    itemDrops.push(rollItemDrop(missionLevel, starRating));
-    if (starRating >= 3) itemDrops.push(rollItemDrop(missionLevel, starRating));
-    var elementBias = null;
-    if (mission.waves && mission.waves.length > 0) {
-        for (var wi = 0; wi < mission.waves.length; wi++) {
-            if (mission.waves[wi].elementBias) { elementBias = mission.waves[wi].elementBias; break; }
-        }
+    var regionNum = 1;
+    var isBossMission = false;
+    if (mission.id) {
+        var rmatch2 = mission.id.match(/r(\d+)/);
+        if (rmatch2) regionNum = parseInt(rmatch2[1]);
+        isBossMission = mission.id.indexOf('boss') !== -1;
     }
-    var essenceDrops = rollEssenceDrops(missionLevel, starRating, elementBias);
-    var milestoneItem = null;
-    if (mission.id && MISSION_MILESTONES[mission.id] && starRating >= 3) {
-        if (!saveData.missions.milestonesClaimed || saveData.missions.milestonesClaimed.indexOf(mission.id) === -1) {
-            var milestone = MISSION_MILESTONES[mission.id];
-            milestoneItem = { id: generateItemId(), type: 'ability', key: milestone.abilityItemKey, rarity: 'rare', equipped: null };
-        }
-    }
-    return { gold: gold, xp: xp, starRating: starRating, unitCopies: unitCopies, itemDrops: itemDrops, essenceDrops: essenceDrops, milestoneItem: milestoneItem, missionId: mission.id || null };
+    var equipRewards = (typeof generateMissionRewards === 'function') ?
+        generateMissionRewards(missionLevel, starRating, isBossMission, saveData) :
+        { items: [], gems: [], essences: {}, mythicMaterials: {} };
+
+    return { gold: gold, xp: xp, starRating: starRating, unitCopies: unitCopies,
+        equipmentDrops: equipRewards.items, gemDrops: equipRewards.gems,
+        essenceDropsNew: equipRewards.essences, mythicMatDrops: equipRewards.mythicMaterials,
+        materialDrops: equipRewards.materials || {},
+        missionId: mission.id || null };
 }
 
 function applyMissionRewards(saveData, rewards) {
@@ -2420,22 +2709,36 @@ function applyMissionRewards(saveData, rewards) {
     if (rewards.unitCopies) {
         for (var i = 0; i < rewards.unitCopies.length; i++) addUnitToCollection(saveData, rewards.unitCopies[i]);
     }
-    if (rewards.itemDrops) {
-        rewards.itemsBenchFull = false;
-        for (var j = 0; j < rewards.itemDrops.length; j++) {
-            var added = addItemToBench(saveData, rewards.itemDrops[j]);
-            if (!added) rewards.itemsBenchFull = true;
+    // Apply equipment drops (new system)
+    if (rewards.equipmentDrops && saveData.equipment) {
+        for (var j = 0; j < rewards.equipmentDrops.length; j++) {
+            saveData.equipment.inventory.push(rewards.equipmentDrops[j]);
+            if (saveData.equipment.codex && rewards.equipmentDrops[j].itemKey) {
+                saveData.equipment.codex.discovered[rewards.equipmentDrops[j].itemKey + '_t' + rewards.equipmentDrops[j].tier] = true;
+            }
         }
     }
-    if (rewards.essenceDrops && rewards.essenceDrops.length > 0) {
-        if (!saveData.items.essences) saveData.items.essences = { fire: 0, water: 0, earth: 0, wind: 0 };
-        for (var ej = 0; ej < rewards.essenceDrops.length; ej++) saveData.items.essences[rewards.essenceDrops[ej]]++;
+    if (rewards.gemDrops && saveData.equipment) {
+        if (!saveData.equipment.gems) saveData.equipment.gems = [];
+        for (var gj = 0; gj < rewards.gemDrops.length; gj++) saveData.equipment.gems.push(rewards.gemDrops[gj]);
     }
-    if (rewards.milestoneItem) {
-        var milestoneAdded = addItemToBench(saveData, rewards.milestoneItem);
-        if (!milestoneAdded) rewards.itemsBenchFull = true;
-        if (!saveData.missions.milestonesClaimed) saveData.missions.milestonesClaimed = [];
-        if (milestoneAdded) saveData.missions.milestonesClaimed.push(rewards.milestoneItem.key === 'zhonyas_hourglass' ? 'story_10' : 'story_13');
+    if (rewards.essenceDropsNew && saveData.equipment) {
+        var enKeys = Object.keys(rewards.essenceDropsNew);
+        for (var ej = 0; ej < enKeys.length; ej++) {
+            saveData.equipment.essences[enKeys[ej]] = (saveData.equipment.essences[enKeys[ej]] || 0) + rewards.essenceDropsNew[enKeys[ej]];
+        }
+    }
+    if (rewards.mythicMatDrops && saveData.equipment) {
+        var mmKeys = Object.keys(rewards.mythicMatDrops);
+        for (var mj = 0; mj < mmKeys.length; mj++) {
+            saveData.equipment.mythicMaterials[mmKeys[mj]] = (saveData.equipment.mythicMaterials[mmKeys[mj]] || 0) + rewards.mythicMatDrops[mmKeys[mj]];
+        }
+    }
+    if (rewards.materialDrops && saveData.equipment) {
+        var matDropKeys = Object.keys(rewards.materialDrops);
+        for (var mdj = 0; mdj < matDropKeys.length; mdj++) {
+            saveData.equipment.materials[matDropKeys[mdj]] = (saveData.equipment.materials[matDropKeys[mdj]] || 0) + rewards.materialDrops[matDropKeys[mdj]];
+        }
     }
     // Grant unit XP to deployed team members
     if (typeof grantUnitXP === 'function' && typeof getMissionUnitXP === 'function') {
@@ -2474,6 +2777,18 @@ function applyMissionRewards(saveData, rewards) {
                 }
             }
         }
+    }
+
+    // Grant hero XP to deployed heroes
+    if (typeof grantHeroXPForMission === 'function' && rewards.missionId) {
+        var hRegionNum = 1;
+        var hIsBoss = false;
+        if (rewards.missionId) {
+            var hrmatch = rewards.missionId.match(/r(\d+)/);
+            if (hrmatch) hRegionNum = parseInt(hrmatch[1]);
+            hIsBoss = rewards.missionId.indexOf('boss') !== -1;
+        }
+        rewards.heroLevelUps = grantHeroXPForMission(saveData, hRegionNum, hIsBoss);
     }
 
     saveData.stats.totalMissionsCompleted++;
@@ -2517,5 +2832,18 @@ function completeStoryMission(saveData, missionIndex, starRating) {
     if (!saveData.missions.starRatings) saveData.missions.starRatings = {};
     var prevStars = saveData.missions.starRatings[stage.id] || 0;
     if (starRating > prevStars) saveData.missions.starRatings[stage.id] = starRating;
+
+    // Check for hero unlocks/events on stage completion
+    if (typeof checkHeroUnlocks === 'function') {
+        var heroEvents = checkHeroUnlocks(saveData, stage.id);
+        if (heroEvents.length > 0) {
+            // Store events for UI display
+            if (!saveData._pendingHeroEvents) saveData._pendingHeroEvents = [];
+            for (var he = 0; he < heroEvents.length; he++) {
+                saveData._pendingHeroEvents.push(heroEvents[he]);
+            }
+        }
+    }
+
     autoSave(saveData);
 }

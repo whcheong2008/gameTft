@@ -70,9 +70,9 @@ function checkAscensionRequirements(saveData, unitKey, tier) {
         if (!ascMet) allMet = false;
     }
 
-    // Check gold
-    var goldMet = saveData.player.gold >= tierData.requirements.gold;
-    results.push({ type: 'gold', met: goldMet, desc: tierData.requirements.gold + 'g required (have: ' + saveData.player.gold + 'g)' });
+    // Check VE
+    var goldMet = saveData.player.veilEssence >= tierData.requirements.gold;
+    results.push({ type: 'gold', met: goldMet, desc: tierData.requirements.gold + ' VE required (have: ' + saveData.player.veilEssence + ' VE)' });
     if (!goldMet) allMet = false;
 
     // Check essences (region essences — use the unit's element)

@@ -119,6 +119,29 @@ var UNIT_BONDS = {
         units: ['storm_dragon', 'void_wyrm', 'titan_lord'],
         bonus: { allStatsPct: 0.10, archetypeCountBonus: 1 },
         description: '+10% all stats, primary archetype +1 count'
+    },
+
+    // --- New T4 Bonds ---
+    deep_and_shallow: {
+        name: 'Deep & Shallow',
+        type: 'duo',
+        units: ['abyssal_guardian', 'tide_hunter'],
+        bonus: { hpPct: 0.12 },
+        description: '+12% HP. When Abyssal Guardian\'s Tidal Fortress activates, Tide Hunter gains +20% ATK for the duration.'
+    },
+    fire_and_ash: {
+        name: 'Fire and Ash',
+        type: 'duo',
+        units: ['fire_dragon', 'ashen_watcher'],
+        bonus: {},
+        description: 'Fire Dragon\'s Dragonfire Aura heals allies for 5% of aura damage dealt. Ashen Watcher\'s heals on Burning allies are +20% stronger.'
+    },
+    eye_of_the_storm: {
+        name: 'Eye of the Storm',
+        type: 'trio',
+        units: ['tempest_weaver', 'monsoon_caller', 'storm_sovereign'],
+        bonus: { abilityDmgPct: 0.08 },
+        description: 'Vortices and Monsoon zones merge: shared zones deal combined damage and grant combined buffs. All Wind allies gain +8% ability damage.'
     }
 };
 

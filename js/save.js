@@ -3,7 +3,7 @@
 // =============================================================================
 
 var SAVE_KEY = 'autobattler_v2_save';
-var SAVE_VERSION = 7;
+var SAVE_VERSION = 12;
 
 // ---- Default State Factory ----
 
@@ -13,7 +13,7 @@ function createDefaultSaveData() {
         player: {
             level: 1,
             xp: 0,
-            gold: 500,       // Starting gold — enough for several rolls + a building
+            veilEssence: 500,  // Starting VE — enough for several rolls + a building
             name: 'Player'
         },
         // Unit collection: { templateKey: { count: N, stars: S } }
@@ -29,16 +29,14 @@ function createDefaultSaveData() {
         activeTeamIndex: 0,
         // Buildings: { buildingId: level }
         buildings: {
-            barracks: 0,
-            summoning_circle: 0,
-            training_ground: 0,
-            warehouse: 0,
-            war_room: 0,
-            evolution_lab: 0,
-            forge: 0,
-            gem_workshop: 0,
-            mana_shrine: 0,
-            bond_hall: 0
+            sustained_bonds: 0,
+            attunement_rite: 0,
+            essence_reservoir: 0,
+            deep_resonance: 0,
+            echo_shaping: 0,
+            prism_focus: 0,
+            veil_wellspring: 0,
+            kindred_circle: 0
         },
         // Mission progress
         // storyProgress: index of highest completed story mission (0 = none)
@@ -59,24 +57,39 @@ function createDefaultSaveData() {
                 8: { completed: [], bossCleared: false }
             },
             starRatings: {},
-            regionRewardsClaimed: []
+            regionRewardsClaimed: [],
+            stageProgress: {}
         },
-        // Item inventory
-        items: {
-            bench: [],       // Array of item instances (max 10 slots)
-            benchSize: 10,
-            essences: { fire: 0, water: 0, earth: 0, wind: 0, lightning: 0, force: 0, arcane: 0 },
+        // Equipment inventory (new system replaces old items)
+        equipment: {
+            inventory: [],
+            gems: [],
+            materials: { commonScraps: 0, uncommonScraps: 0, rareScraps: 0, epicScraps: 0, oreShards: 0, refinedOre: 0, elementalDust: 0, prismaticShards: 0 },
             mythicMaterials: { dragon_scale: 0, void_crystal: 0, world_shard: 0 },
-            recipeBook: {},
-            milestones: {}
+            essences: { fire: 0, water: 0, earth: 0, wind: 0, lightning: 0, force: 0, arcane: 0 },
+            codex: { discovered: {} },
+            slotFocus: { slot: null, remaining: 0 }
+        },
+        // Legacy items field kept for migration
+        items: null,
+        // Heroes (philosophy-based system)
+        heroes: {
+            data: {
+                kael:  { level: 1, xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false },
+                lyric: { level: 1, xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false },
+                ren:   { level: 1, xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false, _unlocked: false },
+                sera:  { level: 1, xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false, _unlocked: false },
+                maren: { level: 1, xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false, _unlocked: false },
+                voss:  { level: 1, xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false, _unlocked: false }
+            }
         },
         // Achievements
         achievements: { earned: [], claimed: [] },
         // Stats tracking
         stats: {
             totalMissionsCompleted: 0,
-            totalGoldEarned: 0,
-            totalGoldSpent: 0,
+            totalVeilEssenceEarned: 0,
+            totalVeilEssenceSpent: 0,
             totalRolls: 0,
             totalUnitsCollected: 0,
             rollsSincePity: 0,
@@ -345,11 +358,375 @@ function migrateSave(data) {
         console.log('Migration v6\u2192v7 complete.');
     }
 
+    if (data.version < 8) {
+        console.log('Migrating save from v7 to v8 (Hero system)');
+
+        if (!data.heroes) {
+            data.heroes = {
+                unlocked: ['hero_a', 'hero_b'],
+                data: {
+                    hero_a: { key: 'hero_a', level: 1, xp: 0, skillPoints: 0, allocations: {}, assignedUnit: null, respecCount: 0 },
+                    hero_b: { key: 'hero_b', level: 1, xp: 0, skillPoints: 0, allocations: {}, assignedUnit: null, respecCount: 0 }
+                },
+                bDeathSnapshot: null,
+                bFragment: null
+            };
+        }
+
+        // Unlock heroes based on existing region progress
+        if (data.missions && data.missions.regionProgress) {
+            var rp = data.missions.regionProgress;
+            if (rp[1] && rp[1].bossCleared && data.heroes.unlocked.indexOf('hero_kael') < 0) {
+                data.heroes.unlocked.push('hero_kael');
+                data.heroes.data.hero_kael = { key: 'hero_kael', level: 1, xp: 0, skillPoints: 0, allocations: {}, assignedUnit: null, respecCount: 0 };
+            }
+            if (rp[2] && rp[2].bossCleared && data.heroes.unlocked.indexOf('hero_lyra') < 0) {
+                data.heroes.unlocked.push('hero_lyra');
+                data.heroes.data.hero_lyra = { key: 'hero_lyra', level: 1, xp: 0, skillPoints: 0, allocations: {}, assignedUnit: null, respecCount: 0 };
+            }
+            if (rp[3] && rp[3].bossCleared && data.heroes.unlocked.indexOf('hero_maren') < 0) {
+                data.heroes.unlocked.push('hero_maren');
+                data.heroes.data.hero_maren = { key: 'hero_maren', level: 1, xp: 0, skillPoints: 0, allocations: {}, assignedUnit: null, respecCount: 0 };
+            }
+            if (rp[4] && rp[4].completed && rp[4].completed.indexOf('r4_s3') >= 0 && data.heroes.unlocked.indexOf('hero_dax') < 0) {
+                data.heroes.unlocked.push('hero_dax');
+                data.heroes.data.hero_dax = { key: 'hero_dax', level: 1, xp: 0, skillPoints: 0, allocations: {}, assignedUnit: null, respecCount: 0 };
+            }
+            // If R4 boss cleared, B dies and Lyra/Maren leave
+            if (rp[4] && rp[4].bossCleared) {
+                var bIdx = data.heroes.unlocked.indexOf('hero_b');
+                if (bIdx >= 0) {
+                    data.heroes.bDeathSnapshot = { level: data.heroes.data.hero_b.level, xp: 0, skillPoints: 0, allocations: {}, respecCount: 0 };
+                    data.heroes.unlocked.splice(bIdx, 1);
+                }
+                // Only remove Lyra/Maren if R5 hasn't returned them
+                if (!(rp[5] && rp[5].completed && rp[5].completed.indexOf('r5_s2') >= 0)) {
+                    var lyraIdx = data.heroes.unlocked.indexOf('hero_lyra');
+                    if (lyraIdx >= 0) data.heroes.unlocked.splice(lyraIdx, 1);
+                }
+                if (!(rp[5] && rp[5].completed && rp[5].completed.indexOf('r5_s4') >= 0)) {
+                    var marenIdx = data.heroes.unlocked.indexOf('hero_maren');
+                    if (marenIdx >= 0) data.heroes.unlocked.splice(marenIdx, 1);
+                }
+            }
+            if (rp[5] && rp[5].bossCleared && data.heroes.unlocked.indexOf('hero_sera') < 0) {
+                data.heroes.unlocked.push('hero_sera');
+                data.heroes.data.hero_sera = { key: 'hero_sera', level: 1, xp: 0, skillPoints: 0, allocations: {}, assignedUnit: null, respecCount: 0 };
+            }
+            if (rp[6] && rp[6].bossCleared && data.heroes.unlocked.indexOf('hero_voss') < 0) {
+                data.heroes.unlocked.push('hero_voss');
+                data.heroes.data.hero_voss = { key: 'hero_voss', level: 1, xp: 0, skillPoints: 0, allocations: {}, assignedUnit: null, respecCount: 0 };
+            }
+        }
+
+        data.version = 8;
+        console.log('Migration v7->v8 complete. Heroes unlocked:', data.heroes.unlocked.length);
+    }
+
+    if (data.version < 9) {
+        console.log('Migrating save from v8 to v9 (Equipment system rework)');
+
+        // Create new equipment structure
+        if (!data.equipment) {
+            data.equipment = {
+                inventory: [],
+                gems: [],
+                materials: { commonScraps: 0, uncommonScraps: 0, rareScraps: 0, epicScraps: 0, oreShards: 0, refinedOre: 0, elementalDust: 0, prismaticShards: 0 },
+                mythicMaterials: { dragon_scale: 0, void_crystal: 0, world_shard: 0 },
+                essences: { fire: 0, water: 0, earth: 0, wind: 0, lightning: 0, force: 0, arcane: 0 },
+                codex: { discovered: {} },
+                slotFocus: { slot: null, remaining: 0 }
+            };
+        }
+
+        // Migrate old items to new equipment
+        if (data.items) {
+            // Carry over essences
+            if (data.items.essences) {
+                var essKeys = Object.keys(data.items.essences);
+                for (var ei = 0; ei < essKeys.length; ei++) {
+                    data.equipment.essences[essKeys[ei]] = data.items.essences[essKeys[ei]] || 0;
+                }
+            }
+
+            // Carry over mythic materials
+            if (data.items.mythicMaterials) {
+                var matKeys = Object.keys(data.items.mythicMaterials);
+                for (var mi = 0; mi < matKeys.length; mi++) {
+                    data.equipment.mythicMaterials[matKeys[mi]] = data.items.mythicMaterials[matKeys[mi]] || 0;
+                }
+            }
+
+            // Carry over gems
+            if (data.items.gems && Array.isArray(data.items.gems)) {
+                data.equipment.gems = data.items.gems.slice();
+            }
+
+            // Convert old bench items to new equipment + gold refund
+            if (data.items.bench && Array.isArray(data.items.bench)) {
+                var goldRefund = 0;
+                for (var bi = 0; bi < data.items.bench.length; bi++) {
+                    var oldItem = data.items.bench[bi];
+                    if (!oldItem) continue;
+
+                    var converted = _migrateOldItem(oldItem);
+                    if (converted) {
+                        data.equipment.inventory.push(converted);
+                    } else {
+                        // Items that don't map cleanly → gold refund
+                        goldRefund += 15;
+                    }
+                }
+                if (goldRefund > 0) {
+                    // gold field still exists at this migration step (renamed in v10)
+                    data.player.gold = (data.player.gold || 0) + goldRefund;
+                    console.log('Refunded ' + goldRefund + ' for unconvertible items');
+                }
+            }
+
+            // Clear old items to save space (keep reference for any code that checks)
+            data.items = null;
+        }
+
+        data.version = 9;
+        console.log('Migration v8->v9 complete. Equipment items:', data.equipment.inventory.length);
+    }
+
+    // Helper: migrate a single old item to new equipment format
+    function _migrateOldItem(oldItem) {
+        var id = oldItem.id || (Math.random().toString(36).substr(2, 9));
+        var enhanceLevel = oldItem.enhanceLevel || 0;
+        var gems = oldItem.gems || [];
+
+        if (oldItem.type === 'component') {
+            // Components → Common T1 equipment
+            var slotMap = { bf_sword: 'weapon', chain_vest: 'chest', giants_belt: 'chest', recurve_bow: 'weapon',
+                large_rod: 'weapon', negatron_cloak: 'offhand', sparring_gloves: 'gauntlets', tear: 'offhand',
+                aether_shard: 'helm', quicksilver_gem: 'boots', warding_stone: 'offhand', soul_prism: 'gauntlets' };
+            var lineMap = { bf_sword: 'sword', chain_vest: 'chainmail', giants_belt: 'chainmail', recurve_bow: 'bow',
+                large_rod: 'staff', negatron_cloak: 'wooden_shield', sparring_gloves: 'leather_gloves', tear: 'healing_orb',
+                aether_shard: 'circlet', quicksilver_gem: 'windwalker', warding_stone: 'ward_stone', soul_prism: 'mana_gauntlets' };
+            return {
+                id: id, slot: slotMap[oldItem.key] || 'weapon', itemKey: lineMap[oldItem.key] || 'sword',
+                tier: 1, rarity: 'common', enhanceLevel: 0, enhanceFailStreak: 0, gems: [], affixes: [], setId: null, equipped: null
+            };
+        } else if (oldItem.type === 'combined') {
+            // Combined → Uncommon T2
+            return {
+                id: id, slot: 'weapon', itemKey: 'sword',
+                tier: 2, rarity: 'uncommon', enhanceLevel: enhanceLevel, enhanceFailStreak: 0, gems: gems, affixes: [], setId: null, equipped: null
+            };
+        } else if (oldItem.type === 'set') {
+            // Set items → Rare T3 with set
+            var setId = oldItem.setId || null;
+            return {
+                id: id, slot: 'weapon', itemKey: 'sword',
+                tier: 3, rarity: 'rare', enhanceLevel: enhanceLevel, enhanceFailStreak: 0, gems: gems, affixes: [], setId: setId, equipped: null
+            };
+        } else if (oldItem.type === 'ability') {
+            // Ability items → Epic T3
+            return {
+                id: id, slot: 'weapon', itemKey: 'sword',
+                tier: 3, rarity: 'epic', enhanceLevel: enhanceLevel, enhanceFailStreak: 0, gems: gems, affixes: [], setId: null, equipped: null
+            };
+        } else if (oldItem.type === 'mythic') {
+            // Mythic items → direct mapping
+            var mythicMap = {
+                infinity_gauntlet: { slot: 'gauntlets', key: 'infinity_gauntlet' },
+                aegis_of_immortality: { slot: 'offhand', key: 'aegis_of_immortality' },
+                eclipse: { slot: 'weapon', key: 'eclipse' },
+                staff_of_ages: { slot: 'weapon', key: 'staff_of_ages' },
+                worldbreaker: { slot: 'weapon', key: 'worldbreaker' },
+                crown_of_ages: { slot: 'helm', key: 'crown_of_ages' }
+            };
+            var mapping = mythicMap[oldItem.key];
+            if (!mapping) return null;
+            return {
+                id: id, slot: mapping.slot, itemKey: mapping.key,
+                tier: 5, rarity: 'mythic', enhanceLevel: enhanceLevel, enhanceFailStreak: 0, gems: gems.length ? gems : [null, null],
+                affixes: [], setId: null, equipped: null, isMythic: true
+            };
+        }
+        return null;
+    }
+
+    if (data.version < 10) {
+        console.log('Migrating save from v9 to v10 (Progression rework — VE, Camp, tiered star-up)');
+
+        // Rename gold → veilEssence
+        if (data.player) {
+            if (typeof data.player.gold !== 'undefined') {
+                data.player.veilEssence = data.player.gold;
+                delete data.player.gold;
+            }
+            if (typeof data.player.veilEssence === 'undefined') data.player.veilEssence = 500;
+        }
+
+        // Rename stats
+        if (!data.stats) data.stats = {};
+        if (typeof data.stats.totalGoldEarned !== 'undefined') {
+            data.stats.totalVeilEssenceEarned = data.stats.totalGoldEarned;
+            delete data.stats.totalGoldEarned;
+        }
+        if (typeof data.stats.totalGoldSpent !== 'undefined') {
+            data.stats.totalVeilEssenceSpent = data.stats.totalGoldSpent;
+            delete data.stats.totalGoldSpent;
+        }
+
+        // Migrate building keys
+        if (!data.buildings) data.buildings = {};
+        var bldMigrationMap = {
+            barracks: 'sustained_bonds',
+            summoning_circle: 'attunement_rite',
+            warehouse: 'essence_reservoir',
+            evolution_lab: 'deep_resonance',
+            forge: 'echo_shaping',
+            gem_workshop: 'prism_focus',
+            mana_shrine: 'veil_wellspring',
+            bond_hall: 'kindred_circle'
+        };
+        var oldBldKeys = Object.keys(bldMigrationMap);
+        for (var bmi = 0; bmi < oldBldKeys.length; bmi++) {
+            var oldKey = oldBldKeys[bmi];
+            var newKey = bldMigrationMap[oldKey];
+            if (typeof data.buildings[oldKey] !== 'undefined') {
+                data.buildings[newKey] = data.buildings[oldKey];
+                delete data.buildings[oldKey];
+            }
+            if (typeof data.buildings[newKey] === 'undefined') data.buildings[newKey] = 0;
+        }
+        // Sustained Bonds: cap at max 1 (was barracks up to 5)
+        if (data.buildings.sustained_bonds > 1) data.buildings.sustained_bonds = 1;
+        // Remove obsolete building keys
+        delete data.buildings.training_ground;
+        delete data.buildings.war_room;
+
+        // Recalculate star-up progress for existing collection entries
+        if (data.collection) {
+            var collKeys = Object.keys(data.collection);
+            for (var sci = 0; sci < collKeys.length; sci++) {
+                var sck = collKeys[sci];
+                var scEntry = data.collection[sck];
+                // No recalc needed — copiesForNext is banked copies, not a threshold.
+                // The threshold is now dynamic via getCopiesPerStar().
+                // Existing copies stay as-is; they just star up faster/slower depending on tier.
+            }
+        }
+
+        data.version = 10;
+        console.log('Migration v9→v10 complete. VE:', data.player.veilEssence);
+    }
+
+    if (data.version < 11) {
+        console.log('Migrating save from v10 to v11 (Hero system redesign — philosophy-based)');
+
+        // Determine region progress for hero unlocks
+        var rp = (data.missions && data.missions.regionProgress) || {};
+        var r2Done = rp[2] && rp[2].bossCleared;
+        var r3Done = rp[3] && rp[3].completed && rp[3].completed.length > 0;
+        var r4Mid = rp[4] && rp[4].completed && (rp[4].completed.indexOf('r4_s3') >= 0 || rp[4].completed.indexOf('r4_mid') >= 0);
+        var r4Boss = rp[4] && rp[4].bossCleared;
+        var r5Early = rp[5] && rp[5].completed && (rp[5].completed.indexOf('r5_s1') >= 0 || rp[5].completed.indexOf('r5_s2') >= 0);
+        var r5Late = rp[5] && rp[5].completed && (rp[5].completed.indexOf('r5_s4') >= 0 || rp[5].completed.indexOf('r5_boss') >= 0);
+        var r7Done = rp[7] && rp[7].completed && rp[7].completed.length > 0;
+
+        // Estimate hero levels from old data
+        var oldAvgLevel = 1;
+        if (data.heroes && data.heroes.data) {
+            var totalLvl = 0;
+            var cnt = 0;
+            var oldKeys = Object.keys(data.heroes.data);
+            for (var oli = 0; oli < oldKeys.length; oli++) {
+                var oh = data.heroes.data[oldKeys[oli]];
+                if (oh && oh.level) { totalLvl += oh.level; cnt++; }
+            }
+            if (cnt > 0) oldAvgLevel = Math.floor(totalLvl / cnt);
+        }
+
+        // Build new hero data
+        var newHeroes = {
+            data: {
+                kael:  { level: Math.max(1, oldAvgLevel), xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false },
+                lyric: { level: Math.max(1, oldAvgLevel), xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false },
+                ren:   { level: Math.max(1, oldAvgLevel), xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false, _unlocked: !r2Done ? false : undefined },
+                sera:  { level: Math.max(1, oldAvgLevel), xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false, _unlocked: !r3Done ? false : undefined },
+                maren: { level: Math.max(1, oldAvgLevel), xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false, _unlocked: !r3Done ? false : undefined },
+                voss:  { level: Math.max(1, Math.floor(oldAvgLevel * 0.8)), xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false, _unlocked: !r7Done ? false : undefined }
+            }
+        };
+
+        // Handle Lyric death (R4 mid+)
+        if (r4Mid || r4Boss) {
+            newHeroes.data.lyric.isDead = true;
+            newHeroes.data.lyric.assignedUnit = null;
+        }
+
+        // Handle Sera/Maren away during R4
+        if ((r4Mid || r4Boss) && !r5Early) {
+            newHeroes.data.maren._away = true;
+            newHeroes.data.maren.assignedUnit = null;
+        }
+        if ((r4Mid || r4Boss) && !r5Late) {
+            newHeroes.data.sera._away = true;
+            newHeroes.data.sera.assignedUnit = null;
+        }
+
+        // Clean up undefined _unlocked flags
+        for (var nhk in newHeroes.data) {
+            if (newHeroes.data[nhk]._unlocked === undefined) {
+                delete newHeroes.data[nhk]._unlocked;
+            }
+        }
+
+        data.heroes = newHeroes;
+        data.version = 11;
+        console.log('Migration v10→v11 complete. New hero system.');
+    }
+
+    if (data.version < 12) {
+        // v11→v12: 74-stage expansion — add stageProgress for per-stage tracking
+        // and update regionProgress to include all new stage IDs
+        if (!data.missions.stageProgress) {
+            data.missions.stageProgress = {};
+        }
+        // Migrate existing completed stages into stageProgress
+        if (data.missions.regionProgress) {
+            for (var rp12 = 1; rp12 <= 8; rp12++) {
+                var rpData = data.missions.regionProgress[rp12];
+                if (rpData && rpData.completed) {
+                    for (var sp12 = 0; sp12 < rpData.completed.length; sp12++) {
+                        var sid = rpData.completed[sp12];
+                        if (!data.missions.stageProgress[sid]) {
+                            data.missions.stageProgress[sid] = {
+                                completed: true,
+                                bestStars: (data.missions.starRatings && data.missions.starRatings[sid]) || 1,
+                                clearedAt: Date.now()
+                            };
+                        }
+                    }
+                }
+            }
+        }
+        // Ensure all 8 regions exist in regionProgress
+        for (var rp12b = 1; rp12b <= 8; rp12b++) {
+            if (!data.missions.regionProgress[rp12b]) {
+                data.missions.regionProgress[rp12b] = { completed: [], bossCleared: false };
+            }
+        }
+        data.version = 12;
+        console.log('Migration v11→v12 complete. 74-stage expansion.');
+    }
+
     // Phase 5 graceful migration: add new fields if missing (version-agnostic)
     if (!data.buildings) data.buildings = {};
-    if (typeof data.buildings.gem_workshop === 'undefined') data.buildings.gem_workshop = 0;
-    if (typeof data.buildings.mana_shrine === 'undefined') data.buildings.mana_shrine = 0;
-    if (typeof data.buildings.bond_hall === 'undefined') data.buildings.bond_hall = 0;
+    if (typeof data.buildings.sustained_bonds === 'undefined') data.buildings.sustained_bonds = 0;
+    if (typeof data.buildings.attunement_rite === 'undefined') data.buildings.attunement_rite = 0;
+    if (typeof data.buildings.essence_reservoir === 'undefined') data.buildings.essence_reservoir = 0;
+    if (typeof data.buildings.deep_resonance === 'undefined') data.buildings.deep_resonance = 0;
+    if (typeof data.buildings.echo_shaping === 'undefined') data.buildings.echo_shaping = 0;
+    if (typeof data.buildings.prism_focus === 'undefined') data.buildings.prism_focus = 0;
+    if (typeof data.buildings.veil_wellspring === 'undefined') data.buildings.veil_wellspring = 0;
+    if (typeof data.buildings.kindred_circle === 'undefined') data.buildings.kindred_circle = 0;
     if (!data.achievements) data.achievements = { earned: [], claimed: [] };
     if (!data.stats) data.stats = {};
     if (typeof data.stats.missionsCompleted === 'undefined') data.stats.missionsCompleted = 0;
@@ -380,8 +757,8 @@ function validateSaveData(data) {
     data.player.level = Math.max(1, Math.min(20, data.player.level));
     if (typeof data.player.xp !== 'number') data.player.xp = 0;
     data.player.xp = Math.max(0, data.player.xp);
-    if (typeof data.player.gold !== 'number') data.player.gold = 500;
-    data.player.gold = Math.max(0, data.player.gold);
+    if (typeof data.player.veilEssence !== 'number') data.player.veilEssence = 500;
+    data.player.veilEssence = Math.max(0, data.player.veilEssence);
 
     if (!data.collection) data.collection = {};
 
@@ -413,11 +790,14 @@ function validateSaveData(data) {
 
     if (typeof data.activeTeamIndex !== 'number') data.activeTeamIndex = 0;
     if (!data.buildings) data.buildings = defaults.buildings;
-    if (typeof data.buildings.evolution_lab === 'undefined') data.buildings.evolution_lab = 0;
-    if (typeof data.buildings.forge === 'undefined') data.buildings.forge = 0;
-    if (typeof data.buildings.gem_workshop === 'undefined') data.buildings.gem_workshop = 0;
-    if (typeof data.buildings.mana_shrine === 'undefined') data.buildings.mana_shrine = 0;
-    if (typeof data.buildings.bond_hall === 'undefined') data.buildings.bond_hall = 0;
+    if (typeof data.buildings.sustained_bonds === 'undefined') data.buildings.sustained_bonds = 0;
+    if (typeof data.buildings.attunement_rite === 'undefined') data.buildings.attunement_rite = 0;
+    if (typeof data.buildings.essence_reservoir === 'undefined') data.buildings.essence_reservoir = 0;
+    if (typeof data.buildings.deep_resonance === 'undefined') data.buildings.deep_resonance = 0;
+    if (typeof data.buildings.echo_shaping === 'undefined') data.buildings.echo_shaping = 0;
+    if (typeof data.buildings.prism_focus === 'undefined') data.buildings.prism_focus = 0;
+    if (typeof data.buildings.veil_wellspring === 'undefined') data.buildings.veil_wellspring = 0;
+    if (typeof data.buildings.kindred_circle === 'undefined') data.buildings.kindred_circle = 0;
     if (!data.missions) data.missions = defaults.missions;
     if (!data.missions.storyStars) data.missions.storyStars = {};
     if (!data.missions.grindBest) data.missions.grindBest = {};
@@ -432,32 +812,87 @@ function validateSaveData(data) {
     if (!data.missions.regionRewardsClaimed) data.missions.regionRewardsClaimed = [];
     if (!data.stats) data.stats = defaults.stats;
     if (typeof data.stats.rollsSincePity !== 'number') data.stats.rollsSincePity = 0;
-    if (typeof data.stats.totalGoldSpent !== 'number') data.stats.totalGoldSpent = 0;
+    if (typeof data.stats.totalVeilEssenceSpent !== 'number') data.stats.totalVeilEssenceSpent = 0;
+    if (typeof data.stats.totalVeilEssenceEarned !== 'number') data.stats.totalVeilEssenceEarned = 0;
     if (!data.achievements) data.achievements = { earned: [], claimed: [] };
     if (!Array.isArray(data.achievements.earned)) data.achievements.earned = [];
     if (!Array.isArray(data.achievements.claimed)) data.achievements.claimed = [];
 
-    // Items migration: add items if missing (old saves)
-    if (!data.items) data.items = { bench: [], benchSize: 10, essences: { fire: 0, water: 0, earth: 0, wind: 0, lightning: 0, force: 0 } };
-    if (!Array.isArray(data.items.bench)) data.items.bench = [];
-    if (typeof data.items.benchSize !== 'number') data.items.benchSize = 10;
-    if (!data.items.essences) data.items.essences = { fire: 0, water: 0, earth: 0, wind: 0, lightning: 0, force: 0 };
-    if (typeof data.items.essences.lightning === 'undefined') data.items.essences.lightning = 0;
-    if (typeof data.items.essences.force === 'undefined') data.items.essences.force = 0;
+    // Heroes validation (new philosophy-based system)
+    if (!data.heroes || !data.heroes.data) {
+        data.heroes = {
+            data: {
+                kael:  { level: 1, xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false },
+                lyric: { level: 1, xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false },
+                ren:   { level: 1, xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false, _unlocked: false },
+                sera:  { level: 1, xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false, _unlocked: false },
+                maren: { level: 1, xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false, _unlocked: false },
+                voss:  { level: 1, xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false, _unlocked: false }
+            }
+        };
+    }
+    if (!data.heroes.data) data.heroes.data = {};
+    // Ensure all 6 heroes have data entries
+    var heroDefaults = ['kael', 'lyric', 'ren', 'sera', 'maren', 'voss'];
+    for (var hi = 0; hi < heroDefaults.length; hi++) {
+        var hk = heroDefaults[hi];
+        if (!data.heroes.data[hk]) {
+            data.heroes.data[hk] = { level: 1, xp: 0, assignedUnit: null, investedNodes: [], respecCount: 0, isDead: false };
+        }
+        var hd = data.heroes.data[hk];
+        if (typeof hd.level !== 'number') hd.level = 1;
+        if (typeof hd.xp !== 'number') hd.xp = 0;
+        if (!Array.isArray(hd.investedNodes)) hd.investedNodes = [];
+        if (typeof hd.respecCount !== 'number') hd.respecCount = 0;
+        if (typeof hd.isDead !== 'boolean') hd.isDead = false;
+    }
+
+    // Equipment validation (new system)
+    if (!data.equipment) {
+        data.equipment = {
+            inventory: [], gems: [],
+            materials: { commonScraps: 0, uncommonScraps: 0, rareScraps: 0, epicScraps: 0, oreShards: 0, refinedOre: 0, elementalDust: 0, prismaticShards: 0 },
+            mythicMaterials: { dragon_scale: 0, void_crystal: 0, world_shard: 0 },
+            essences: { fire: 0, water: 0, earth: 0, wind: 0, lightning: 0, force: 0, arcane: 0 },
+            codex: { discovered: {} },
+            slotFocus: { slot: null, remaining: 0 }
+        };
+    }
+    if (!Array.isArray(data.equipment.inventory)) data.equipment.inventory = [];
+    if (!Array.isArray(data.equipment.gems)) data.equipment.gems = [];
+    if (!data.equipment.materials) data.equipment.materials = { commonScraps: 0, uncommonScraps: 0, rareScraps: 0, epicScraps: 0, oreShards: 0, refinedOre: 0, elementalDust: 0, prismaticShards: 0 };
+    if (!data.equipment.mythicMaterials) data.equipment.mythicMaterials = { dragon_scale: 0, void_crystal: 0, world_shard: 0 };
+    if (!data.equipment.essences) data.equipment.essences = { fire: 0, water: 0, earth: 0, wind: 0, lightning: 0, force: 0, arcane: 0 };
+    if (!data.equipment.codex) data.equipment.codex = { discovered: {} };
+    if (!data.equipment.slotFocus) data.equipment.slotFocus = { slot: null, remaining: 0 };
 
     console.log('Validation complete. Valid entries:', Object.keys(data.collection).length);
     return data;
 }
 
-// Copies per star level constant
-var COPIES_PER_STAR = 10;
-
-// Sell value: 3x unit cost
-function getSellValue(templateKey, starLevel) {
+// Tiered copies per star — depends on unit cost tier
+function getCopiesPerStar(templateKey) {
     var tmpl = UNIT_TEMPLATES[templateKey] || EVOLVED_TEMPLATES[templateKey];
-    if (!tmpl) return 0;
-    var baseCost = UNIT_COSTS ? UNIT_COSTS[tmpl.cost || tmpl.baseCost || 1] : (tmpl.cost || 1) * 3;
-    return baseCost * 3;
+    if (!tmpl) return 10;
+    var tier = tmpl.cost || tmpl.baseCost || 1;
+    switch (tier) {
+        case 1: return 3;
+        case 2: return 4;
+        case 3: return 5;
+        case 4: return 8;
+        case 5: return 10;
+        default: return 10;
+    }
+}
+
+// Echo Release (sell) value by unit tier — flat VE per copy
+var ECHO_RELEASE_VALUES = { 1: 5, 2: 10, 3: 20, 4: 50, 5: 100 };
+
+function getEchoReleaseValue(templateKey) {
+    var tmpl = UNIT_TEMPLATES[templateKey] || EVOLVED_TEMPLATES[templateKey];
+    if (!tmpl) return 5;
+    var tier = tmpl.cost || tmpl.baseCost || 1;
+    return ECHO_RELEASE_VALUES[tier] || 5;
 }
 
 // ---- Collection Helpers ----
@@ -474,33 +909,25 @@ function addUnitToCollection(saveData, templateKey) {
     }
 }
 
-function getStarUpCost() {
-    // 10 copies required per star level
-    return 10;
-}
-
 function canStarUp(saveData, templateKey) {
     var entry = saveData.collection[templateKey];
     if (!entry) return false;
-    return entry.copiesForNext >= getStarUpCost();
+    return entry.copiesForNext >= getCopiesPerStar(templateKey);
 }
 
 function starUpUnit(saveData, templateKey) {
     if (!canStarUp(saveData, templateKey)) return false;
 
     var entry = saveData.collection[templateKey];
-    entry.copiesForNext -= getStarUpCost();
+    entry.copiesForNext -= getCopiesPerStar(templateKey);
     entry.stars++;
     return true;
 }
 
 // ---- Sell Helpers ----
 
-function getSellGoldValue(templateKey, copiesCount) {
-    var tmpl = UNIT_TEMPLATES[templateKey] || EVOLVED_TEMPLATES[templateKey];
-    if (!tmpl) return 0;
-    var unitCost = tmpl.cost || tmpl.baseCost || 1;
-    return copiesCount * unitCost * 3;
+function getEchoReleaseTotal(templateKey, copiesCount) {
+    return copiesCount * getEchoReleaseValue(templateKey);
 }
 
 function sellUnitCopies(saveData, templateKey, count) {
@@ -509,11 +936,11 @@ function sellUnitCopies(saveData, templateKey, count) {
     if (count > entry.copiesForNext) return false;
     if (count <= 0) return false;
 
-    var goldEarned = getSellGoldValue(templateKey, count);
+    var veEarned = getEchoReleaseTotal(templateKey, count);
     entry.copiesForNext -= count;
-    earnGold(saveData, goldEarned);
+    earnGold(saveData, veEarned);
     autoSave(saveData);
-    return goldEarned;
+    return veEarned;
 }
 
 function getCollectionCount(saveData) {
@@ -533,17 +960,21 @@ function getActiveTeam(saveData) {
 function getMaxTeamSize(saveData) {
     var level = saveData.player.level;
 
-    // Base slots: 2 + 1 per 2 levels until level 10 (cap 7)
-    var baseSlots = Math.min(7, 2 + Math.floor(level / 2));
+    // Base slots: start at 3, +1 at levels 4, 8, 12, 16
+    var baseSlots = 3;
+    if (level >= 4) baseSlots++;
+    if (level >= 8) baseSlots++;
+    if (level >= 12) baseSlots++;
+    if (level >= 16) baseSlots++;
 
-    // Barracks bonus: only available at level 10+
-    var barracksBonus = 0;
-    if (level >= 10) {
-        var barracksLevel = saveData.buildings && saveData.buildings.barracks ? saveData.buildings.barracks : 0;
-        barracksBonus = Math.min(2, Math.floor(barracksLevel / 2));
+    // Sustained Bonds bonus: +1 at L17 with building upgrade
+    var sustainedBondsBonus = 0;
+    if (level >= 17) {
+        var sustainedBondsLevel = saveData.buildings && saveData.buildings.sustained_bonds ? saveData.buildings.sustained_bonds : 0;
+        if (sustainedBondsLevel >= 1) sustainedBondsBonus = 1;
     }
 
-    return Math.min(9, baseSlots + barracksBonus);
+    return Math.min(8, baseSlots + sustainedBondsBonus);
 }
 
 function saveTeam(saveData, teamIndex, slots) {
@@ -598,17 +1029,21 @@ function addPlayerXP(saveData, amount) {
     return leveled;
 }
 
-// ---- Gold Helpers ----
+// ---- VE (Veil Essence) Helpers ----
+// Function names kept as spendGold/earnGold for backward compat across all call sites
 
 function spendGold(saveData, amount) {
-    if (saveData.player.gold < amount) return false;
-    saveData.player.gold -= amount;
+    if (saveData.player.veilEssence < amount) return false;
+    saveData.player.veilEssence -= amount;
+    if (!saveData.stats.totalVeilEssenceSpent) saveData.stats.totalVeilEssenceSpent = 0;
+    saveData.stats.totalVeilEssenceSpent += amount;
     return true;
 }
 
 function earnGold(saveData, amount) {
-    saveData.player.gold += amount;
-    saveData.stats.totalGoldEarned += amount;
+    saveData.player.veilEssence += amount;
+    if (!saveData.stats.totalVeilEssenceEarned) saveData.stats.totalVeilEssenceEarned = 0;
+    saveData.stats.totalVeilEssenceEarned += amount;
 }
 
 // ---- Auto-save (call after any mutation) ----

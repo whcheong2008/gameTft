@@ -21,7 +21,7 @@ body {
     flex-wrap: wrap; gap: 6px;
 }
 #player-info { display: flex; gap: 14px; }
-#player-gold { color: #ffd93d; font-weight: bold; }
+#player-gold { color: #b388ff; font-weight: bold; }
 #player-level { color: #6bcb77; font-weight: bold; }
 #player-xp { color: #8bbcff; font-size: 13px; }
 #nav-back { cursor: pointer; background: #2a3a5e; border: none; color: #e0e0e0;
@@ -720,13 +720,13 @@ body {
             <div id="player-info">
                 <span id="player-level">Lv. 1</span>
                 <span id="player-xp">XP: 0/100</span>
-                <span id="player-gold">💰 100</span>
+                <span id="player-gold">✨ 100 VE</span>
             </div>
         </div>
 
         <!-- ============ HUB SCREEN ============ -->
         <div id="screen-hub" class="screen active">
-            <div class="screen-title">🏠 Base Camp</div>
+            <div class="screen-title">🏕️ Camp</div>
 
             <div class="hub-nav">
                 <div class="hub-nav-btn" onclick="showScreen('gacha')">
@@ -739,19 +739,26 @@ body {
                     <span class="nav-emoji">⚔️</span> Team Builder
                 </div>
                 <div class="hub-nav-btn" onclick="uiToggleItemBench()">
-                    <span class="nav-emoji">🎒</span> Item Bench
+                    <span class="nav-emoji">🎒</span> Equipment
+                </div>
+                <div class="hub-nav-btn" onclick="showScreen('heroes')">
+                    <span class="nav-emoji">👑</span> Heroes
                 </div>
             </div>
 
-            <!-- Item Bench Overlay -->
+            <!-- Equipment Inventory Overlay -->
             <div id="item-bench-overlay" style="display:none; background:#1a1a2e; border:1px solid #333; border-radius:8px; padding:12px; margin-top:10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <div class="section-title" style="margin:0;">🎒 Item Bench</div>
+                    <div class="section-title" style="margin:0;">🎒 Equipment Inventory</div>
                     <button class="btn-secondary" onclick="uiToggleItemBench()" style="font-size:11px; padding:2px 8px;">Close</button>
                 </div>
                 <div id="item-bench-info" style="font-size:12px; color:#888; margin-bottom:6px;"></div>
+                <div style="margin-bottom:6px;">
+                    <button onclick="uiShowCodex()" style="font-size:11px; padding:3px 10px; background:#2a3a5e; color:#e0e0e0; border:none; border-radius:4px; cursor:pointer;">📖 Codex</button>
+                </div>
                 <div id="item-bench-grid" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:4px;"></div>
                 <div id="item-detail-panel" style="display:none; margin-top:8px; padding:8px; background:#16213e; border-radius:6px; font-size:12px;"></div>
+                <div id="codex-panel" style="display:none; margin-top:8px; padding:10px; background:#0d1117; border-radius:6px; font-size:12px; max-height:300px; overflow-y:auto;"></div>
             </div>
 
             <div class="section-title mt-md">Buildings</div>
@@ -779,11 +786,11 @@ body {
 
         <!-- ============ GACHA SCREEN ============ -->
         <div id="screen-gacha" class="screen">
-            <div class="screen-title">🎲 Summoning Circle</div>
+            <div class="screen-title">🎲 Attunement Rite</div>
             <div class="gacha-rates" id="gacha-rates"></div>
             <div class="gacha-controls">
-                <button class="gacha-btn" id="btn-roll-1" onclick="uiDoSingleRoll()">Roll x1 (5g)</button>
-                <button class="gacha-btn" id="btn-roll-10" onclick="uiDoMultiRoll()">Roll x10 (45g)</button>
+                <button class="gacha-btn" id="btn-roll-1" onclick="uiDoSingleRoll()">Rite x1 (50 VE)</button>
+                <button class="gacha-btn" id="btn-roll-10" onclick="uiDoMultiRoll()">Rite x10 (450 VE)</button>
             </div>
             <div id="gacha-roll-results" class="gacha-results" style="display:none;"></div>
             <div id="gacha-shop" class="gacha-results"></div>
@@ -794,6 +801,12 @@ body {
             <div class="screen-title">📋 Unit Collection</div>
             <div id="roster-stats" class="text-muted" style="font-size:13px;"></div>
             <div id="roster-grid" class="roster-grid"></div>
+        </div>
+
+        <!-- ============ HEROES SCREEN ============ -->
+        <div id="screen-heroes" class="screen">
+            <div class="screen-title">👑 Heroes</div>
+            <div id="hero-screen-content"></div>
         </div>
 
         <!-- ============ TEAM BUILDER SCREEN ============ -->
@@ -866,15 +879,16 @@ body {
     <script src="js/units-abilities.js"></script>
     <script src="js/units-bonds.js"></script>
     <script src="js/units-ascension.js"></script>
+    <script src="js/heroes.js?v=2"></script>
     <!-- synergies.js not loaded — V2 handles synergies in main-v2.js and teams.js -->
-    <script src="js/save.js"></script>
+    <script src="js/save.js?v=2"></script>
     <script src="js/gacha.js"></script>
     <script src="js/teams.js"></script>
     <script src="js/hub.js"></script>
-    <script src="js/items.js"></script>
-    <script src="js/missions.js"></script>
+    <script src="js/items.js?v=2"></script>
+    <script src="js/missions.js?v=2"></script>
     <!-- V2 uses simplified combat in main-v2.js, not V1 combat.js -->
-    <script src="js/ui-v2.js?v=4"></script>
+    <script src="js/ui-v2.js?v=5"></script>
     <script src="js/main-v2.js"></script>
 </body>
 </html>

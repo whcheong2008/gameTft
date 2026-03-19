@@ -17,7 +17,7 @@
 
 ---
 
-## Current Status: V2 — Phases 1-5 Complete, Hero + Item Rework In Progress
+## Current Status: V2 — Phases 1-5 Complete, Hero + Item Rework + Progression Rework In Progress
 
 **Repository**: https://github.com/whcheong2008/gameTft
 **Current tag**: `v0.2.0-phase1-complete` (initial commit)
@@ -48,8 +48,8 @@ Hub → Gacha Rolling → Roster Management → Team Building → Mission Deploy
 - Save/load via localStorage with migration support
 - Reset game function
 
-**Unit Taxonomy (REDESIGNED — see UNITS-DESIGN.md)**:
-- **All 60 units evolve → 60 base + 60 evolved = 120 total** across 6 elements, 9 archetypes, 6 unit types
+**Unit Taxonomy (REDESIGNED — see UNITS-DESIGN.md + PROGRESSION-REWORK.md)**:
+- **66 base units evolve → 66 base + 66 evolved = 132 total** across 6 elements, 9 archetypes, 6 unit types (6 new T4 needed)
 - 6 elements: Fire, Water, Earth, Wind, **Lightning** (NEW), **Force/Physical** (NEW)
 - 9 archetypes: Guardian, Warden, Vanguard, Duelist, Predator, Ranger, Sorcerer, Mystic, Sage (Striker retired)
 - 6 unit types: Warrior, Tank, Archer, Mage, Assassin, Healer
@@ -57,9 +57,10 @@ Hub → Gacha Rolling → Roster Management → Team Building → Mission Deploy
 - Element synergy thresholds: **2/4/7/10** (10 = game-warping "Prismatic" bonus)
 - **Prismatic rule**: Evolved T5 units count as 2 toward element synergy. 9 mono-element + evolved T5 = 10
 - **One family one slot**: Base + evolved form can't both be on team
-- Tier distribution: 21 T1 / 15 T2 / 12 T3 / 6 T4 / 6 T5 = 60 (10 per element)
-- All 60 units evolve (T1-T2 get named evolutions, T3-T4 get stat+ability upgrades, T5 get enhanced passive)
-- Team size: Start 2 slots, +1 every 2 levels → 7 at lvl 10, Barracks unlocks at lvl 10 (+2 max = 9 total)
+- Tier distribution: 21 T1 / 15 T2 / 12 T3 / **12 T4** (was 6) / 6 T5 = **66**
+- All 66 units evolve (T1-T2 get named evolutions, T3-T4 get stat+ability upgrades, T5 get enhanced passive)
+- **Team size**: Start **3** slots, +1 at levels 4/8/12/16, Sustained Bonds upgrade at L17 → **max 8**
+- **Tiered star-up**: T1=3, T2=4, T3=5, T4=8, T5=10 copies per star. 3 stars to evolve.
 - **Only T5 units have passive abilities (MaxMana 0). All others use mana.**
 
 ### What's Done (Phase 2 — COMPLETE)
@@ -164,13 +165,13 @@ The combat engine is being rebuilt from scratch per COMBAT-DESIGN.md. Implementa
 - Source of truth for boss encounter details: CONTENT-DESIGN.md section 4
 
 **Phase 2 — Expanded Roster** (IMPLEMENTED — all 5 prompts done, see UNITS-DESIGN.md):
-- **Full roster redesign**: 60 base units (up from 20), all evolve → 120 total
+- **Full roster redesign**: 66 base units (up from 20), all evolve → 132 total
 - **2 new elements**: Lightning (crits/chain), Force (physical/neutral) — requires new ELEMENT_SYNERGIES, ARCHETYPES data
 - **9 archetypes** (was 6): +Ranger, +Sorcerer, +Duelist, +Warden, -Striker
 - **Element synergy overhaul**: 2/4/7/10 thresholds (was 2/4), prismatic 10-bonus
 - **Team size overhaul**: Start 2, +1/2 levels → 7 at lvl 10, Barracks at lvl 10 (+2 = 9 max)
 - **One family one slot rule**: Base+evolved can't coexist on team
-- Innate passives for all 60 units, abilities for all 60
+- Innate passives for all 66 units, abilities for all 66
 - Unit bonds system (6 elemental duos, 4 cross-element duos, 6 trios)
 - Ascension system (Awakened → Exalted → Transcendent)
 
@@ -201,9 +202,9 @@ The combat engine is being rebuilt from scratch per COMBAT-DESIGN.md. Implementa
 **Phase 6 — Hero + Item Rework** (IN PROGRESS):
 - [x] Unit XP/levels + ascension + secondary archetypes (prompt 26)
 - [x] Archetype synergy rework to 2/4/6/8, archetype-scoped (prompts 25+27)
-- [ ] **Hero system** (prompt 29 — IN PROGRESS): 8 heroes, skill trees, story integration
+- [x] **Hero system REDESIGNED** (Session 11 — HERO-REWORK.md): 6 philosophy-based heroes matched to story cast. Prompt 29 needs revision to match new design.
 - [ ] **Item system rework** (prompt 30 — WRITTEN, awaiting 29): RPG equipment + Diablo loot
-- [ ] Progression/balance pass (gold economy, XP curves, power curve — NOT YET STARTED)
+- [x] **Progression/economy rework** (Session 11 — DESIGNED): See PROGRESSION-REWORK.md. Gold→Veil Essence, tiered star-up, 12 T4 units, 74 stages, camp practices replace buildings
 
 **Phase 7 — Visual & Audio Polish** (deferred, considering Unity port):
 - [ ] Sprite system (replace emoji with art)
@@ -212,7 +213,7 @@ The combat engine is being rebuilt from scratch per COMBAT-DESIGN.md. Implementa
 - [ ] Screen transitions
 
 **Mission & Region System** (DESIGNED — see MISSIONS-DESIGN.md):
-- 8 regions, ~45-50 stages total (37-42 regular + 8 boss stages)
+- 8 regions, **74 stages total** (9-9-9-9-10-10-10-8 per region, see PROGRESSION-REWORK.md)
 - **Lock system**: Minimum count requirements on team composition (e.g., "2 Guardians", "4 elements"). Grayed-out deploy if unmet. Locks are the tutorial — force the player to use systems instead of popup tutorials.
 - **6 reusable encounter mechanics** (first appear Region 4, reused in R7, R8, bosses):
   - VIP Target (kill priority enemy to remove buff/heal), Countdown (destroy structure before wipe timer), Reinforcement Pressure (fixed spawn points produce enemies on interval), Protect the Objective (keep friendly NPC alive), Split Formation (team forced into two groups), Escalating Threat (enemy ramps stats over time)
@@ -235,15 +236,15 @@ The combat engine is being rebuilt from scratch per COMBAT-DESIGN.md. Implementa
 
 ### Key Design Decisions (V2)
 - **Persistent progression**: Units, buildings, progress all persist via localStorage
-- **10-copy star-up**: `1.8^(stars-1)` scaling, uncapped stars (may reduce to 5 copies for single-player — TBD)
+- **Tiered star-up**: T1=3, T2=4, T3=5, T4=8, T5=10 copies/star. `1.8^(stars-1)` scaling. 3 stars to evolve. See PROGRESSION-REWORK.md.
 - **Unit XP/Levels**: Per-unit, 1-30, +2% stats/level, XP from combat (deployed units only)
 - **Ascension**: Awakened (L15, +10%, secondary archetype) → Exalted (L25, +30%, ability scaling) → Transcendent (L30, +65%, primary counts as 2 + new ability effect)
-- **Hero system**: 8 story characters equip onto units. Enable item equipping. Own XP + skill trees (2 branches, 20 levels). B dies R4, fragment R7.
+- **Hero system (REWORKED)**: 6 philosophy-based heroes (Kael/Protection, Lyric/Efficiency, Ren/Steadfast, Sera/Precision, Maren/Sustain, Voss/Momentum). Heroes modify playstyle of any unit regardless of archetype. Enable item equipping. Own XP + skill trees (2 branches, 20 levels). Lyric dies R4 permanently (no fragment). 5 heroes for 8 team slots = 3 unhero'd units. See HERO-REWORK.md.
 - **Item system (rework)**: RPG equipment (8 slots). Two-axis loot: Tier (region-gated) × Rarity (RNG). Random affixes, passives at Epic/Legendary. Diablo 4 style.
-- **Single-player pivot**: No daily quests, no stamina, no premium currency. 30-40 hour one-session experience. Gold is the only currency.
+- **Single-player pivot**: No daily quests, no stamina, no premium currency. 30-40 hour one-session experience. **Veil Essence** (harvested from Voidspawn) is the only currency — replaces gold. See STORY-DRAFT-V1.md § Lore-Mechanics Bridge.
 - **Modular JS (global scope)**: All files loaded via `<script>` tags, NO ES modules
 - **Pre-set teams**: Team is locked when mission starts, only repositioning between waves
-- **Building bonuses wired**: Training Ground→XP mult, Warehouse→gold mult, Summoning Circle→roll discount+pity, War Room→mission intel, Barracks→team size
+- **Camp practices replace buildings**: Attunement Rite (summoning), Sustained Bonds (team size), Essence Reservoir (storage), Echo Shaping (crafting), Deep Resonance (evolution), Prism Focus (gems), Veil Wellspring (ambient power), Kindred Circle (bonds). See PROGRESSION-REWORK.md and STORY-DRAFT-V1.md § Lore-Mechanics Bridge.
 - **Evolution via Evolution Lab**: Deliberate player action via building. Evolved units are separate collection entries. Base unit preserved. 3-star base required. (Rework from combat-start system — prompt 09)
 - **Item rarity**: Both component rarities contribute independently to combined item power
 - **Orchestrator pattern**: Cowork session designs features + writes prompts in `prompts/`. To hand off, provide a single paste-ready line for the Claude Code chatbox: `Read the file prompts/XX-name.md and implement everything it describes.` — no CLI commands, no piping.
@@ -256,8 +257,8 @@ Game TFT/
 ├── game.html             ← V1 HTML shell (historical, still playable)
 ├── js/
 │   ├── units-core.js     ← Elements, archetypes (2/4/6/8), synergies, unit functions
-│   ├── units-templates.js ← 60 base + 60 evolved unit templates with secondaryArchetype
-│   ├── units-abilities.js ← 120 ability + 120 passive definitions
+│   ├── units-templates.js ← 66 base + 66 evolved unit templates with secondaryArchetype
+│   ├── units-abilities.js ← 132 ability + 132 passive definitions
 │   ├── units-bonds.js    ← 16 unit bonds (6 elemental, 4 cross-element, 6 trios)
 │   ├── units-ascension.js ← Ascension tiers, XP/leveling, power rating functions
 │   ├── heroes.js         ← Hero definitions, skill trees, hero functions (prompt 29 — in progress)
@@ -315,6 +316,9 @@ Game TFT/
 ├── PROGRESSION-DESIGN.md ← Deep progression/economy design (currencies, stamina, daily loop, prestige)
 ├── CONTENT-DESIGN.md     ← Deep content/meta design (campaign narrative, bosses, endless, arena, lore, pipeline)
 ├── MISSIONS-DESIGN.md    ← Deep mission/region design (8 regions, locks, encounter mechanics, 8 bosses)
+├── PROGRESSION-REWORK.md ← Single-player economy: VE currency, tiered star-up, gacha rates, playtime model
+├── HERO-REWORK.md        ← 6 philosophy-based heroes matched to story cast (replaces HERO-SYSTEM-DESIGN.md)
+├── T4-EXPANSION.md       ← 6 new T4 units (66 total roster), element/archetype coverage
 ├── SCOPE.md              ← Prototype scope: core vs future expansion, 6-phase implementation priority
 ├── DESIGN.md             ← V1 game design (historical reference)
 ├── MECHANICS.md          ← Engine-agnostic mechanics reference (V1)
@@ -389,11 +393,11 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
   - Created prompt 11b (fix-grid-orientation): Corrective prompt to change grid from 4×14 horizontal to 8×7 vertical (rows 0-3 enemy, rows 4-7 player). Maps team builder row→combat row via `7-teamRow`. Adds enemy zone preview to team builder.
   - Remaining: hub/social
 - **Session 8 (2026-03-17 → 2026-03-18)**: Roster expansion design + Phase 2 implementation prompts + Git init.
-  - Expanded roster: 60 base → 120 total (all tiers evolve, fixing T3+ inconsistency)
+  - Expanded roster: 66 base → 132 total (all tiers evolve, fixing T3+ inconsistency)
   - Created prompts 17-20 (5 chunks: systems foundation, unit data, passives+abilities, legendaries, integration)
   - MISSIONS-DESIGN.md created in separate session — reviewed, non-mission info extracted to CONTINUITY.md
   - 9 open design questions captured (boss reconciliation, feature gating, war room, grind missions, etc.)
-  - **Claude Code implemented ALL Phase 2 prompts (17, 18, 19a, 19b, 20)**: 6 elements, 9 archetypes, 60+60 units, passive system, legendary abilities, gacha/UI overhaul, save migration v4
+  - **Claude Code implemented ALL Phase 2 prompts (17, 18, 19a, 19b, 20)**: 6 elements, 9 archetypes, 66+66 units, passive system, legendary abilities, gacha/UI overhaul, save migration v4
   - Git initialized: repo at https://github.com/whcheong2008/gameTft, tagged `v0.2.0-phase1-complete`
   - Created prompt 21 (git-init) for Claude Code handoff
   - Project folder moving out of Dropbox to local directory (GitHub is now the backup)
@@ -418,11 +422,50 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
   - Phase 4 regions + Phase 5 progression both COMPLETE. Endless mode, challenge modes, lore system now unblocked
   - **Prompt 24** (UI wiring + QoL): Region map UI, new building panels, achievements, stats dashboard, combat bonuses wired, team builder sorting, building confirmations, ability/synergy descriptions, removed daily quests + War Room + Training Ground
   - **Prompt 25** (design-only): Synergy rework proposal → SYNERGY-REWORK.md. All 9 archetypes reworked to archetype-scoped buffs at 2/4/6/8 thresholds. Duelist ramping ATK capped at 40%.
-  - **Prompt 26** (unit progression): Split units.js → 5 files (core, templates, abilities, bonds, ascension). Added unit XP/levels (1-30), ascension system (Awakened/Exalted/Transcendent), secondary archetypes for all 60 units, unit bonds (16 total), power rating formula, combat benchmark system. Save v6→v7.
+  - **Prompt 26** (unit progression): Split units.js → 5 files (core, templates, abilities, bonds, ascension). Added unit XP/levels (1-30), ascension system (Awakened/Exalted/Transcendent), secondary archetypes for all 66 units, unit bonds (19 total), power rating formula, combat benchmark system. Save v6→v7.
   - **Prompt 27** (synergy implementation): All 9 archetype synergies replaced with reworked versions. New combat effects (last-stand, CC spread, death-save, focused shot, spell penetration, etc.) implemented.
   - **Prompt 28** (design-only): Item system redesign → ITEMS-REDESIGN.md. Diablo-style tier × rarity loot with 39 item lines, random affixes, passives at Epic/Legendary.
   - Designed hero system → HERO-SYSTEM-DESIGN.md: 8 heroes with skill trees, B dies R4, fragment R7, availability timeline per region.
   - **Prompt 29** (hero system): LAUNCHED, awaiting completion. Implements heroes.js, hero data, skill trees, combat integration, hero management UI.
   - **Prompt 30** (item rework): WRITTEN, not yet launched. Depends on prompt 29. Replaces items.js with RPG equipment + Diablo loot.
-  - **Still to discuss**: Progression/balance (gold economy, XP curves, star-up requirements, R4 power dip)
+  - **Still to discuss**: ~~Progression/balance~~ (DONE — see Session 11), hero system alignment to story
   - Main at `bc06c9b`. Story being developed in separate session (STORY PLAN.md, STORY-DRAFT-V1.md)
+- **Session 11 (2026-03-19)**: Progression rework + story integration.
+  - **Progression economy rework** → PROGRESSION-REWORK.md:
+    - Gold renamed to **Veil Essence** (harvested from Voidspawn). Currency has narrative justification.
+    - Hub renamed to **Camp** with **practices** (not buildings). Practices mapped to lore: Attunement Rite (summoning), Sustained Bonds (team size), Essence Reservoir (storage), Echo Shaping (crafting), Deep Resonance (evolution), Prism Focus (gems), Veil Wellspring (ambient power), Kindred Circle (bonds).
+    - Roll cost: 50 VE single, 450 VE 10-rite (was ~5g)
+    - **Tiered star-up**: T1=3, T2=4, T3=5, T4=8, T5=10 copies/star (was flat 10). 3 stars to evolve.
+    - **T4 expanded to 12 units** (was 6). 6 new T4 units needed (suggest 2 Lightning + 2 Force + 1 Fire + 1 Water).
+    - Total units: 66 (was 60). Total with evolved: 132.
+    - **Team size**: Start 3, +1 at L4/L8/L12/L16, Sustained Bonds upgrade at L17 → max 8 (was start 2, +1/2 levels, max 9).
+    - **Stages per region**: 9-9-9-9-10-10-10-8 = 74 total (was ~47).
+    - Gacha rates gated by player level (not region). T5 enters at L15 (~2%), caps at 10% at L20.
+    - XP diminishing returns for overleveled content. No hard region locks.
+    - Campaign total: ~71,650 VE, ~637 rites, ~10 hr first clear, ~30-35 hr total with post-game.
+    - Removed: stamina, gems, daily quests, weekly quests (all live-service artifacts).
+  - **Story updates** (STORY-DRAFT-V1.md):
+    - Added Lore-Mechanics Bridge section mapping all game systems to story world
+    - Added Veil Crystal (roster = dormant Echoes), Veil Essence (currency), Attunement Rite (summoning) terminology
+    - False cosmology reworked: Luminous Plane vs Void (two separate dimensions) is the false understanding. Truth: one Otherside, one opening.
+    - Clue 2 (R2) redesigned: Triple-buried among genuine ancient mistakes. Wellspring discovery (future Nexus) is the scene's focus, hiding the "Veilcrossers" clue in plain sight.
+    - R5 opening updated: Otho connects Wellspring from R2 to seal theory — feels earned, not contrived.
+    - Design notes section expanded with false cosmology analysis and clue escalation breakdown.
+  - **Hero system deferred**: 8 placeholder heroes don't match story cast (Kael, Lyric, Senna, Otho, Mira, Voss). Will redesign after story is finalized. Prompt 29 (hero implementation) may need revision.
+  - **Open design items**: 6 new T4 unit designs, hard mode details, hero system alignment to story, exact XP curve tuning
+  - **T4 Expansion** → T4-EXPANSION.md:
+    - 6 new T4 units designed (one per element, covering all 4 missing archetypes at T4):
+      - Ashen Watcher (Fire/Sage/Healer), Abyssal Guardian (Water/Guardian/Tank), Grove Warden (Earth/Ranger/Archer)
+      - Tempest Weaver (Wind/Sorcerer/Mage), Voltfang Stalker (Lightning/Predator/Assassin), Iron Duelist (Force/Duelist/Warrior)
+    - All 9 archetypes now represented at T4. Every element has exactly 2 T4 units.
+    - Full specs: stats, innate passives, abilities, evolved forms, secondary archetypes, 3 new bonds.
+    - Total roster: 66 base → 132 with evolved.
+  - **Hero Rework** → HERO-REWORK.md:
+    - 6 heroes (down from 8), matched to story Resonants: Kael, Lyric, Ren, Sera, Maren, Voss.
+    - Philosophy-based design: heroes are playstyle modifiers, not role amplifiers. Kael on a Mage = protector-mage.
+    - Kael (Protection), Lyric (Efficiency), Ren (Steadfast), Sera (Precision), Maren (Sustain), Voss (Momentum).
+    - Lyric's death is permanent — no fragment system. Voss in R7 is a different philosophy, not a replacement.
+    - 5 heroes for 8 team slots = 3 units without heroes/items. Meaningful team-building constraint.
+    - R4 power dip: 5→2 heroes (Kael + Ren only). Mechanically devastating, matches story.
+    - Full skill trees (2 branches × 5 tiers × 2 choices per tier, 20 levels). Tier costs: 1/1/2/4/5. Capstone (5pt) + other branch T4 (4pt) = impossible at 20pt budget — forces real build choices.
+  - **Open design items remaining**: hard mode details, exact XP curve tuning, prompt 29/30 revision for new hero/progression systems

@@ -2,7 +2,7 @@
 // units-abilities.js — Ability data and passive data for all units
 // =============================================================================
 // =============================================================================
-// ABILITY DATA (120 entries: 60 base + 60 evolved)
+// ABILITY DATA (132 entries: 66 base + 66 evolved)
 // =============================================================================
 
 var ABILITY_DATA = {
@@ -16,6 +16,7 @@ var ABILITY_DATA = {
     pyromancer:      { name: 'Infernal Storm',   desc: 'Cast storm at location, dealing 200% ATK to all enemies in area over 3s. Apply Burn (25 DPS, 4s).' },
     inferno_fox:     { name: 'Spirit Rush',      desc: 'Dash 3 times to 3 different enemies over 1.5s, dealing 100% ATK each. Final target takes 200%.' },
     fire_dragon:     { name: 'Breath Weapon',    desc: 'Breathe fire in a cone, dealing 250% ATK and applying Burn (30 DPS, 4s). Stun closest hit enemy for 1.5s.' },
+    ashen_watcher:   { name: 'Pyre of Renewal', desc: 'Target lowest-HP ally. Column of flame erupts beneath them, healing for 300% ATK over 3s. Target immune to CC during heal. If Burning, consume Burn and increase heal 50%.' },
     phoenix:         { name: 'Rebirth',          desc: 'PASSIVE: On death, revive after 3s at 50% HP. First revive always triggers; subsequent on kills. Explode on revive for 150% ATK in area.' },
 
     // --- WATER BASE ---
@@ -28,6 +29,7 @@ var ABILITY_DATA = {
     tidal_shaman:    { name: 'Tidal Surge',      desc: 'Heal all Water allies for 160% ATK. They gain 15% dodge for 3s.' },
     riptide_blade:   { name: 'Maelstrom Spin',   desc: 'Spin rapidly, dealing 180% ATK to nearby enemies and applying Slow (20% AS, 3s). Gain 20% lifesteal for 4s.' },
     kraken:          { name: 'Maelstrom',        desc: 'Create whirlpool at target location (2-cell radius). Over 4s, deal 280% ATK total to enemies and pull them 1 cell toward center each second.' },
+    abyssal_guardian:{ name: 'Tidal Fortress',  desc: 'Slam ground, creating 2-cell radius zone for 5s. Enemies Slowed 25%, take 80% ATK/s. Allies +10% DR. Guardian Rooted during channel, gains +20% DR.' },
     leviathan:       { name: 'Tidal Guardian',   desc: 'PASSIVE: Water allies gain 12% max HP and 8% DR. Enemies hitting Leviathan lose 8 mana. Start combat with 200 shield.' },
 
     // --- EARTH BASE ---
@@ -40,6 +42,7 @@ var ABILITY_DATA = {
     golem:           { name: 'Ground Slam',      desc: 'Slam ground dealing 180% ATK to nearby enemies and stunning them 1.2s. Grant self 15% DR for 4s.' },
     terra_sage:      { name: 'Earthen Barrage',  desc: 'Launch 3 earth projectiles at 3 highest-ATK enemies, each dealing 140% ATK and reducing their ATK 18% for 4s.' },
     ancient_treant:  { name: 'Nature\'s Wrath',  desc: 'Strike target dealing 220% ATK and rooting for 2s. Heal all Earth allies for 15% of damage dealt.' },
+    grove_warden:    { name: 'Thornstorm',      desc: 'Fire 5 thorn projectiles at random enemies. Each deals 120% ATK and applies Slow 15% for 2s. Rooted or Slowed targets take 40% bonus damage.' },
     world_tree:      { name: 'Bloom of Life',    desc: 'PASSIVE: Every 8s, nearest lowest-HP 3 allies heal for 250% ATK. Overhealing converts to Shield (60%). Earth allies +10% healing received.' },
 
     // --- WIND BASE ---
@@ -52,6 +55,7 @@ var ABILITY_DATA = {
     monsoon_caller:  { name: 'Tornado',          desc: 'Summon tornado at location. Deals 200% ATK over 3s to enemies in area (2-cell radius). Silence them 2s.' },
     wind_duelist:    { name: 'Cyclone Slash',    desc: 'Spin slash, dealing 190% ATK in area. Gain 30% dodge for 3s. Reset dodge stacks.' },
     storm_sovereign: { name: 'Thunder Cleave',   desc: 'Teleport to lowest-HP enemy and deal 280% ATK. Adjacent enemies take 100% ATK splash.' },
+    tempest_weaver:  { name: 'Cyclone Barrage', desc: 'Launch twisting projectile at highest-ATK enemy. Deal 220% ATK, knock 1 cell back. If knocked into another enemy, both take 120% ATK and Slow 20% for 2s.' },
     void_wyrm:       { name: 'Dimensional Rift', desc: 'PASSIVE: When any ally casts ability, fire bolt at random enemy for 90% ATK. Fires more often with ability-heavy teams.' },
 
     // --- LIGHTNING BASE ---
@@ -64,6 +68,7 @@ var ABILITY_DATA = {
     ball_lightning:  { name: 'Sphere Summoning', desc: 'Summon ball lightning at location. It rolls toward enemies, dealing 180% ATK to each it hits and chaining damage.' },
     thunder_warden:  { name: 'Lightning Prison', desc: 'Emit lightning that stuns nearby enemies 1s and applies chain damage. Grant self 8% DR per Lightning ally for 5s.' },
     thunderbird:     { name: 'Lightning Descent', desc: 'Dive at lowest-HP enemy dealing 240% ATK and applying chain damage. Stun nearby enemies 0.8s.' },
+    voltfang_stalker:{ name: 'Lightning Pounce', desc: 'Dash to lowest-HP enemy within 4 cells, deal 200% ATK. On kill, dash to next lowest-HP and deal 150% ATK. Chain up to 3 kills. Each dash leaves Afterimage (2s, 50% ATK to enemies stepping through).' },
     storm_dragon:    { name: 'Cataclysmic Storm', desc: 'PASSIVE: Every 6s, strike target with lightning dealing 300% ATK and chaining to all nearby enemies. Chains crit at 50%.' },
 
     // --- FORCE BASE ---
@@ -76,6 +81,7 @@ var ABILITY_DATA = {
     gladiator:       { name: 'Brutal Strike',    desc: 'Perform powerful strike, dealing 220% ATK and applying 15% DR reduction to target for 4s.' },
     fortress:        { name: 'Defensive Stance', desc: 'Gain +12% DR for 6s. Taunt nearby enemies for 2s and reduce their ATK by 20%.' },
     siege_engineer:  { name: 'Artillery Strike', desc: 'Target furthest enemy and deal 280% ATK. Create impact crater (40% slow, 3s) around target.' },
+    iron_duelist:    { name: 'Decisive Strike', desc: 'Next auto-attack deals 280% ATK and ignores 30% of target\'s DR. If target is Rival, apply Wound (target receives 30% less healing, 2s).' },
     titan_lord:      { name: 'Earthshaker',      desc: 'PASSIVE: Every 7s, slam ground dealing 320% ATK in area. Enemies rooted 2s and take 20% more damage for 5s. Force allies +15% ATK.' },
 
     // --- FIRE EVOLVED ---
@@ -130,41 +136,47 @@ var ABILITY_DATA = {
     arcane_inferno:      { name: 'Infernal Storm Enhanced', desc: 'Cast storm at location creating persistent fire zones. Deal 250% ATK over 4s. Apply Burn (30 DPS, 4s). Burn reapplies on zone entry.' },
     ninetail_blaze:      { name: 'Spirit Rush Enhanced', desc: 'Dash 5 times to 5 different enemies over 2s, dealing 120% ATK each. Final target takes 240%. Apply Burn to all hit.' },
     elder_wyrm:          { name: 'Breath Weapon Enhanced', desc: 'Breathe fire in extended cone dealing 280% ATK. Stun all hit for 2s. Apply Burn (30 DPS, 4s) in area.' },
+    phoenix_priest:      { name: 'Pyre of Renewal Enhanced', desc: 'Target lowest and second-lowest HP allies. Column of flame erupts beneath them, healing 300% ATK over 3s. Target immune to CC during heal. If Burning, consume and heal +50%. Leave healing zone (50% ATK/s, 3s, 2-cell radius).' },
     eternal_phoenix:     { name: 'Rebirth Enhanced',     desc: 'PASSIVE: On death, revive after 2s at 70% HP. Always triggers. Explode on revive for 250% ATK. Fire allies gain 20% ATK for 6s.' },
 
     // --- WATER T3-T5 EVOLVED ---
     stormtide_oracle:    { name: 'Tidal Surge',          desc: 'Heal lowest-HP ally for 200% ATK. Grant 25% dodge for 4s. Apply 18% Slow to 2 nearest enemies.' },
     tsunami_warlord:     { name: 'Maelstrom Spin',       desc: 'Spin dealing 230% ATK to all nearby enemies. Apply 30% Slow. Heal for 35% of damage dealt. Stun Slowed enemies 0.5s.' },
     abyssal_terror:      { name: 'Maelstrom Enhanced',    desc: 'Deal 400% ATK total over 4s, pulling enemies 2 cells per second. Apply Slow (30%, 4s) to all in area.' },
+    hadal_colossus:      { name: 'Tidal Fortress Enhanced', desc: 'Slam ground, creating 3-cell radius zone for 5s. Enemies Slowed 35%, take 80% ATK/s. Allies +10% DR. Guardian Rooted during channel, gains +20% DR. Enemies leaving zone Rooted 1s.' },
     primordial_leviathan:{ name: 'Tidal Guardian Enhanced', desc: 'PASSIVE: Water allies gain 18% max HP and 12% DR. Enemies lose 12 mana on hit. Start with 400 shield. Every 7s, pull enemies 1 cell closer.' },
 
     // --- EARTH T3-T5 EVOLVED ---
     iron_colossus:       { name: 'Ground Slam Enhanced', desc: 'Slam ground dealing 250% ATK. Stun for 1.8s. Grant 22% DR to nearby allies for 4s. Reduces AoE damage taken by 18%.' },
     earthweaver:         { name: 'Earthen Barrage',      desc: 'Launch 5 earth projectiles dealing 180% ATK each. Reduce enemy ATK by 25% for 4s. Grant allies 25% max HP shields.' },
     world_sentinel:      { name: 'Nature\'s Wrath',      desc: 'Deal 300% ATK to target. Root for 3s. Heal self for 25% of damage dealt. Grant immunity to slows.' },
+    worldroot_sentinel:  { name: 'Thornstorm Enhanced',  desc: 'Fire 7 thorn projectiles at random enemies. Each deals 120% ATK, apply Slow 15% for 2s. Rooted/Slowed targets take 40% bonus. Plant Seedlings on each hit (4s duration). Seedlings Root enemies stepping on them (1.5s).' },
     yggdrasil:           { name: 'Bloom of Life Enhanced', desc: 'PASSIVE: Every 6s, heal 4 allies for 350% ATK. Overhealing converts to Shield (80%). Earth allies +15% healing. Dead allies revive once at 30% HP.' },
 
     // --- WIND T3-T5 EVOLVED ---
     tempest_lord:        { name: 'Tornado Enhanced',     desc: 'Summon tornado in 3-cell radius dealing 300% ATK. Silence all hit for 3s. Knock back enemies 1 cell.' },
     hurricane_blade:     { name: 'Cyclone Slash',        desc: 'Spin dealing 260% ATK to nearby enemies. Grant self 45% dodge for 4s. Apply Slow to all hit.' },
     tempest_emperor:     { name: 'Thunder Cleave',       desc: 'Deal 380% ATK in 2-cell splash. Guaranteed crit. Apply 15% Slow. Resets on kill.' },
+    stormweft_oracle:    { name: 'Cyclone Barrage Enhanced', desc: 'Launch twisting projectile at highest-ATK enemy. Deal 220% ATK, knock 2 cells back. If knocked into wall/edge, Stun 1.5s. If into another enemy, both take 120% ATK and Slow 20% for 2s. Max 4 vortices.' },
     dimensional_dragon:  { name: 'Dimensional Rift Enhanced', desc: 'PASSIVE: When ally casts ability, fire 2 bolts at 120% ATK each. Every 10s, open rift dealing 150% ATK area damage.' },
 
     // --- LIGHTNING T3-T5 EVOLVED ---
     plasma_core:         { name: 'Sphere Summoning',     desc: 'Summon 2 lightning balls that orbit and deal 25 DPS each. Balls chain to enemies, applying +18% damage taken for 4s.' },
     storm_fortress:      { name: 'Lightning Prison Enhanced', desc: 'Create 2-cell radius prison. Stun for 1.5s. Grant 10% DR per ally inside. Excess crits convert to 1s stuns.' },
     roc_of_storms:       { name: 'Lightning Descent Enhanced', desc: 'Dive dealing 330% ATK. Stun for 1.5s. Chain lightning to nearby enemies. First hit guarantees crit.' },
+    plasma_ravager:      { name: 'Lightning Pounce Enhanced', desc: 'Dash to lowest-HP enemy within 4 cells, deal 200% ATK. On kill, dash to next lowest-HP and deal 200% ATK. Chain up to 4 kills. Each dash leaves Afterimage (2s). Afterimages explode after 2s for 100% ATK in 1-cell radius.' },
     thunder_god:         { name: 'Cataclysmic Storm Enhanced', desc: 'PASSIVE: Every 4.5s, strike dealing 450% ATK. Chain to all nearby enemies. Chains always crit. Lightning allies +25% crit damage.' },
 
     // --- FORCE T3-T5 EVOLVED ---
     champion:            { name: 'Brutal Strike Enhanced', desc: 'Deal 320% ATK. Apply 25% DR reduction for 4s. Stun target 0.8s on kill. Triggers every 2 attacks.' },
     citadel:             { name: 'Defensive Stance Enhanced', desc: 'Gain +18% DR for 8s. Taunt at 2-cell range for 3s. Reduce enemy ATK by 30%. Immune to all CC.' },
     war_architect:       { name: 'Artillery Strike Enhanced', desc: 'Deal 380% ATK to furthest enemy. 2-cell crater with 50% slow for 4s. Ignore 25% DR.' },
+    warforged_champion:  { name: 'Decisive Strike Enhanced', desc: 'Next auto-attack deals 350% ATK, ignores 50% of target\'s DR. If target is Rival, apply Wound (30% less healing, 2s). On kill, refund 50% mana. If Rival killed, gain +10% permanent ATK (stacks).' },
     cosmic_titan:        { name: 'Earthshaker Enhanced', desc: 'PASSIVE: Every 5.5s, slam dealing 480% ATK. Root 3s. Damage amp 25% for 6s. Force allies +20% ATK and +10% DR.' }
 };
 
 // =============================================================================
-// PASSIVE DATA (60 base unit innate passives)
+// PASSIVE DATA (66 base unit innate passives)
 // =============================================================================
 
 var PASSIVE_DATA = {
@@ -178,6 +190,7 @@ var PASSIVE_DATA = {
     pyromancer:      { name: 'Pyromaniac',       desc: 'Burn effects on enemies hit by Pyromancer last 50% longer and deal 20% more DPS.', trigger: 'on_attack', params: { burnDurationMultiplier: 1.5, burnDpsMultiplier: 1.20 } },
     inferno_fox:     { name: 'Foxfire',          desc: 'Leaves fire trail when moving. Trail lasts 2.5s and deals 18 DPS to enemies on it.', trigger: 'periodic', params: { trailDps: 18, trailDuration: 2.5 } },
     fire_dragon:     { name: 'Dragonfire Aura',  desc: 'Enemies within 2 cells take 20 fire damage per second.', trigger: 'aura', params: { auraDps: 20, range: 2 } },
+    ashen_watcher:   { name: 'Ember Shroud',    desc: 'Heals on allies linger as warm afterglow. Healed allies gain Shield equal to 15% of heal amount for 4s. Applies to all heals (abilities, lifesteal, regen). If ally Burning, shield grants 2s Burn immunity when applied.', trigger: 'on_heal', params: { shieldPct: 0.15, shieldDuration: 4, burnImmunityDuration: 2 } },
     phoenix:         { name: 'Eternal Flame',    desc: 'While alive, all Fire allies gain 15% ATK and 8% lifesteal. On revival, aura doubles for 6s.', trigger: 'aura', params: { atkBonus: 0.15, lifesteal: 0.08, range: 999 } },
 
     // --- WATER ---
@@ -190,6 +203,7 @@ var PASSIVE_DATA = {
     tidal_shaman:    { name: 'Scepter of Tides', desc: 'Heals also apply Slow (12% AS, 2s) to nearest enemy.', trigger: 'on_attack', params: { slowPct: 0.12, slowDuration: 2 } },
     riptide_blade:   { name: 'Current',          desc: 'Attacks against Slowed enemies have 25% chance to grant +25% ATK for 3s.', trigger: 'on_attack', params: { procChance: 0.25, atkBonus: 0.25, atkDuration: 3, condition: 'target_slowed' } },
     kraken:          { name: 'Ink Cloud',        desc: 'Every 15s, release ink cloud (2-cell radius). Enemies in it have 35% miss chance for 3s.', trigger: 'periodic', params: { cooldown: 15, range: 2, missChance: 0.35, duration: 3 } },
+    abyssal_guardian:{ name: 'Pressure Depths', desc: 'For every 10% max HP lost, gain +3% DR (stacks up to +30% at 1 HP). Attacks against this unit slowed 10%. Deeper health drops, harder to finish the kill.', trigger: 'aura', params: { drPerTenPct: 0.03, drMax: 0.30, attackerSlowPct: 0.10 } },
     leviathan:       { name: 'Abyssal Depths',   desc: 'Every 10s, submerge for 1.5s (untargetable). On resurfacing, deal 120% ATK and apply Slow (25% AS, 4s).', trigger: 'periodic', params: { cooldown: 10, submergeDuration: 1.5, emergeDamage: 1.20, slowPct: 0.25, slowDuration: 4 } },
 
     // --- EARTH ---
@@ -202,6 +216,7 @@ var PASSIVE_DATA = {
     golem:           { name: 'Immovable',        desc: 'Cannot be knocked back, pulled, or displaced. Takes 12% reduced damage from AoE.', trigger: 'combat_start', params: { displacementImmune: true, aoeDR: 0.12 } },
     terra_sage:      { name: 'Living Earth',     desc: 'Every time Terra Sage casts ability, nearest ally gains Shield equal to 18% max HP.', trigger: 'on_attack', params: { allyShieldPct: 0.18 } },
     ancient_treant:  { name: 'Deep Roots',       desc: 'Cannot be slowed below 75% of base move speed. Regenerate 1.2% max HP/sec while standing still.', trigger: 'combat_start', params: { minMoveSpeedPct: 0.75, regenPct: 0.012 } },
+    grove_warden:    { name: 'Deep Roots',       desc: 'While stationary for 3+ seconds, gain +15% ATK and +1 Range (total 6). Auto-attacks from rooted position have 20% chance to apply Root (1s) to target. Moving resets timer.', trigger: 'periodic', params: { stationaryDuration: 3, atkBonus: 0.15, rangeBonus: 1, rootChance: 0.20, rootDuration: 1 } },
     world_tree:      { name: 'Roots of Life',    desc: 'Allies heal 1.2% max HP per second passively, even if silenced/stunned.', trigger: 'aura', params: { healPct: 0.012, range: 999 } },
 
     // --- WIND ---
@@ -214,6 +229,7 @@ var PASSIVE_DATA = {
     monsoon_caller:  { name: 'Updraft',          desc: 'Kills grant all Wind allies 10% ATK speed for 5s (stacks up to 4 times).', trigger: 'on_kill', params: { atkSpdBonus: 0.10, duration: 5, maxStacks: 4, element: 'wind' } },
     wind_duelist:    { name: 'Dance of Blades',  desc: 'Every attack grants +5% dodge (max 5 stacks).', trigger: 'on_attack', params: { dodgePerStack: 0.05, maxStacks: 5 } },
     storm_sovereign: { name: 'Lightning Speed',  desc: 'First auto-attack after repositioning guarantees crit.', trigger: 'on_attack', params: { guaranteedCrit: true, condition: 'after_reposition' } },
+    tempest_weaver:  { name: 'Lingering Gales', desc: 'Whenever Tempest Weaver casts ability, Vortex remains on target cell for 6s. Vortices deal 20% ATK/s to enemies, grant +15% dodge to allies. Max 3 active (oldest fades when 4th created). Stack with Wind dodge bonuses.', trigger: 'on_ability_cast', params: { vortexDps: 0.20, vortexAllydodgeBonus: 0.15, maxVortices: 3, vortexDuration: 6 } },
     void_wyrm:       { name: 'Reality Warp',     desc: 'Auto-attacks teleport target 1 cell in random direction (3s cooldown per target).', trigger: 'on_attack', params: { teleportDistance: 1, cooldownPerTarget: 3 } },
 
     // --- LIGHTNING ---
@@ -226,6 +242,7 @@ var PASSIVE_DATA = {
     ball_lightning:  { name: 'Rolling Thunder',  desc: 'Creates persistent lightning orb (5s). Orb damages nearby enemies 15 DPS. Enemies hitting it take +12% damage.', trigger: 'periodic', params: { orbDuration: 5, orbDps: 15, damageAmp: 0.12 } },
     thunder_warden:  { name: 'Overcharge',       desc: 'Converts excess crits into stuns. Takes +8% crit damage.', trigger: 'on_hit', params: { critDamageIncrease: 0.08, critToStun: true } },
     thunderbird:     { name: 'Aerial Superiority', desc: 'Gains +20% ATK. First attack each combat guarantees crit.', trigger: 'combat_start', params: { atkBonus: 0.20, firstAttackCrit: true } },
+    voltfang_stalker:{ name: 'Overcharge Frenzy', desc: 'Every crit grants +8% ATK speed for 4s (stacks up to 5 = +40%). At max stacks, auto-attacks chain to 1 adjacent enemy for 40% damage. Lightning crit bonus fuels this passive.', trigger: 'on_crit', params: { atkSpdPerStack: 0.08, maxStacks: 5, stackDuration: 4, chainDamage: 0.40, chainCount: 1 } },
     storm_dragon:    { name: 'Superconductor',   desc: 'All Lightning allies gain +18% crit chance. Storm Dragon crits grant nearby Lightning allies +25% ATK for 3s.', trigger: 'aura', params: { allyCritBonus: 0.18, critAtkBonus: 0.25, critAtkDuration: 3, element: 'lightning' } },
 
     // --- FORCE ---
@@ -238,11 +255,12 @@ var PASSIVE_DATA = {
     gladiator:       { name: 'Arena Master',     desc: 'Every 3 attacks, gain +40% ATK for next attack.', trigger: 'on_attack', params: { interval: 3, bonusDamage: 0.40 } },
     fortress:        { name: 'Unbreakable Will', desc: 'Cannot be Rooted, Stunned, or Slowed below base move speed.', trigger: 'combat_start', params: { ccImmune: true } },
     siege_engineer:  { name: 'War Machine',      desc: 'Attacks ignore 15% of target DR.', trigger: 'on_attack', params: { drIgnore: 0.15 } },
+    iron_duelist:    { name: 'Challenge Protocol', desc: 'At combat start, mark highest-ATK enemy as Rival. While fighting Rival, gain +20% ATK and +10% DR. On Rival death, next highest-ATK becomes new Rival. If no Rival in range, gain +15% move speed toward Rival.', trigger: 'combat_start', params: { rivalAtkBonus: 0.20, rivalDrBonus: 0.10, moveSpdBonus: 0.15, rivalDiameter: 5 } },
     titan_lord:      { name: 'Colossus',         desc: 'Gain +25% max HP. Every 5th hit stuns target 1s. First CC immunity per combat.', trigger: 'combat_start', params: { hpBonus: 0.25, stunInterval: 5, stunDuration: 1, firstCcImmune: true } }
 };
 
 // =============================================================================
-// EVOLVED PASSIVE DATA (60 evolved unit passives)
+// EVOLVED PASSIVE DATA (66 evolved unit passives)
 // =============================================================================
 
 var EVOLVED_PASSIVE_DATA = {
@@ -298,35 +316,41 @@ var EVOLVED_PASSIVE_DATA = {
     arcane_inferno:      { name: 'Pyromaniac Enhanced',      desc: 'Burn effects last 70% longer and deal 35% more DPS. Fire zones reapply burn on entry.', trigger: 'on_attack', params: { burnDurationMultiplier: 1.7, burnDpsMultiplier: 1.35, zoneReapply: true } },
     ninetail_blaze:      { name: 'Foxfire Enhanced',         desc: 'Fire trail lasts 4s, deals 30 DPS, and applies Burn (10 DPS, 2s) to enemies on it.', trigger: 'periodic', params: { trailDps: 30, trailDuration: 4, burnDps: 10, burnDuration: 2 } },
     elder_wyrm:          { name: 'Dragonfire Aura Enhanced', desc: 'Aura damage increased to 35 DPS. Extends to 3-cell range.', trigger: 'aura', params: { auraDps: 35, range: 3 } },
+    phoenix_priest:      { name: 'Ember Shroud Enhanced',   desc: 'Heals linger as warm afterglow. Healed allies gain Shield 25% of heal amount for 4s and 2s Burn immunity. Applies to all heals. Second healing zone grants +15% move speed.', trigger: 'on_heal', params: { shieldPct: 0.25, shieldDuration: 4, burnImmunityDuration: 2, areaMoveSpdBonus: 0.15 } },
     eternal_phoenix:     { name: 'Eternal Flame Enhanced',   desc: 'All Fire allies gain 20% ATK and 12% lifesteal. On revival, aura doubles for 8s.', trigger: 'aura', params: { atkBonus: 0.20, lifesteal: 0.12, range: 999, revivalDuration: 8 } },
 
     // --- WATER T3-T5 EVOLVED ---
     stormtide_oracle:    { name: 'Scepter of Tides Enhanced', desc: 'Apply 18% slow to enemies. Heal-Slow spreads to 2 nearest enemies.', trigger: 'on_attack', params: { slowPct: 0.18, spreadTargets: 2 } },
     tsunami_warlord:     { name: 'Current Enhanced',         desc: 'Current trigger rate increases to 35% and grants +40% ATK for next attack.', trigger: 'on_attack', params: { procChance: 0.35, atkBonus: 0.40 } },
     abyssal_terror:      { name: 'Ink Cloud Enhanced',       desc: 'Ink Cloud triggers every 10s, lasts 4s, extends to 3-cell radius.', trigger: 'periodic', params: { cooldown: 10, duration: 4, range: 3 } },
+    hadal_colossus:      { name: 'Pressure Depths Enhanced', desc: 'For every 10% max HP lost, gain +3% DR (up to +40% at 1 HP) and +2% lifesteal. Attacks against this unit slowed 10%. Deeper drops, harder kill and more survivability.', trigger: 'aura', params: { drPerTenPct: 0.03, drMax: 0.40, lifestealPerTenPct: 0.02, attackerSlowPct: 0.10 } },
     primordial_leviathan:{ name: 'Abyssal Depths Enhanced',  desc: 'Submerge every 7s for 2.5s. Resurfacing deals 150% ATK in 2-cell radius and applies Slow.', trigger: 'periodic', params: { cooldown: 7, submergeDuration: 2.5, emergeDamage: 1.50, range: 2 } },
 
     // --- EARTH T3-T5 EVOLVED ---
     iron_colossus:       { name: 'Immovable Enhanced',       desc: 'Reduces AoE damage by 18%. Ground Slam grants nearby allies 22% DR for 4s.', trigger: 'on_hit', params: { aoeDR: 0.18, allyDR: 0.22, allyDrDuration: 4 } },
     earthweaver:         { name: 'Living Earth Enhanced',    desc: 'Procs on every ability cast. Grants allies 25% max HP shields.', trigger: 'on_attack', params: { shieldPct: 0.25, procOnAbility: true } },
     world_sentinel:      { name: 'Deep Roots Enhanced',     desc: 'Prevents all slows. Regen 2% HP per second. Nature\'s Wrath heals for 25% of damage.', trigger: 'combat_start', params: { slowImmune: true, hpRegen: 0.02, healPctOfDamage: 0.25 } },
+    worldroot_sentinel:  { name: 'Deep Roots Enhanced',     desc: 'While stationary 2+ seconds (instead of 3), gain +25% ATK and +2 Range (total 7). Auto-attacks have 20% chance to Root (1.5s). Every Thornstorm plants Seedlings (4s, Root enemies 1.5s on step).', trigger: 'periodic', params: { stationaryDuration: 2, atkBonus: 0.25, rangeBonus: 2, rootChance: 0.20, rootDuration: 1.5 } },
     yggdrasil:           { name: 'Roots of Life Enhanced',   desc: 'All allies heal 1.8% max HP per second passively, even if silenced or stunned.', trigger: 'aura', params: { healPct: 0.018, range: 999 } },
 
     // --- WIND T3-T5 EVOLVED ---
     tempest_lord:        { name: 'Updraft Enhanced',         desc: 'Stacks up to 6 times (60% ATK speed). Allies keep stacks for 7s after moving.', trigger: 'on_attack', params: { atkSpdPerStack: 0.10, maxStacks: 6, allyDuration: 7 } },
     hurricane_blade:     { name: 'Dance of Blades Enhanced', desc: '8% dodge per stack (max 8 stacks, 64% dodge). Cyclone Slash grants 45% dodge.', trigger: 'on_attack', params: { dodgePerStack: 0.08, maxStacks: 8 } },
     tempest_emperor:     { name: 'Lightning Speed Enhanced', desc: 'Guarantees crit on first attack. Applies 15% slow on hit. Thunder Cleave resets on kill.', trigger: 'combat_start', params: { guaranteedCrit: true, slowPct: 0.15, resetOnKill: true } },
+    stormweft_oracle:    { name: 'Lingering Gales Enhanced', desc: 'Ability casts leave Vortices (8s). Vortices deal 30% ATK/s to enemies, grant +25% dodge to allies. Max 4 active. Stack with Wind dodge. Merged zones combine damage and buffs.', trigger: 'on_ability_cast', params: { vortexDps: 0.30, vortexAllyDodgeBonus: 0.25, maxVortices: 4, vortexDuration: 8 } },
     dimensional_dragon:  { name: 'Reality Warp Enhanced',    desc: 'Auto-attacks teleport target 2 cells and apply Slow (15% AS, 3s). 3s cooldown per target.', trigger: 'on_attack', params: { teleportDistance: 2, slowPct: 0.15, slowDuration: 3, cooldownPerTarget: 3 } },
 
     // --- LIGHTNING T3-T5 EVOLVED ---
     plasma_core:         { name: 'Rolling Thunder Enhanced', desc: 'Orb lasts 8s, deals 25 DPS. Enemies in orb take +18% damage. Orb bounces between enemies.', trigger: 'periodic', params: { orbDuration: 8, orbDps: 25, damageAmp: 0.18, bounces: true } },
     storm_fortress:      { name: 'Overcharge Enhanced',      desc: 'Converts excess crits into 1s stuns. Reflects 20% of crit damage converted.', trigger: 'on_hit', params: { critToStun: true, stunDuration: 1, reflectPct: 0.20 } },
     roc_of_storms:       { name: 'Aerial Superiority Enhanced', desc: '+30% ATK. First hit guarantees crit and applies Slow.', trigger: 'combat_start', params: { atkBonus: 0.30, firstAttackCrit: true, applySlow: true } },
+    plasma_ravager:      { name: 'Overcharge Frenzy Enhanced', desc: 'Every crit grants +8% ATK speed (up to 7 = +56%). At max stacks, auto-attacks chain 60% damage to 1 adjacent. Afterimage explosions scale with stacks.', trigger: 'on_crit', params: { atkSpdPerStack: 0.08, maxStacks: 7, stackDuration: 4, chainDamage: 0.60, chainCount: 1 } },
     thunder_god:         { name: 'Superconductor Enhanced',  desc: '+25% crit chance to all Lightning allies. Crits chain to all enemies within 3 cells for +40% ATK.', trigger: 'aura', params: { allyCritBonus: 0.25, critChainRange: 3, critAtkBonus: 0.40, element: 'lightning' } },
 
     // --- FORCE T3-T5 EVOLVED ---
     champion:            { name: 'Arena Master Enhanced',    desc: 'Every 2 attacks, gain +60% ATK for next attack.', trigger: 'on_attack', params: { interval: 2, bonusDamage: 0.60 } },
     citadel:             { name: 'Unbreakable Will Enhanced', desc: 'Immune to all CC effects. Grants nearby allies 5% CC resistance.', trigger: 'combat_start', params: { ccImmune: true, allyCcResist: 0.05 } },
     war_architect:       { name: 'War Machine Enhanced',     desc: 'Ignores 25% DR. Applies 20% additional damage to targets hit by Artillery.', trigger: 'on_attack', params: { drIgnore: 0.25, artilleryDamageAmp: 0.20 } },
+    warforged_champion:  { name: 'Challenge Protocol Enhanced', desc: 'Mark highest-ATK as Rival. While fighting Rival, gain +30% ATK and +15% DR. On Rival death, next highest becomes Rival and gain +10% permanent ATK (stacks). If no Rival in range, +15% move speed.', trigger: 'combat_start', params: { rivalAtkBonus: 0.30, rivalDrBonus: 0.15, permanentAtkPerKill: 0.10, moveSpdBonus: 0.15, rivalDiameter: 5 } },
     cosmic_titan:        { name: 'Colossus Enhanced',        desc: '+35% max HP. Every 4th hit stuns for 1.5s. CC immunity for first 8s of combat.', trigger: 'combat_start', params: { hpBonus: 0.35, stunInterval: 4, stunDuration: 1.5, ccImmuneDuration: 8 } }
 };

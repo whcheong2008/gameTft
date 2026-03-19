@@ -1,40 +1,41 @@
 // =============================================================================
-// gacha.js — Gold-based unit rolling system
+// gacha.js — Veil Essence-based unit rolling system
 // =============================================================================
 
-var ROLL_COST = 5;       // Gold per single roll
+var ROLL_COST = 50;        // VE per single rite
 var MULTI_ROLL_COUNT = 10;
-var MULTI_ROLL_COST = 45; // Slight discount for 10x
+var MULTI_ROLL_COST = 450;  // VE for 10-rite (10% discount)
 
-// Gold cost to buy a unit from shop, by cost tier
-var UNIT_COSTS = { 1: 3, 2: 6, 3: 12, 4: 24, 5: 50 };
+// VE cost to buy a unit from shop, by cost tier
+var UNIT_COSTS = { 1: 30, 2: 60, 3: 120, 4: 240, 5: 500 };
 
 // Cost to refresh the shop
-var SHOP_REFRESH_COST = 2;
+var SHOP_REFRESH_COST = 20;
 
-// Tier weight table: indexed by player level bracket
-// Each row = [cost1%, cost2%, cost3%, cost4%, cost5%]
+// Tier weight table: indexed by player level
+// Each row = [T1%, T2%, T3%, T4%, T5%]
+// T5 enters at L15 (2%), caps at 10% at L20
 var TIER_WEIGHTS = {
-    1:  [70, 25, 5,  0,  0],
-    2:  [70, 25, 5,  0,  0],
-    3:  [70, 25, 5,  0,  0],
-    4:  [50, 30, 15, 5,  0],
-    5:  [50, 30, 15, 5,  0],
-    6:  [30, 30, 25, 12, 3],
-    7:  [30, 30, 25, 12, 3],
-    8:  [15, 25, 30, 20, 10],
-    9:  [15, 25, 30, 20, 10],
-    10: [10, 20, 25, 25, 20],
-    11: [10, 20, 25, 25, 20],
-    12: [10, 20, 25, 25, 20],
-    13: [10, 20, 25, 25, 20],
-    14: [10, 20, 25, 25, 20],
-    15: [10, 20, 25, 25, 20],
-    16: [10, 20, 25, 25, 20],
-    17: [10, 20, 25, 25, 20],
-    18: [5,  15, 25, 30, 25],
-    19: [5,  15, 25, 30, 25],
-    20: [5,  15, 25, 30, 25]
+    1:  [75, 25, 0,  0,  0],
+    2:  [75, 25, 0,  0,  0],
+    3:  [60, 35, 5,  0,  0],
+    4:  [60, 35, 5,  0,  0],
+    5:  [45, 38, 17, 0,  0],
+    6:  [45, 38, 17, 0,  0],
+    7:  [35, 33, 32, 0,  0],
+    8:  [35, 33, 32, 0,  0],
+    9:  [28, 28, 38, 6,  0],
+    10: [28, 28, 38, 6,  0],
+    11: [22, 25, 40, 13, 0],
+    12: [22, 25, 40, 13, 0],
+    13: [18, 22, 38, 22, 0],
+    14: [18, 22, 38, 22, 0],
+    15: [15, 18, 35, 30, 2],
+    16: [15, 18, 35, 30, 2],
+    17: [12, 15, 30, 37, 6],
+    18: [12, 15, 30, 37, 6],
+    19: [10, 12, 25, 43, 10],
+    20: [8,  10, 22, 50, 10]
 };
 
 // Pity: guaranteed cost-5 unit every 50 rolls without one
@@ -96,11 +97,11 @@ function rollOneUnit(playerLevel, minTier) {
 // ---- Pity System ----
 
 function getPityConfig(saveData) {
-    // Building-based pity (bonus from summoning circle)
-    var level = getBuildingLevel(saveData, 'summoning_circle');
+    // Building-based pity (bonus from Attunement Rite)
+    var level = getBuildingLevel(saveData, 'attunement_rite');
     if (level >= 5) return { threshold: 30, minTier: 4 };
     if (level >= 4) return { threshold: 20, minTier: 3 };
-    // Base pity: every 50 rolls guarantees a cost-5 unit
+    // Base pity: every 50 rites guarantees a T5 unit
     return { threshold: PITY_THRESHOLD, minTier: 5 };
 }
 
@@ -160,9 +161,9 @@ function refreshShopUnits(playerLevel) {
 function buyUnit(saveData, unitKey, slotIndex) {
     var tmpl = UNIT_TEMPLATES[unitKey];
     if (!tmpl) return { success: false, reason: 'Unknown unit' };
-    var goldCost = UNIT_COSTS[tmpl.cost] || 3;
-    if (!spendGold(saveData, goldCost)) {
-        return { success: false, reason: 'Not enough gold' };
+    var veCost = UNIT_COSTS[tmpl.cost] || 30;
+    if (!spendGold(saveData, veCost)) {
+        return { success: false, reason: 'Not enough VE' };
     }
     addUnitToCollection(saveData, unitKey);
     saveData.stats.totalRolls++;
@@ -171,22 +172,22 @@ function buyUnit(saveData, unitKey, slotIndex) {
         currentShopUnits[slotIndex] = null;
     }
     autoSave(saveData);
-    return { success: true, unitKey: unitKey, goldCost: goldCost };
+    return { success: true, unitKey: unitKey, veCost: veCost };
 }
 
 function refreshShop(saveData) {
     if (!spendGold(saveData, SHOP_REFRESH_COST)) {
-        return { success: false, reason: 'Not enough gold' };
+        return { success: false, reason: 'Not enough VE' };
     }
     refreshShopUnits(saveData.player.level);
     autoSave(saveData);
     return { success: true };
 }
 
-// Perform a single roll: deduct gold, add unit to collection
+// Perform a single rite: deduct VE, add unit to collection
 function doSingleRoll(saveData) {
     if (!spendGold(saveData, ROLL_COST)) {
-        return { success: false, reason: 'Not enough gold' };
+        return { success: false, reason: 'Not enough VE' };
     }
 
     if (!saveData.stats.rollsSincePity) saveData.stats.rollsSincePity = 0;
@@ -220,7 +221,7 @@ function doSingleRoll(saveData) {
 function doMultiRoll(saveData) {
     var cost = getMultiRollCost(saveData);
     if (!spendGold(saveData, cost)) {
-        return { success: false, reason: 'Not enough gold (need ' + cost + ')' };
+        return { success: false, reason: 'Not enough VE (need ' + cost + ')' };
     }
 
     if (!saveData.stats.rollsSincePity) saveData.stats.rollsSincePity = 0;

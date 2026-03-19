@@ -1,10 +1,10 @@
 // =============================================================================
-// hub.js — Hub/base screen, building definitions, screen navigation
+// hub.js — Camp screen, building definitions, screen navigation
 // =============================================================================
 
 // ---- Screen Management ----
 
-var SCREENS = ['hub', 'gacha', 'roster', 'team-builder', 'mission-select', 'combat'];
+var SCREENS = ['hub', 'gacha', 'roster', 'team-builder', 'mission-select', 'combat', 'heroes'];
 var currentScreen = 'hub';
 
 function showScreen(screenId) {
@@ -27,6 +27,7 @@ function renderCurrentScreen() {
         case 'team-builder': renderTeamBuilderScreen(); break;
         case 'mission-select': renderMissionSelectScreen(); break;
         case 'combat': /* combat rendering handled by combat loop */ break;
+        case 'heroes': renderHeroScreen(); break;
     }
     // Always update top bar
     renderTopBar();
@@ -35,103 +36,100 @@ function renderCurrentScreen() {
 // ---- Building Definitions ----
 
 var BUILDINGS = {
-    barracks: {
-        name: 'Barracks',
-        emoji: '🏰',
+    sustained_bonds: {
+        name: 'Sustained Bonds',
+        emoji: '🤝',
         description: 'Increases team size capacity',
-        maxLevel: 5,
-        upgradeCosts: [0, 100, 250, 500, 1000, 2000],
+        maxLevel: 1,
+        upgradeCosts: [0, 500],
         effects: [
-            'Team size: base only',
-            'Team size: +1 slot',
-            'Team size: +1 slot',
-            'Team size: +1 slot',
-            'Team size: +2 slots',
-            'Team size: +2 slots'
-        ]
+            'Locked \u2014 unlocked at level 17',
+            'Team size +1 (max 8)'
+        ],
+        prereq: { level: 17 }
     },
-    summoning_circle: {
-        name: 'Summoning Circle',
+    attunement_rite: {
+        name: 'Attunement Rite',
         emoji: '🔮',
-        description: 'Improves gacha rolling',
+        description: 'Summon Echoes from the Veil',
         maxLevel: 5,
         upgradeCosts: [0, 80, 200, 400, 800, 1500],
         effects: [
-            'Standard rates',
-            'Multi-roll: 10x for 45g (10% discount)',
-            'Multi-roll: 10x for 42g (16% discount)',
-            'Multi-roll: 10x for 40g (20% discount)',
-            'Pity system: guaranteed cost 3+ every 20 rolls',
-            'Pity system: guaranteed cost 4+ every 30 rolls'
+            'Standard rite rates',
+            'Multi-rite: 10x for 450 VE (10% discount)',
+            'Multi-rite: 10x for 420 VE (16% discount)',
+            'Multi-rite: 10x for 400 VE (20% discount)',
+            'Pity: guaranteed T3+ every 20 rites',
+            'Pity: guaranteed T4+ every 30 rites'
         ]
     },
-    warehouse: {
-        name: 'Warehouse',
-        emoji: '📦',
-        description: 'Bonus gold from missions + more item storage',
+    essence_reservoir: {
+        name: 'Essence Reservoir',
+        emoji: '💧',
+        description: 'Store and manage harvested Veil Essence',
         maxLevel: 5,
         upgradeCosts: [0, 50, 120, 300, 600, 1000],
         effects: [
-            'Standard gold, 10 item slots',
-            '+5% gold, 12 item slots',
-            '+10% gold, 14 item slots',
-            '+15% gold, 16 item slots',
-            '+20% gold, 18 item slots',
-            '+25% gold, 20 item slots'
+            'Standard VE rewards',
+            '+5% VE from missions, 12 item slots',
+            '+10% VE, 14 item slots',
+            '+15% VE, 16 item slots',
+            '+20% VE, 18 item slots',
+            '+25% VE, 20 item slots'
         ]
     },
-    evolution_lab: {
-        name: 'Evolution Lab',
+    deep_resonance: {
+        name: 'Deep Resonance',
         emoji: '🧬',
-        description: 'Evolve 3-star units into powerful new forms',
+        description: 'Evolve Echoes into powerful new forms',
         maxLevel: 3,
         upgradeCosts: [0, 300, 800, 2000],
         effects: [
-            'Locked — build to unlock evolution',
-            'Can evolve units (gold cost: 50 × base unit cost)',
+            'Locked \u2014 build to unlock evolution',
+            'Can evolve units (500-2000 VE by tier)',
             'Evolution cost reduced by 25%',
             'Evolution cost reduced by 50%'
         ]
     },
-    forge: {
-        name: 'Forge',
+    echo_shaping: {
+        name: 'Echo Shaping',
         emoji: '🔨',
-        description: 'Reforge, disassemble, and craft powerful items',
+        description: 'Reshape Veil energy within items',
         maxLevel: 5,
         upgradeCosts: [0, 200, 500, 1000, 2000, 4000],
         effects: [
-            'Locked — build to unlock the Forge',
-            'Reroll Rarity: change a component\'s rarity tier',
-            'Disassemble: break combined items back into components',
-            'Transmute: convert one component type into another',
-            'Set Crafting: forge set items using Essences',
-            'Advanced Crafting: forge ability items and evolution-gated items'
+            'Locked \u2014 build to unlock forging',
+            'Reroll: change item rarity (100 VE)',
+            'Disassemble: break combined items (50 VE)',
+            'Transmute: convert components (200 VE)',
+            'Set Crafting: forge set items (500-1000 VE)',
+            'Advanced Crafting: ability items + evolved gates (1000-2000 VE)'
         ]
     },
-    gem_workshop: {
-        name: 'Gem Workshop',
+    prism_focus: {
+        name: 'Prism Focus',
         emoji: '💎',
-        description: 'Socket, combine, and transmute gems',
+        description: 'Craft and socket crystallized Veil gems',
         maxLevel: 5,
         upgradeCosts: [0, 500, 1200, 2500, 5000, 10000],
         effects: [
-            'Locked — unlocks gem operations',
+            'Locked \u2014 unlocks gem operations',
             'Gem inventory + gem socketing',
-            'Gem combining (3→1) + gem removal',
-            'Gem transmute (change type, keep rarity, 30g)',
-            'Auto-socket suggestion for team',
-            'Prismatic Forge: combine 3 different Epic gems → 1 Prismatic gem'
+            'Gem combining (3\u21921) + removal',
+            'Gem transmute (change type, keep rarity)',
+            'Auto-socket suggestion',
+            'Prismatic Forge: combine 3 Epic gems \u2192 Prismatic'
         ],
         prereq: { level: 12 }
     },
-    mana_shrine: {
-        name: 'Mana Shrine',
+    veil_wellspring: {
+        name: 'Veil Wellspring',
         emoji: '🔵',
-        description: 'Passive bonuses to mana and ability power',
+        description: 'Channel ambient Veil power for mana and ability',
         maxLevel: 5,
         upgradeCosts: [0, 800, 2000, 4000, 8000, 15000],
         effects: [
-            'Locked — unlocks mana bonuses',
+            'Locked \u2014 unlocks mana bonuses',
             '+5 starting mana for all units',
             'Mana generation from attacks +10%',
             'Ability damage +5% (global)',
@@ -140,17 +138,17 @@ var BUILDINGS = {
         ],
         prereq: { level: 15 }
     },
-    bond_hall: {
-        name: 'Bond Hall',
-        emoji: '🤝',
-        description: 'View and enhance unit bond bonuses',
+    kindred_circle: {
+        name: 'Kindred Circle',
+        emoji: '👥',
+        description: 'Where bonded Echoes train together',
         maxLevel: 5,
         upgradeCosts: [0, 600, 1500, 3500, 7000, 12000],
         effects: [
-            'Locked — unlocks bond viewer',
+            'Locked \u2014 unlocks bond viewer',
             'View active bonds and bonuses',
             'Bond bonuses increased by 25%',
-            'Unlock bond quests (earn extra gold)',
+            'Unlock bond quests (extra VE)',
             'Bond bonuses increased by 50% total',
             'Unlock trio bonds (3-unit bonds active)'
         ],
@@ -179,7 +177,7 @@ function canUpgradeBuilding(saveData, buildingId) {
         if (bld.prereq.level && saveData.player.level < bld.prereq.level) return false;
     }
     var cost = bld.upgradeCosts[level + 1];
-    return saveData.player.gold >= cost;
+    return saveData.player.veilEssence >= cost;
 }
 
 function upgradeBuilding(saveData, buildingId) {
@@ -209,21 +207,26 @@ function getXPMultiplier(saveData) {
 }
 
 function getGoldMultiplier(saveData) {
-    var level = getBuildingLevel(saveData, 'warehouse');
+    var level = getBuildingLevel(saveData, 'essence_reservoir');
     return 1.0 + (level * 0.05);
 }
 
+// Alias for clarity
+function getVeilEssenceMultiplier(saveData) {
+    return getGoldMultiplier(saveData);
+}
+
 function getMultiRollDiscount(saveData) {
-    var level = getBuildingLevel(saveData, 'summoning_circle');
-    if (level >= 3) return 10;  // 40g instead of 50g
-    if (level >= 2) return 8;   // 42g
-    if (level >= 1) return 5;   // 45g
+    var level = getBuildingLevel(saveData, 'attunement_rite');
+    if (level >= 3) return 100;  // 400 VE instead of 500 VE
+    if (level >= 2) return 80;   // 420 VE
+    if (level >= 1) return 50;   // 450 VE
     return 0;
 }
 
 function getItemBenchSize(saveData) {
-    var warehouseLevel = getBuildingLevel(saveData, 'warehouse');
-    return 10 + (warehouseLevel * 2); // 10 base + 2 per level, max 20 at level 5
+    var reservoirLevel = getBuildingLevel(saveData, 'essence_reservoir');
+    return 10 + (reservoirLevel * 2); // 10 base + 2 per level, max 20 at level 5
 }
 
 function getWarRoomIntelLevel(saveData) {
@@ -232,23 +235,33 @@ function getWarRoomIntelLevel(saveData) {
 }
 
 function canEvolve(saveData) {
-    return getBuildingLevel(saveData, 'evolution_lab') >= 1;
+    return getBuildingLevel(saveData, 'deep_resonance') >= 1;
 }
+
+// Evolution VE cost by tier: T1=500, T2=750, T3=1000, T4=1500, T5=2000
+var EVOLUTION_VE_COSTS = { 1: 500, 2: 750, 3: 1000, 4: 1500, 5: 2000 };
 
 function getEvolutionGoldCost(saveData, templateKey) {
     var tmpl = UNIT_TEMPLATES[templateKey];
     if (!tmpl) return Infinity;
-    var baseCost = 50 * tmpl.cost;
-    var labLevel = getBuildingLevel(saveData, 'evolution_lab');
+    var tier = tmpl.cost || 1;
+    var baseCost = EVOLUTION_VE_COSTS[tier] || 500;
+    var labLevel = getBuildingLevel(saveData, 'deep_resonance');
     if (labLevel >= 3) return Math.floor(baseCost * 0.5);
     if (labLevel >= 2) return Math.floor(baseCost * 0.75);
     return baseCost;
 }
 
+function getSustainedBondsBonus(saveData) {
+    if (saveData.player.level < 17) return 0;
+    var level = getBuildingLevel(saveData, 'sustained_bonds');
+    return level >= 1 ? 1 : 0;
+}
+
 // ---- New Building Bonus Getters ----
 
 function getManaShrineBonuses(saveData) {
-    var level = getBuildingLevel(saveData, 'mana_shrine');
+    var level = getBuildingLevel(saveData, 'veil_wellspring');
     return {
         startingMana: level >= 1 ? 5 : 0,
         manaGenMult: level >= 2 ? 1.10 : 1.0,
@@ -259,7 +272,7 @@ function getManaShrineBonuses(saveData) {
 }
 
 function getBondHallBonuses(saveData) {
-    var level = getBuildingLevel(saveData, 'bond_hall');
+    var level = getBuildingLevel(saveData, 'kindred_circle');
     return {
         canViewBonds: level >= 1,
         bondBonusMult: level >= 4 ? 1.50 : (level >= 2 ? 1.25 : 1.0),
@@ -269,7 +282,7 @@ function getBondHallBonuses(saveData) {
 }
 
 function getGemWorkshopCapabilities(saveData) {
-    var level = getBuildingLevel(saveData, 'gem_workshop');
+    var level = getBuildingLevel(saveData, 'prism_focus');
     return {
         canSocket: level >= 1,
         canCombine: level >= 2,
@@ -356,36 +369,36 @@ function hasAllMaxedBuildings(saveData) {
 
 var ACHIEVEMENTS = [
     // Combat
-    { id: 'first_blood', category: 'combat', name: 'First Blood', description: 'Win your first mission', check: function(s) { return s.missions.storyProgress >= 1; }, reward: { gold: 50 } },
-    { id: 'unscathed', category: 'combat', name: 'Unscathed', description: '3-star any mission', check: function(s) { return hasAnyThreeStar(s); }, reward: { gold: 100 } },
-    { id: 'elemental_mastery', category: 'combat', name: 'Elemental Mastery', description: 'Win with a 6-piece element synergy', check: function(s) { return s.stats && s.stats.maxElementSynergy >= 6; }, reward: { gold: 200 } },
-    { id: 'boss_slayer', category: 'combat', name: 'Boss Slayer', description: 'Defeat your first boss', check: function(s) { return s.stats && s.stats.bossesDefeated >= 1; }, reward: { gold: 300 } },
-    { id: 'deathless', category: 'combat', name: 'Deathless', description: 'Complete any boss with no unit deaths', check: function(s) { return s.stats && s.stats.deathlessBossClears >= 1; }, reward: { gold: 500 } },
-    { id: 'overkill', category: 'combat', name: 'Overkill', description: 'Deal 10,000 damage in a single hit', check: function(s) { return s.stats && s.stats.maxSingleHit >= 10000; }, reward: { gold: 200 } },
-    { id: 'speed_demon', category: 'combat', name: 'Speed Demon', description: 'Win a mission in under 30 seconds', check: function(s) { return s.stats && s.stats.fastestWin <= 30; }, reward: { gold: 150 } },
+    { id: 'first_blood', category: 'combat', name: 'First Blood', description: 'Win your first mission', check: function(s) { return s.missions.storyProgress >= 1; }, reward: { veilEssence: 50 } },
+    { id: 'unscathed', category: 'combat', name: 'Unscathed', description: '3-star any mission', check: function(s) { return hasAnyThreeStar(s); }, reward: { veilEssence: 100 } },
+    { id: 'elemental_mastery', category: 'combat', name: 'Elemental Mastery', description: 'Win with a 6-piece element synergy', check: function(s) { return s.stats && s.stats.maxElementSynergy >= 6; }, reward: { veilEssence: 200 } },
+    { id: 'boss_slayer', category: 'combat', name: 'Boss Slayer', description: 'Defeat your first boss', check: function(s) { return s.stats && s.stats.bossesDefeated >= 1; }, reward: { veilEssence: 300 } },
+    { id: 'deathless', category: 'combat', name: 'Deathless', description: 'Complete any boss with no unit deaths', check: function(s) { return s.stats && s.stats.deathlessBossClears >= 1; }, reward: { veilEssence: 500 } },
+    { id: 'overkill', category: 'combat', name: 'Overkill', description: 'Deal 10,000 damage in a single hit', check: function(s) { return s.stats && s.stats.maxSingleHit >= 10000; }, reward: { veilEssence: 200 } },
+    { id: 'speed_demon', category: 'combat', name: 'Speed Demon', description: 'Win a mission in under 30 seconds', check: function(s) { return s.stats && s.stats.fastestWin <= 30; }, reward: { veilEssence: 150 } },
 
     // Collection
-    { id: 'collector_1', category: 'collection', name: 'Collector I', description: 'Own 10 unique units', check: function(s) { return countUniqueUnits(s) >= 10; }, reward: { gold: 200 } },
-    { id: 'collector_2', category: 'collection', name: 'Collector II', description: 'Own 25 unique units', check: function(s) { return countUniqueUnits(s) >= 25; }, reward: { gold: 500 } },
-    { id: 'collector_3', category: 'collection', name: 'Collector III', description: 'Own all 60 base units', check: function(s) { return countUniqueUnits(s) >= 60; }, reward: { gold: 1000 } },
-    { id: 'evolution_pioneer', category: 'collection', name: 'Evolution Pioneer', description: 'Evolve your first unit', check: function(s) { return countEvolvedUnits(s) >= 1; }, reward: { gold: 200 } },
-    { id: 'evolution_master', category: 'collection', name: 'Evolution Master', description: 'Evolve 10 different units', check: function(s) { return countEvolvedUnits(s) >= 10; }, reward: { gold: 1000 } },
-    { id: 'bond_collector', category: 'collection', name: 'Bond Collector', description: 'Activate 5 different bonds in combat', check: function(s) { return s.stats && s.stats.uniqueBondsUsed >= 5; }, reward: { gold: 300 } },
+    { id: 'collector_1', category: 'collection', name: 'Collector I', description: 'Own 10 unique units', check: function(s) { return countUniqueUnits(s) >= 10; }, reward: { veilEssence: 200 } },
+    { id: 'collector_2', category: 'collection', name: 'Collector II', description: 'Own 25 unique units', check: function(s) { return countUniqueUnits(s) >= 25; }, reward: { veilEssence: 500 } },
+    { id: 'collector_3', category: 'collection', name: 'Collector III', description: 'Own all 66 base units', check: function(s) { return countUniqueUnits(s) >= 66; }, reward: { veilEssence: 1000 } },
+    { id: 'evolution_pioneer', category: 'collection', name: 'Evolution Pioneer', description: 'Evolve your first unit', check: function(s) { return countEvolvedUnits(s) >= 1; }, reward: { veilEssence: 200 } },
+    { id: 'evolution_master', category: 'collection', name: 'Evolution Master', description: 'Evolve 10 different units', check: function(s) { return countEvolvedUnits(s) >= 10; }, reward: { veilEssence: 1000 } },
+    { id: 'bond_collector', category: 'collection', name: 'Bond Collector', description: 'Activate 5 different bonds in combat', check: function(s) { return s.stats && s.stats.uniqueBondsUsed >= 5; }, reward: { veilEssence: 300 } },
 
     // Economy
-    { id: 'big_spender', category: 'economy', name: 'Big Spender', description: 'Spend 10,000g total', check: function(s) { return s.stats && s.stats.totalGoldSpent >= 10000; }, reward: { gold: 500 } },
-    { id: 'master_forger', category: 'economy', name: 'Master Forger', description: 'Perform 100 forge operations', check: function(s) { return s.stats && s.stats.forgeOperations >= 100; }, reward: { gold: 300 } },
-    { id: 'enhancement_addict', category: 'economy', name: 'Enhancement Addict', description: 'Enhance items 50 times', check: function(s) { return s.stats && s.stats.enhancementsPerformed >= 50; }, reward: { gold: 200 } },
-    { id: 'plus_ten_club', category: 'economy', name: '+10 Club', description: 'Reach +10 on any item', check: function(s) { return s.stats && s.stats.maxEnhanceLevel >= 10; }, reward: { gold: 1000 } },
-    { id: 'mythic_wielder', category: 'economy', name: 'Mythic Wielder', description: 'Craft any mythic item', check: function(s) { return s.stats && s.stats.mythicsCrafted >= 1; }, reward: { gold: 500 } },
-    { id: 'full_house', category: 'economy', name: 'Full House', description: 'Fill all 3 item slots on 5 units', check: function(s) { return countFullyEquippedUnits(s) >= 5; }, reward: { gold: 200 } },
-    { id: 'gem_master', category: 'economy', name: 'Gem Master', description: 'Socket 20 gems into items', check: function(s) { return s.stats && s.stats.gemsSocketed >= 20; }, reward: { gold: 300 } },
+    { id: 'big_spender', category: 'economy', name: 'Big Spender', description: 'Spend 10,000 VE total', check: function(s) { return s.stats && s.stats.totalVeilEssenceSpent >= 10000; }, reward: { veilEssence: 500 } },
+    { id: 'master_forger', category: 'economy', name: 'Master Forger', description: 'Perform 100 forge operations', check: function(s) { return s.stats && s.stats.forgeOperations >= 100; }, reward: { veilEssence: 300 } },
+    { id: 'enhancement_addict', category: 'economy', name: 'Enhancement Addict', description: 'Enhance items 50 times', check: function(s) { return s.stats && s.stats.enhancementsPerformed >= 50; }, reward: { veilEssence: 200 } },
+    { id: 'plus_ten_club', category: 'economy', name: '+10 Club', description: 'Reach +10 on any item', check: function(s) { return s.stats && s.stats.maxEnhanceLevel >= 10; }, reward: { veilEssence: 1000 } },
+    { id: 'mythic_wielder', category: 'economy', name: 'Mythic Wielder', description: 'Craft any mythic item', check: function(s) { return s.stats && s.stats.mythicsCrafted >= 1; }, reward: { veilEssence: 500 } },
+    { id: 'full_house', category: 'economy', name: 'Full House', description: 'Fill all 3 item slots on 5 units', check: function(s) { return countFullyEquippedUnits(s) >= 5; }, reward: { veilEssence: 200 } },
+    { id: 'gem_master', category: 'economy', name: 'Gem Master', description: 'Socket 20 gems into items', check: function(s) { return s.stats && s.stats.gemsSocketed >= 20; }, reward: { veilEssence: 300 } },
 
     // Progression
-    { id: 'level_10', category: 'progression', name: 'Level 10', description: 'Reach player level 10', check: function(s) { return s.player.level >= 10; }, reward: { gold: 300 } },
-    { id: 'level_20', category: 'progression', name: 'Level 20', description: 'Reach player level 20', check: function(s) { return s.player.level >= 20; }, reward: { gold: 1000 } },
-    { id: 'builder', category: 'progression', name: 'Builder', description: 'Max any building', check: function(s) { return hasMaxedBuilding(s); }, reward: { gold: 500 } },
-    { id: 'architect', category: 'progression', name: 'Architect', description: 'Max all buildings', check: function(s) { return hasAllMaxedBuildings(s); }, reward: { gold: 2000 } }
+    { id: 'level_10', category: 'progression', name: 'Level 10', description: 'Reach player level 10', check: function(s) { return s.player.level >= 10; }, reward: { veilEssence: 300 } },
+    { id: 'level_20', category: 'progression', name: 'Level 20', description: 'Reach player level 20', check: function(s) { return s.player.level >= 20; }, reward: { veilEssence: 1000 } },
+    { id: 'builder', category: 'progression', name: 'Builder', description: 'Max any building', check: function(s) { return hasMaxedBuilding(s); }, reward: { veilEssence: 500 } },
+    { id: 'architect', category: 'progression', name: 'Architect', description: 'Max all buildings', check: function(s) { return hasAllMaxedBuildings(s); }, reward: { veilEssence: 2000 } }
 ];
 
 function checkAchievements(saveData) {
@@ -414,7 +427,7 @@ function claimAchievementReward(saveData, achievementId) {
     if (!ach) return null;
 
     saveData.achievements.claimed.push(achievementId);
-    saveData.player.gold += ach.reward.gold;
+    saveData.player.veilEssence += (ach.reward.veilEssence || 0);
     return ach.reward;
 }
 

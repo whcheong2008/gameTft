@@ -3,7 +3,7 @@
 // =============================================================================
 
 var UNIT_TEMPLATES = {
-    // --- FIRE (10 units) ---
+    // --- FIRE (11 units) ---
     flame_warrior:  { name: 'Flame Warrior',  cost: 1, type: 'warrior',  archetype: 'duelist',   secondaryArchetype: 'vanguard',  element: 'fire', hp: 600,  attack: 50,  attackSpd: 0.85, range: 1, moveSpd: 1.9, maxMana: 65, emoji: '\u{2694}\uFE0F\u{1F525}', evolvedForm: 'fire_berserker' },
     ember_scout:    { name: 'Ember Scout',    cost: 1, type: 'assassin', archetype: 'predator',  secondaryArchetype: 'duelist',   element: 'fire', hp: 390,  attack: 46,  attackSpd: 0.5,  range: 1, moveSpd: 3.9, maxMana: 45, emoji: '\u{1F5E1}\uFE0F\u{1F525}', evolvedForm: 'flame_rogue' },
     cinder_archer:  { name: 'Cinder Archer',  cost: 1, type: 'archer',   archetype: 'ranger',    secondaryArchetype: 'sorcerer',  element: 'fire', hp: 360,  attack: 52,  attackSpd: 0.7,  range: 4, moveSpd: 2.0, maxMana: 55, emoji: '\u{1F3F9}\u{1F525}', evolvedForm: 'cinder_marksman' },
@@ -13,9 +13,10 @@ var UNIT_TEMPLATES = {
     pyromancer:     { name: 'Pyromancer',     cost: 3, type: 'mage',     archetype: 'sorcerer',  secondaryArchetype: 'mystic',    element: 'fire', hp: 520,  attack: 75,  attackSpd: 0.9,  range: 3, moveSpd: 1.5, maxMana: 65, emoji: '\u{1F52E}\u{1F525}', evolvedForm: 'arcane_inferno' },
     inferno_fox:    { name: 'Inferno Fox',    cost: 3, type: 'assassin', archetype: 'mystic',    secondaryArchetype: 'predator',  element: 'fire', hp: 480,  attack: 72,  attackSpd: 0.5,  range: 1, moveSpd: 3.8, maxMana: 50, emoji: '\u{1F5E1}\uFE0F\u{1F525}', evolvedForm: 'ninetail_blaze' },
     fire_dragon:    { name: 'Fire Dragon',    cost: 4, type: 'mage',     archetype: 'warden',    secondaryArchetype: 'sorcerer',  element: 'fire', hp: 1100, attack: 95,  attackSpd: 0.9,  range: 3, moveSpd: 1.5, maxMana: 80, emoji: '\u{1F52E}\u{1F525}', evolvedForm: 'elder_wyrm' },
+    ashen_watcher:  { name: 'Ashen Watcher',  cost: 4, type: 'healer',   archetype: 'sage',      secondaryArchetype: 'mystic',    element: 'fire', hp: 780,  attack: 72,  attackSpd: 0.8,  range: 3, moveSpd: 1.6, maxMana: 75, emoji: '\u{2694}\uFE0F\u{1F525}', evolvedForm: 'phoenix_priest' },
     phoenix:        { name: 'Phoenix',        cost: 5, type: 'mage',     archetype: 'mystic',    secondaryArchetype: 'sage',      element: 'fire', hp: 950,  attack: 110, attackSpd: 0.95, range: 3, moveSpd: 1.6, maxMana: 0,  emoji: '\u{1F52E}\u{1F525}', evolvedForm: 'eternal_phoenix' },
 
-    // --- WATER (10 units) ---
+    // --- WATER (11 units) ---
     tide_hunter:    { name: 'Tide Hunter',    cost: 1, type: 'warrior',  archetype: 'vanguard',  secondaryArchetype: 'warden',    element: 'water', hp: 640,  attack: 48,  attackSpd: 0.8,  range: 1, moveSpd: 1.8, maxMana: 60, emoji: '\u{2694}\uFE0F\u{1F4A7}', evolvedForm: 'tsunami_blade' },
     frost_archer:   { name: 'Frost Archer',   cost: 1, type: 'archer',   archetype: 'ranger',    secondaryArchetype: 'mystic',    element: 'water', hp: 360,  attack: 50,  attackSpd: 0.7,  range: 4, moveSpd: 1.95,maxMana: 50, emoji: '\u{1F3F9}\u{1F4A7}', evolvedForm: 'ice_sniper' },
     reef_stalker:   { name: 'Reef Stalker',   cost: 1, type: 'assassin', archetype: 'predator',  secondaryArchetype: 'duelist',   element: 'water', hp: 400,  attack: 44,  attackSpd: 0.5,  range: 1, moveSpd: 3.8, maxMana: 40, emoji: '\u{1F5E1}\uFE0F\u{1F4A7}', evolvedForm: 'tidal_phantom' },
@@ -25,9 +26,10 @@ var UNIT_TEMPLATES = {
     tidal_shaman:   { name: 'Tidal Shaman',   cost: 3, type: 'healer',   archetype: 'mystic',    secondaryArchetype: 'sage',      element: 'water', hp: 480,  attack: 45,  attackSpd: 1.1,  range: 2.5, moveSpd: 1.6, maxMana: 80, emoji: '\u{1F49A}\u{1F4A7}', evolvedForm: 'stormtide_oracle' },
     riptide_blade:  { name: 'Riptide Blade',  cost: 3, type: 'warrior',  archetype: 'duelist',   secondaryArchetype: 'vanguard',  element: 'water', hp: 620,  attack: 70,  attackSpd: 0.8,  range: 1, moveSpd: 1.8, maxMana: 65, emoji: '\u{2694}\uFE0F\u{1F4A7}', evolvedForm: 'tsunami_warlord' },
     kraken:         { name: 'Kraken',         cost: 4, type: 'mage',     archetype: 'warden',    secondaryArchetype: 'sorcerer',  element: 'water', hp: 920,  attack: 98,  attackSpd: 0.9,  range: 3, moveSpd: 1.3, maxMana: 85, emoji: '\u{1F52E}\u{1F4A7}', evolvedForm: 'abyssal_terror' },
+    abyssal_guardian:{ name: 'Abyssal Guardian',cost: 4, type: 'tank',     archetype: 'guardian',  secondaryArchetype: 'warden',    element: 'water', hp: 1350, attack: 55,  attackSpd: 0.6,  range: 1, moveSpd: 1.2, maxMana: 90, emoji: '\u{1F52E}\u{1F4A7}', evolvedForm: 'hadal_colossus' },
     leviathan:      { name: 'Leviathan',      cost: 5, type: 'tank',     archetype: 'guardian',  secondaryArchetype: 'warden',    element: 'water', hp: 1450, attack: 35,  attackSpd: 1.0,  range: 1, moveSpd: 1.2, maxMana: 0,  emoji: '\u{1F6E1}\uFE0F\u{1F4A7}', evolvedForm: 'primordial_leviathan' },
 
-    // --- EARTH (10 units) ---
+    // --- EARTH (11 units) ---
     stone_guard:    { name: 'Stone Guard',    cost: 1, type: 'tank',     archetype: 'guardian',  secondaryArchetype: 'vanguard',  element: 'earth', hp: 750,  attack: 32,  attackSpd: 1.0,  range: 1, moveSpd: 1.4, maxMana: 80, emoji: '\u{1F6E1}\uFE0F\u{1F33F}', evolvedForm: 'mountain_lord' },
     bramble_knight: { name: 'Bramble Knight', cost: 1, type: 'warrior',  archetype: 'vanguard',  secondaryArchetype: 'guardian',  element: 'earth', hp: 640,  attack: 48,  attackSpd: 0.85, range: 1, moveSpd: 1.8, maxMana: 65, emoji: '\u{2694}\uFE0F\u{1F33F}', evolvedForm: 'ironwood_sentinel' },
     seedling_archer:{ name: 'Seedling Archer',cost: 1, type: 'archer',   archetype: 'ranger',    secondaryArchetype: 'warden',    element: 'earth', hp: 360,  attack: 48,  attackSpd: 0.7,  range: 3, moveSpd: 2.0, maxMana: 55, emoji: '\u{1F3F9}\u{1F33F}', evolvedForm: 'thornwood_ranger' },
@@ -37,9 +39,10 @@ var UNIT_TEMPLATES = {
     golem:          { name: 'Golem',          cost: 3, type: 'tank',     archetype: 'warden',    secondaryArchetype: 'guardian',   element: 'earth', hp: 1050, attack: 42,  attackSpd: 1.0,  range: 1, moveSpd: 1.2, maxMana: 90, emoji: '\u{1F6E1}\uFE0F\u{1F33F}', evolvedForm: 'iron_colossus' },
     terra_sage:     { name: 'Terra Sage',     cost: 3, type: 'mage',     archetype: 'sorcerer',  secondaryArchetype: 'ranger',    element: 'earth', hp: 440,  attack: 70,  attackSpd: 0.9,  range: 3, moveSpd: 1.5, maxMana: 75, emoji: '\u{1F52E}\u{1F33F}', evolvedForm: 'earthweaver' },
     ancient_treant: { name: 'Ancient Treant', cost: 4, type: 'warrior',  archetype: 'duelist',   secondaryArchetype: 'warden',    element: 'earth', hp: 1200, attack: 70,  attackSpd: 0.9,  range: 1, moveSpd: 1.2, maxMana: 80, emoji: '\u{2694}\uFE0F\u{1F33F}', evolvedForm: 'world_sentinel' },
+    grove_warden:   { name: 'Grove Warden',   cost: 4, type: 'archer',   archetype: 'ranger',    secondaryArchetype: 'guardian',  element: 'earth', hp: 680,  attack: 88,  attackSpd: 0.75, range: 5, moveSpd: 1.0, maxMana: 70, emoji: '\u{1F3F9}\u{1F33F}', evolvedForm: 'worldroot_sentinel' },
     world_tree:     { name: 'World Tree',     cost: 5, type: 'healer',   archetype: 'sage',      secondaryArchetype: 'guardian',  element: 'earth', hp: 1300, attack: 28,  attackSpd: 1.2,  range: 3, moveSpd: 1.3, maxMana: 0,  emoji: '\u{1F49A}\u{1F33F}', evolvedForm: 'yggdrasil' },
 
-    // --- WIND (10 units) ---
+    // --- WIND (11 units) ---
     zephyr_scout:   { name: 'Zephyr Scout',   cost: 1, type: 'assassin', archetype: 'predator',  secondaryArchetype: 'duelist',   element: 'wind', hp: 395,  attack: 46,  attackSpd: 0.5,  range: 1, moveSpd: 4.0, maxMana: 45, emoji: '\u{1F5E1}\uFE0F\u{1F4A8}', evolvedForm: 'storm_assassin' },
     wind_archer:    { name: 'Wind Archer',    cost: 1, type: 'archer',   archetype: 'ranger',    secondaryArchetype: 'predator',  element: 'wind', hp: 360,  attack: 52,  attackSpd: 0.7,  range: 4, moveSpd: 2.1, maxMana: 55, emoji: '\u{1F3F9}\u{1F4A8}', evolvedForm: 'gale_sniper' },
     gale_dancer:    { name: 'Gale Dancer',    cost: 1, type: 'healer',   archetype: 'sage',      secondaryArchetype: 'ranger',    element: 'wind', hp: 420,  attack: 30,  attackSpd: 1.1,  range: 2.5, moveSpd: 2.2, maxMana: 75, emoji: '\u{1F49A}\u{1F4A8}', evolvedForm: 'stormweaver' },
@@ -49,9 +52,10 @@ var UNIT_TEMPLATES = {
     monsoon_caller: { name: 'Monsoon Caller', cost: 3, type: 'mage',     archetype: 'sorcerer',  secondaryArchetype: 'mystic',    element: 'wind', hp: 420,  attack: 78,  attackSpd: 0.9,  range: 3, moveSpd: 1.8, maxMana: 70, emoji: '\u{1F52E}\u{1F4A8}', evolvedForm: 'tempest_lord' },
     wind_duelist:   { name: 'Wind Duelist',   cost: 3, type: 'warrior',  archetype: 'duelist',   secondaryArchetype: 'predator',  element: 'wind', hp: 620,  attack: 68,  attackSpd: 0.8,  range: 1, moveSpd: 2.0, maxMana: 60, emoji: '\u{2694}\uFE0F\u{1F4A8}', evolvedForm: 'hurricane_blade' },
     storm_sovereign:{ name: 'Storm Sovereign',cost: 4, type: 'assassin', archetype: 'predator',  secondaryArchetype: 'vanguard',  element: 'wind', hp: 740,  attack: 100, attackSpd: 0.45, range: 1, moveSpd: 4.2, maxMana: 55, emoji: '\u{1F5E1}\uFE0F\u{1F4A8}', evolvedForm: 'tempest_emperor' },
+    tempest_weaver: { name: 'Tempest Weaver', cost: 4, type: 'mage',     archetype: 'sorcerer',  secondaryArchetype: 'ranger',    element: 'wind', hp: 650,  attack: 92,  attackSpd: 0.85, range: 3, moveSpd: 2.0, maxMana: 65, emoji: '\u{1F4A8}\u{1F52E}', evolvedForm: 'stormweft_oracle' },
     void_wyrm:      { name: 'Void Wyrm',      cost: 5, type: 'mage',     archetype: 'mystic',    secondaryArchetype: 'sorcerer',  element: 'wind', hp: 820,  attack: 125, attackSpd: 0.7,  range: 4, moveSpd: 2.1, maxMana: 0,  emoji: '\u{1F52E}\u{1F4A8}', evolvedForm: 'dimensional_dragon' },
 
-    // --- LIGHTNING (10 units) ---
+    // --- LIGHTNING (11 units) ---
     spark_fencer:   { name: 'Spark Fencer',   cost: 1, type: 'warrior',  archetype: 'duelist',   secondaryArchetype: 'sorcerer',  element: 'lightning', hp: 620,  attack: 50,  attackSpd: 0.85, range: 1, moveSpd: 1.9, maxMana: 65, emoji: '\u{2694}\uFE0F\u{26A1}', evolvedForm: 'arc_duelist' },
     volt_runner:    { name: 'Volt Runner',    cost: 1, type: 'assassin', archetype: 'predator',  secondaryArchetype: 'vanguard',  element: 'lightning', hp: 400,  attack: 45,  attackSpd: 0.5,  range: 1, moveSpd: 4.0, maxMana: 45, emoji: '\u{1F5E1}\uFE0F\u{26A1}', evolvedForm: 'lightning_phantom' },
     thunder_archer: { name: 'Thunder Archer', cost: 1, type: 'archer',   archetype: 'ranger',    secondaryArchetype: 'mystic',    element: 'lightning', hp: 360,  attack: 52,  attackSpd: 0.7,  range: 4, moveSpd: 2.0, maxMana: 55, emoji: '\u{1F3F9}\u{26A1}', evolvedForm: 'storm_archer' },
@@ -61,9 +65,10 @@ var UNIT_TEMPLATES = {
     ball_lightning:  { name: 'Ball Lightning',  cost: 3, type: 'mage',     archetype: 'mystic',    secondaryArchetype: 'sorcerer',  element: 'lightning', hp: 480,  attack: 75,  attackSpd: 0.9,  range: 3, moveSpd: 1.6, maxMana: 70, emoji: '\u{1F52E}\u{26A1}', evolvedForm: 'plasma_core' },
     thunder_warden: { name: 'Thunder Warden', cost: 3, type: 'tank',     archetype: 'warden',    secondaryArchetype: 'guardian',  element: 'lightning', hp: 1000, attack: 45,  attackSpd: 1.0,  range: 1, moveSpd: 1.3, maxMana: 85, emoji: '\u{1F6E1}\uFE0F\u{26A1}', evolvedForm: 'storm_fortress' },
     thunderbird:    { name: 'Thunderbird',    cost: 4, type: 'warrior',  archetype: 'vanguard',  secondaryArchetype: 'predator',  element: 'lightning', hp: 820,  attack: 88,  attackSpd: 0.8,  range: 1, moveSpd: 2.2, maxMana: 70, emoji: '\u{2694}\uFE0F\u{26A1}', evolvedForm: 'roc_of_storms' },
+    voltfang_stalker:{ name: 'Voltfang Stalker',cost: 4, type: 'assassin', archetype: 'predator',  secondaryArchetype: 'duelist',   element: 'lightning', hp: 700,  attack: 95,  attackSpd: 0.5,  range: 1, moveSpd: 3.8, maxMana: 50, emoji: '\u{26A1}\u{1F5E1}\uFE0F', evolvedForm: 'plasma_ravager' },
     storm_dragon:   { name: 'Storm Dragon',   cost: 5, type: 'mage',     archetype: 'sorcerer',  secondaryArchetype: 'mystic',    element: 'lightning', hp: 1000, attack: 130, attackSpd: 0.95, range: 3, moveSpd: 1.7, maxMana: 0,  emoji: '\u{1F52E}\u{26A1}', evolvedForm: 'thunder_god' },
 
-    // --- FORCE (10 units) ---
+    // --- FORCE (11 units) ---
     iron_soldier:   { name: 'Iron Soldier',   cost: 1, type: 'warrior',  archetype: 'vanguard',  secondaryArchetype: 'sage',      element: 'force', hp: 630,  attack: 52,  attackSpd: 0.85, range: 1, moveSpd: 1.9, maxMana: 65, emoji: '\u{2694}\uFE0F\u{1F4AA}', evolvedForm: 'legionnaire' },
     shadow_blade:   { name: 'Shadow Blade',   cost: 1, type: 'assassin', archetype: 'predator',  secondaryArchetype: 'duelist',   element: 'force', hp: 410,  attack: 48,  attackSpd: 0.5,  range: 1, moveSpd: 3.9, maxMana: 45, emoji: '\u{1F5E1}\uFE0F\u{1F4AA}', evolvedForm: 'night_stalker' },
     steel_archer:   { name: 'Steel Archer',   cost: 1, type: 'archer',   archetype: 'ranger',    secondaryArchetype: 'predator',  element: 'force', hp: 370,  attack: 50,  attackSpd: 0.7,  range: 4, moveSpd: 2.0, maxMana: 55, emoji: '\u{1F3F9}\u{1F4AA}', evolvedForm: 'ballista_archer' },
@@ -73,11 +78,12 @@ var UNIT_TEMPLATES = {
     gladiator:      { name: 'Gladiator',      cost: 3, type: 'warrior',  archetype: 'duelist',   secondaryArchetype: 'vanguard',  element: 'force', hp: 650,  attack: 80,  attackSpd: 0.8,  range: 1, moveSpd: 1.9, maxMana: 60, emoji: '\u{2694}\uFE0F\u{1F4AA}', evolvedForm: 'champion' },
     fortress:       { name: 'Fortress',       cost: 3, type: 'tank',     archetype: 'warden',    secondaryArchetype: 'guardian',  element: 'force', hp: 1100, attack: 40,  attackSpd: 1.0,  range: 1, moveSpd: 1.2, maxMana: 85, emoji: '\u{1F6E1}\uFE0F\u{1F4AA}', evolvedForm: 'citadel' },
     siege_engineer: { name: 'Siege Engineer', cost: 4, type: 'mage',     archetype: 'mystic',    secondaryArchetype: 'ranger',    element: 'force', hp: 520,  attack: 92,  attackSpd: 0.9,  range: 3, moveSpd: 1.5, maxMana: 75, emoji: '\u{1F52E}\u{1F4AA}', evolvedForm: 'war_architect' },
+    iron_duelist:   { name: 'Iron Duelist',   cost: 4, type: 'warrior',  archetype: 'duelist',   secondaryArchetype: 'vanguard',  element: 'force', hp: 950,  attack: 105, attackSpd: 0.85, range: 1, moveSpd: 1.8, maxMana: 60, emoji: '\u{2694}\uFE0F\u{1F4AA}', evolvedForm: 'warforged_champion' },
     titan_lord:     { name: 'Titan Lord',     cost: 5, type: 'warrior',  archetype: 'duelist',   secondaryArchetype: 'vanguard',  element: 'force', hp: 1350, attack: 140, attackSpd: 0.9,  range: 1, moveSpd: 1.8, maxMana: 0,  emoji: '\u{2694}\uFE0F\u{1F4AA}', evolvedForm: 'cosmic_titan' }
 };
 
 // =============================================================================
-// EVOLVED TEMPLATES (60 evolved forms — all tiers evolve at 3★)
+// EVOLVED TEMPLATES (66 evolved forms — all tiers evolve at 3★)
 // Evolved forms inherit the same secondaryArchetype as their base form.
 // =============================================================================
 
@@ -130,45 +136,51 @@ var EVOLVED_TEMPLATES = {
     force_archmage:   { name: 'Force Archmage',   baseCost: 2, type: 'mage',     archetype: 'sorcerer',  secondaryArchetype: 'warden',    element: 'force', hp: 525,  attack: 88,  attackSpd: 0.85, range: 4, moveSpd: 1.6, maxMana: 75, emoji: '\u{1F52E}\u{1F4AA}\u{2728}', ability: 'Force Blast + Telekinetic Force Enhanced', baseKey: 'battle_mage' },
     bastion:          { name: 'Bastion',          baseCost: 2, type: 'tank',     archetype: 'guardian',  secondaryArchetype: 'sage',      element: 'force', hp: 1150, attack: 42,  attackSpd: 0.95, range: 1, moveSpd: 1.6, maxMana: 85, emoji: '\u{1F6E1}\uFE0F\u{1F4AA}\u{2728}', ability: 'Fortress Wall + Fortified Defense Enhanced', baseKey: 'shield_bearer' },
 
-    // --- FIRE T3-T5 EVOLVED (4) ---
+    // --- FIRE T3-T5 EVOLVED (5) ---
     arcane_inferno:      { name: 'Arcane Inferno',      baseCost: 3, type: 'mage',     archetype: 'sorcerer',  secondaryArchetype: 'mystic',    element: 'fire', hp: 520,  attack: 75,  attackSpd: 0.9,  range: 3, moveSpd: 1.5, maxMana: 65, emoji: '\u{1F52E}\u{1F525}\u{2728}', ability: 'Infernal Storm Enhanced + Pyromaniac Enhanced', baseKey: 'pyromancer' },
     ninetail_blaze:      { name: 'Ninetail Blaze',      baseCost: 3, type: 'assassin', archetype: 'mystic',    secondaryArchetype: 'predator',  element: 'fire', hp: 480,  attack: 72,  attackSpd: 0.5,  range: 1, moveSpd: 3.8, maxMana: 50, emoji: '\u{1F5E1}\uFE0F\u{1F525}\u{2728}', ability: 'Spirit Rush Enhanced + Foxfire Enhanced', baseKey: 'inferno_fox' },
     elder_wyrm:          { name: 'Elder Wyrm',          baseCost: 4, type: 'mage',     archetype: 'warden',    secondaryArchetype: 'sorcerer',  element: 'fire', hp: 1100, attack: 95,  attackSpd: 0.9,  range: 3, moveSpd: 1.5, maxMana: 80, emoji: '\u{1F52E}\u{1F525}\u{2728}', ability: 'Breath Weapon Enhanced + Dragonfire Aura Enhanced', baseKey: 'fire_dragon' },
+    phoenix_priest:      { name: 'Phoenix Priest',      baseCost: 4, type: 'healer',   archetype: 'sage',      secondaryArchetype: 'mystic',    element: 'fire', hp: 780,  attack: 72,  attackSpd: 0.8,  range: 3, moveSpd: 1.6, maxMana: 75, emoji: '\u{2694}\uFE0F\u{1F525}\u{2728}', ability: 'Pyre of Renewal Enhanced', baseKey: 'ashen_watcher' },
     eternal_phoenix:     { name: 'Eternal Phoenix',     baseCost: 5, type: 'mage',     archetype: 'mystic',    secondaryArchetype: 'sage',      element: 'fire', hp: 950,  attack: 110, attackSpd: 0.95, range: 3, moveSpd: 1.6, maxMana: 0,  emoji: '\u{1F52E}\u{1F525}\u{2728}', ability: 'Rebirth Enhanced + Eternal Flame Enhanced', baseKey: 'phoenix' },
 
-    // --- WATER T3-T5 EVOLVED (4) ---
+    // --- WATER T3-T5 EVOLVED (5) ---
     stormtide_oracle:    { name: 'Stormtide Oracle',    baseCost: 3, type: 'healer',   archetype: 'mystic',    secondaryArchetype: 'sage',      element: 'water', hp: 480,  attack: 45,  attackSpd: 1.1,  range: 2.5, moveSpd: 1.6, maxMana: 80, emoji: '\u{1F49A}\u{1F4A7}\u{2728}', ability: 'Tidal Surge + Scepter of Tides Enhanced', baseKey: 'tidal_shaman' },
     tsunami_warlord:     { name: 'Tsunami Warlord',     baseCost: 3, type: 'warrior',  archetype: 'duelist',   secondaryArchetype: 'vanguard',  element: 'water', hp: 620,  attack: 70,  attackSpd: 0.8,  range: 1, moveSpd: 1.8, maxMana: 65, emoji: '\u{2694}\uFE0F\u{1F4A7}\u{2728}', ability: 'Maelstrom Spin + Current Enhanced', baseKey: 'riptide_blade' },
     abyssal_terror:      { name: 'Abyssal Terror',      baseCost: 4, type: 'mage',     archetype: 'warden',    secondaryArchetype: 'sorcerer',  element: 'water', hp: 920,  attack: 98,  attackSpd: 0.9,  range: 3, moveSpd: 1.3, maxMana: 85, emoji: '\u{1F52E}\u{1F4A7}\u{2728}', ability: 'Maelstrom Enhanced + Ink Cloud Enhanced', baseKey: 'kraken' },
+    hadal_colossus:      { name: 'Hadal Colossus',      baseCost: 4, type: 'tank',     archetype: 'guardian',  secondaryArchetype: 'warden',    element: 'water', hp: 1350, attack: 55,  attackSpd: 0.6,  range: 1, moveSpd: 1.2, maxMana: 90, emoji: '\u{1F52E}\u{1F4A7}\u{2728}', ability: 'Tidal Fortress Enhanced', baseKey: 'abyssal_guardian' },
     primordial_leviathan:{ name: 'Primordial Leviathan',baseCost: 5, type: 'tank',     archetype: 'guardian',  secondaryArchetype: 'warden',    element: 'water', hp: 1450, attack: 35,  attackSpd: 1.0,  range: 1, moveSpd: 1.2, maxMana: 0,  emoji: '\u{1F6E1}\uFE0F\u{1F4A7}\u{2728}', ability: 'Tidal Guardian Enhanced + Abyssal Depths Enhanced', baseKey: 'leviathan' },
 
-    // --- EARTH T3-T5 EVOLVED (4) ---
+    // --- EARTH T3-T5 EVOLVED (5) ---
     iron_colossus:       { name: 'Iron Colossus',       baseCost: 3, type: 'tank',     archetype: 'warden',    secondaryArchetype: 'guardian',   element: 'earth', hp: 1050, attack: 42,  attackSpd: 1.0,  range: 1, moveSpd: 1.2, maxMana: 90, emoji: '\u{1F6E1}\uFE0F\u{1F33F}\u{2728}', ability: 'Ground Slam Enhanced + Immovable Enhanced', baseKey: 'golem' },
     earthweaver:         { name: 'Earthweaver',         baseCost: 3, type: 'mage',     archetype: 'sorcerer',  secondaryArchetype: 'ranger',    element: 'earth', hp: 440,  attack: 70,  attackSpd: 0.9,  range: 3, moveSpd: 1.5, maxMana: 75, emoji: '\u{1F52E}\u{1F33F}\u{2728}', ability: 'Earthen Barrage + Living Earth Enhanced', baseKey: 'terra_sage' },
     world_sentinel:      { name: 'World Sentinel',      baseCost: 4, type: 'warrior',  archetype: 'duelist',   secondaryArchetype: 'warden',    element: 'earth', hp: 1200, attack: 70,  attackSpd: 0.9,  range: 1, moveSpd: 1.2, maxMana: 80, emoji: '\u{2694}\uFE0F\u{1F33F}\u{2728}', ability: 'Nature\'s Wrath + Deep Roots Enhanced', baseKey: 'ancient_treant' },
+    worldroot_sentinel:  { name: 'Worldroot Sentinel',  baseCost: 4, type: 'archer',   archetype: 'ranger',    secondaryArchetype: 'guardian',  element: 'earth', hp: 680,  attack: 88,  attackSpd: 0.75, range: 5, moveSpd: 1.0, maxMana: 70, emoji: '\u{1F3F9}\u{1F33F}\u{2728}', ability: 'Thornstorm Enhanced', baseKey: 'grove_warden' },
     yggdrasil:           { name: 'Yggdrasil',           baseCost: 5, type: 'healer',   archetype: 'sage',      secondaryArchetype: 'guardian',  element: 'earth', hp: 1300, attack: 28,  attackSpd: 1.2,  range: 3, moveSpd: 1.3, maxMana: 0,  emoji: '\u{1F49A}\u{1F33F}\u{2728}', ability: 'Bloom of Life Enhanced + Roots of Life Enhanced', baseKey: 'world_tree' },
 
-    // --- WIND T3-T5 EVOLVED (4) ---
+    // --- WIND T3-T5 EVOLVED (5) ---
     tempest_lord:        { name: 'Tempest Lord',        baseCost: 3, type: 'mage',     archetype: 'sorcerer',  secondaryArchetype: 'mystic',    element: 'wind', hp: 420,  attack: 78,  attackSpd: 0.9,  range: 3, moveSpd: 1.8, maxMana: 70, emoji: '\u{1F52E}\u{1F4A8}\u{2728}', ability: 'Tornado Enhanced + Updraft Enhanced', baseKey: 'monsoon_caller' },
     hurricane_blade:     { name: 'Hurricane Blade',     baseCost: 3, type: 'warrior',  archetype: 'duelist',   secondaryArchetype: 'predator',  element: 'wind', hp: 620,  attack: 68,  attackSpd: 0.8,  range: 1, moveSpd: 2.0, maxMana: 60, emoji: '\u{2694}\uFE0F\u{1F4A8}\u{2728}', ability: 'Cyclone Slash + Dance of Blades Enhanced', baseKey: 'wind_duelist' },
     tempest_emperor:     { name: 'Tempest Emperor',     baseCost: 4, type: 'assassin', archetype: 'predator',  secondaryArchetype: 'vanguard',  element: 'wind', hp: 740,  attack: 100, attackSpd: 0.45, range: 1, moveSpd: 4.2, maxMana: 55, emoji: '\u{1F5E1}\uFE0F\u{1F4A8}\u{2728}', ability: 'Thunder Cleave + Lightning Speed Enhanced', baseKey: 'storm_sovereign' },
+    stormweft_oracle:    { name: 'Stormweft Oracle',    baseCost: 4, type: 'mage',     archetype: 'sorcerer',  secondaryArchetype: 'ranger',    element: 'wind', hp: 650,  attack: 92,  attackSpd: 0.85, range: 3, moveSpd: 2.0, maxMana: 65, emoji: '\u{1F4A8}\u{1F52E}\u{2728}', ability: 'Cyclone Barrage Enhanced', baseKey: 'tempest_weaver' },
     dimensional_dragon:  { name: 'Dimensional Dragon',  baseCost: 5, type: 'mage',     archetype: 'mystic',    secondaryArchetype: 'sorcerer',  element: 'wind', hp: 820,  attack: 125, attackSpd: 0.7,  range: 4, moveSpd: 2.1, maxMana: 0,  emoji: '\u{1F52E}\u{1F4A8}\u{2728}', ability: 'Dimensional Rift Enhanced + Reality Warp Enhanced', baseKey: 'void_wyrm' },
 
-    // --- LIGHTNING T3-T5 EVOLVED (4) ---
+    // --- LIGHTNING T3-T5 EVOLVED (5) ---
     plasma_core:         { name: 'Plasma Core',         baseCost: 3, type: 'mage',     archetype: 'mystic',    secondaryArchetype: 'sorcerer',  element: 'lightning', hp: 480,  attack: 75,  attackSpd: 0.9,  range: 3, moveSpd: 1.6, maxMana: 70, emoji: '\u{1F52E}\u{26A1}\u{2728}', ability: 'Sphere Summoning + Rolling Thunder Enhanced', baseKey: 'ball_lightning' },
     storm_fortress:      { name: 'Storm Fortress',      baseCost: 3, type: 'tank',     archetype: 'warden',    secondaryArchetype: 'guardian',  element: 'lightning', hp: 1000, attack: 45,  attackSpd: 1.0,  range: 1, moveSpd: 1.3, maxMana: 85, emoji: '\u{1F6E1}\uFE0F\u{26A1}\u{2728}', ability: 'Lightning Prison Enhanced + Overcharge Enhanced', baseKey: 'thunder_warden' },
     roc_of_storms:       { name: 'Roc of Storms',       baseCost: 4, type: 'warrior',  archetype: 'vanguard',  secondaryArchetype: 'predator',  element: 'lightning', hp: 820,  attack: 88,  attackSpd: 0.8,  range: 1, moveSpd: 2.2, maxMana: 70, emoji: '\u{2694}\uFE0F\u{26A1}\u{2728}', ability: 'Lightning Descent Enhanced + Aerial Superiority Enhanced', baseKey: 'thunderbird' },
+    plasma_ravager:      { name: 'Plasma Ravager',      baseCost: 4, type: 'assassin', archetype: 'predator',  secondaryArchetype: 'duelist',   element: 'lightning', hp: 700,  attack: 95,  attackSpd: 0.5,  range: 1, moveSpd: 3.8, maxMana: 50, emoji: '\u{26A1}\u{1F5E1}\uFE0F\u{2728}', ability: 'Lightning Pounce Enhanced', baseKey: 'voltfang_stalker' },
     thunder_god:         { name: 'Thunder God',         baseCost: 5, type: 'mage',     archetype: 'sorcerer',  secondaryArchetype: 'mystic',    element: 'lightning', hp: 1000, attack: 130, attackSpd: 0.95, range: 3, moveSpd: 1.7, maxMana: 0,  emoji: '\u{1F52E}\u{26A1}\u{2728}', ability: 'Cataclysmic Storm Enhanced + Superconductor Enhanced', baseKey: 'storm_dragon' },
 
-    // --- FORCE T3-T5 EVOLVED (4) ---
+    // --- FORCE T3-T5 EVOLVED (5) ---
     champion:            { name: 'Champion',            baseCost: 3, type: 'warrior',  archetype: 'duelist',   secondaryArchetype: 'vanguard',  element: 'force', hp: 650,  attack: 80,  attackSpd: 0.8,  range: 1, moveSpd: 1.9, maxMana: 60, emoji: '\u{2694}\uFE0F\u{1F4AA}\u{2728}', ability: 'Brutal Strike Enhanced + Arena Master Enhanced', baseKey: 'gladiator' },
     citadel:             { name: 'Citadel',             baseCost: 3, type: 'tank',     archetype: 'warden',    secondaryArchetype: 'guardian',  element: 'force', hp: 1100, attack: 40,  attackSpd: 1.0,  range: 1, moveSpd: 1.2, maxMana: 85, emoji: '\u{1F6E1}\uFE0F\u{1F4AA}\u{2728}', ability: 'Defensive Stance Enhanced + Unbreakable Will Enhanced', baseKey: 'fortress' },
     war_architect:       { name: 'War Architect',       baseCost: 4, type: 'mage',     archetype: 'mystic',    secondaryArchetype: 'ranger',    element: 'force', hp: 520,  attack: 92,  attackSpd: 0.9,  range: 3, moveSpd: 1.5, maxMana: 75, emoji: '\u{1F52E}\u{1F4AA}\u{2728}', ability: 'Artillery Strike Enhanced + War Machine Enhanced', baseKey: 'siege_engineer' },
+    warforged_champion:  { name: 'Warforged Champion',  baseCost: 4, type: 'warrior',  archetype: 'duelist',   secondaryArchetype: 'vanguard',  element: 'force', hp: 950,  attack: 105, attackSpd: 0.85, range: 1, moveSpd: 1.8, maxMana: 60, emoji: '\u{2694}\uFE0F\u{1F4AA}\u{2728}', ability: 'Decisive Strike Enhanced', baseKey: 'iron_duelist' },
     cosmic_titan:        { name: 'Cosmic Titan',        baseCost: 5, type: 'warrior',  archetype: 'duelist',   secondaryArchetype: 'vanguard',  element: 'force', hp: 1350, attack: 140, attackSpd: 0.9,  range: 1, moveSpd: 1.8, maxMana: 0,  emoji: '\u{2694}\uFE0F\u{1F4AA}\u{2728}', ability: 'Earthshaker Enhanced + Colossus Enhanced', baseKey: 'titan_lord' }
 };
 
 // =============================================================================
-// EVOLUTION PATHS (60 entries — all units evolve at 3★)
+// EVOLUTION PATHS (66 entries — all units evolve at 3★)
 // =============================================================================
 
 var EVOLUTIONS = {
@@ -182,6 +194,7 @@ var EVOLUTIONS = {
     pyromancer:      { evolved: 'arcane_inferno',    requirements: [{ type: 'stars', value: 3 }] },
     inferno_fox:     { evolved: 'ninetail_blaze',    requirements: [{ type: 'stars', value: 3 }] },
     fire_dragon:     { evolved: 'elder_wyrm',        requirements: [{ type: 'stars', value: 3 }] },
+    ashen_watcher:   { evolved: 'phoenix_priest',    requirements: [{ type: 'stars', value: 3 }] },
     phoenix:         { evolved: 'eternal_phoenix',   requirements: [{ type: 'stars', value: 3 }] },
     // --- WATER ---
     tide_hunter:     { evolved: 'tsunami_blade',     requirements: [{ type: 'stars', value: 3 }] },
@@ -193,6 +206,7 @@ var EVOLUTIONS = {
     tidal_shaman:    { evolved: 'stormtide_oracle',  requirements: [{ type: 'stars', value: 3 }] },
     riptide_blade:   { evolved: 'tsunami_warlord',   requirements: [{ type: 'stars', value: 3 }] },
     kraken:          { evolved: 'abyssal_terror',    requirements: [{ type: 'stars', value: 3 }] },
+    abyssal_guardian:{ evolved: 'hadal_colossus',    requirements: [{ type: 'stars', value: 3 }] },
     leviathan:       { evolved: 'primordial_leviathan', requirements: [{ type: 'stars', value: 3 }] },
     // --- EARTH ---
     stone_guard:     { evolved: 'mountain_lord',     requirements: [{ type: 'stars', value: 3 }] },
@@ -204,6 +218,7 @@ var EVOLUTIONS = {
     golem:           { evolved: 'iron_colossus',     requirements: [{ type: 'stars', value: 3 }] },
     terra_sage:      { evolved: 'earthweaver',       requirements: [{ type: 'stars', value: 3 }] },
     ancient_treant:  { evolved: 'world_sentinel',    requirements: [{ type: 'stars', value: 3 }] },
+    grove_warden:    { evolved: 'worldroot_sentinel', requirements: [{ type: 'stars', value: 3 }] },
     world_tree:      { evolved: 'yggdrasil',         requirements: [{ type: 'stars', value: 3 }] },
     // --- WIND ---
     zephyr_scout:    { evolved: 'storm_assassin',    requirements: [{ type: 'stars', value: 3 }] },
@@ -215,6 +230,7 @@ var EVOLUTIONS = {
     monsoon_caller:  { evolved: 'tempest_lord',      requirements: [{ type: 'stars', value: 3 }] },
     wind_duelist:    { evolved: 'hurricane_blade',   requirements: [{ type: 'stars', value: 3 }] },
     storm_sovereign: { evolved: 'tempest_emperor',   requirements: [{ type: 'stars', value: 3 }] },
+    tempest_weaver:  { evolved: 'stormweft_oracle',  requirements: [{ type: 'stars', value: 3 }] },
     void_wyrm:       { evolved: 'dimensional_dragon', requirements: [{ type: 'stars', value: 3 }] },
     // --- LIGHTNING ---
     spark_fencer:    { evolved: 'arc_duelist',       requirements: [{ type: 'stars', value: 3 }] },
@@ -226,6 +242,7 @@ var EVOLUTIONS = {
     ball_lightning:  { evolved: 'plasma_core',       requirements: [{ type: 'stars', value: 3 }] },
     thunder_warden:  { evolved: 'storm_fortress',    requirements: [{ type: 'stars', value: 3 }] },
     thunderbird:     { evolved: 'roc_of_storms',     requirements: [{ type: 'stars', value: 3 }] },
+    voltfang_stalker:{ evolved: 'plasma_ravager',    requirements: [{ type: 'stars', value: 3 }] },
     storm_dragon:    { evolved: 'thunder_god',       requirements: [{ type: 'stars', value: 3 }] },
     // --- FORCE ---
     iron_soldier:    { evolved: 'legionnaire',       requirements: [{ type: 'stars', value: 3 }] },
@@ -237,6 +254,7 @@ var EVOLUTIONS = {
     gladiator:       { evolved: 'champion',          requirements: [{ type: 'stars', value: 3 }] },
     fortress:        { evolved: 'citadel',           requirements: [{ type: 'stars', value: 3 }] },
     siege_engineer:  { evolved: 'war_architect',     requirements: [{ type: 'stars', value: 3 }] },
+    iron_duelist:    { evolved: 'warforged_champion', requirements: [{ type: 'stars', value: 3 }] },
     titan_lord:      { evolved: 'cosmic_titan',      requirements: [{ type: 'stars', value: 3 }] }
 };
 

@@ -364,7 +364,7 @@ function evolveUnit(saveData, baseTemplateKey) {
     if (!check.canEvolve) return { success: false, reason: 'Requirements not met' };
 
     var goldCost = getEvolutionGoldCost(saveData, baseTemplateKey);
-    if (saveData.player.gold < goldCost) return { success: false, reason: 'Not enough gold (' + goldCost + 'g needed)' };
+    if (saveData.player.veilEssence < goldCost) return { success: false, reason: 'Not enough VE (' + goldCost + ' VE needed)' };
 
     var evolvedKey = check.evolvedKey;
     if (saveData.collection[evolvedKey]) return { success: false, reason: 'Already evolved' };
@@ -501,25 +501,25 @@ function verifyRosterIntegrity() {
 
     console.log('=== ROSTER INTEGRITY CHECK ===');
 
-    // Check 1: UNIT_TEMPLATES has 60 units
-    if (baseKeys.length !== 60) allErrors.push('UNIT_TEMPLATES has ' + baseKeys.length + ' units (expected 60)');
-    else console.log('\u2713 UNIT_TEMPLATES: 60 base units');
+    // Check 1: UNIT_TEMPLATES has 66 units
+    if (baseKeys.length !== 66) allErrors.push('UNIT_TEMPLATES has ' + baseKeys.length + ' units (expected 66)');
+    else console.log('\u2713 UNIT_TEMPLATES: 66 base units');
 
-    // Check 2: EVOLVED_TEMPLATES has 60 units (all tiers)
-    if (evolvedKeys.length !== 60) allErrors.push('EVOLVED_TEMPLATES has ' + evolvedKeys.length + ' units (expected 60)');
-    else console.log('\u2713 EVOLVED_TEMPLATES: 60 evolved units');
+    // Check 2: EVOLVED_TEMPLATES has 66 units (all tiers)
+    if (evolvedKeys.length !== 66) allErrors.push('EVOLVED_TEMPLATES has ' + evolvedKeys.length + ' units (expected 66)');
+    else console.log('\u2713 EVOLVED_TEMPLATES: 66 evolved units');
 
-    // Check 3: PASSIVE_DATA has 60 entries
-    if (passiveKeys.length !== 60) allErrors.push('PASSIVE_DATA has ' + passiveKeys.length + ' entries (expected 60)');
-    else console.log('\u2713 PASSIVE_DATA: 60 base passives');
+    // Check 3: PASSIVE_DATA has 66 entries
+    if (passiveKeys.length !== 66) allErrors.push('PASSIVE_DATA has ' + passiveKeys.length + ' entries (expected 66)');
+    else console.log('\u2713 PASSIVE_DATA: 66 base passives');
 
-    // Check 4: EVOLVED_PASSIVE_DATA has 60 entries
-    if (evolvedPassiveKeys.length !== 60) allErrors.push('EVOLVED_PASSIVE_DATA has ' + evolvedPassiveKeys.length + ' entries (expected 60)');
-    else console.log('\u2713 EVOLVED_PASSIVE_DATA: 60 evolved passives');
+    // Check 4: EVOLVED_PASSIVE_DATA has 66 entries
+    if (evolvedPassiveKeys.length !== 66) allErrors.push('EVOLVED_PASSIVE_DATA has ' + evolvedPassiveKeys.length + ' entries (expected 66)');
+    else console.log('\u2713 EVOLVED_PASSIVE_DATA: 66 evolved passives');
 
-    // Check 5: ABILITY_DATA has 120 entries (60 base + 60 evolved)
-    if (abilityKeys.length !== 120) allErrors.push('ABILITY_DATA has ' + abilityKeys.length + ' entries (expected 120)');
-    else console.log('\u2713 ABILITY_DATA: 120 ability entries');
+    // Check 5: ABILITY_DATA has 132 entries (66 base + 66 evolved)
+    if (abilityKeys.length !== 132) allErrors.push('ABILITY_DATA has ' + abilityKeys.length + ' entries (expected 132)');
+    else console.log('\u2713 ABILITY_DATA: 132 ability entries');
 
     // Check 6: Each base unit has matching ABILITY_DATA
     for (var i = 0; i < baseKeys.length; i++) {
@@ -561,14 +561,14 @@ function verifyRosterIntegrity() {
     var elNames = ['fire', 'water', 'earth', 'wind', 'lightning', 'force'];
     for (var i = 0; i < elNames.length; i++) {
         var cnt = elementCounts[elNames[i]] || 0;
-        if (cnt !== 10) allErrors.push('Element "' + elNames[i] + '" has ' + cnt + ' units (expected 10)');
+        if (cnt !== 11) allErrors.push('Element "' + elNames[i] + '" has ' + cnt + ' units (expected 11)');
         else console.log('\u2713 ' + elNames[i] + ': ' + cnt + ' units');
     }
 
-    // Check 13: Tier distribution (21/15/12/6/6)
+    // Check 13: Tier distribution (21/15/12/12/6)
     var tierCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     for (var i = 0; i < baseKeys.length; i++) tierCounts[UNIT_TEMPLATES[baseKeys[i]].cost]++;
-    var expectedTiers = { 1: 21, 2: 15, 3: 12, 4: 6, 5: 6 };
+    var expectedTiers = { 1: 21, 2: 15, 3: 12, 4: 12, 5: 6 };
     for (var t = 1; t <= 5; t++) {
         if (tierCounts[t] === expectedTiers[t]) console.log('\u2713 Tier ' + t + ': ' + tierCounts[t] + ' units');
         else allErrors.push('Tier ' + t + ' has ' + tierCounts[t] + ' units (expected ' + expectedTiers[t] + ')');
@@ -580,7 +580,7 @@ function verifyRosterIntegrity() {
         if (!UNIT_TEMPLATES[baseKeys[i]].secondaryArchetype) missingSecondary++;
     }
     if (missingSecondary > 0) allErrors.push(missingSecondary + ' base units missing secondaryArchetype');
-    else console.log('\u2713 All 60 base units have secondaryArchetype');
+    else console.log('\u2713 All 66 base units have secondaryArchetype');
 
     if (allErrors.length === 0) {
         console.log('\n\u2713\u2713\u2713 ALL CHECKS PASSED \u2713\u2713\u2713\n');
