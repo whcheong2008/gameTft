@@ -1,0 +1,88 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f91d9f68a2aaa3948af4f899069aadd5, type: 3}
+  m_Name: GachaConfig
+  m_EditorClassIdentifier: GameData::ShatteredVeil.Data.GachaConfig
+  pullCostVE: 50
+  multiPullCount: 10
+  multiPullDiscount: 50
+  hardPityThreshold: 50
+  softPityStartPull: 40
+  softPityRateIncrease: 1
+  evolvedCopyChance: 0.15
+  rateTables:
+  - minPlayerLevel: 1
+    t1Rate: 75
+    t2Rate: 25
+    t3Rate: 0
+    t4Rate: 0
+    t5Rate: 0
+  - minPlayerLevel: 3
+    t1Rate: 60
+    t2Rate: 35
+    t3Rate: 5
+    t4Rate: 0
+    t5Rate: 0
+  - minPlayerLevel: 5
+    t1Rate: 45
+    t2Rate: 38
+    t3Rate: 17
+    t4Rate: 0
+    t5Rate: 0
+  - minPlayerLevel: 7
+    t1Rate: 35
+    t2Rate: 33
+    t3Rate: 32
+    t4Rate: 0
+    t5Rate: 0
+  - minPlayerLevel: 9
+    t1Rate: 28
+    t2Rate: 28
+    t3Rate: 38
+    t4Rate: 6
+    t5Rate: 0
+  - minPlayerLevel: 11
+    t1Rate: 22
+    t2Rate: 25
+    t3Rate: 40
+    t4Rate: 13
+    t5Rate: 0
+  - minPlayerLevel: 13
+    t1Rate: 18
+    t2Rate: 22
+    t3Rate: 38
+    t4Rate: 22
+    t5Rate: 0
+  - minPlayerLevel: 15
+    t1Rate: 15
+    t2Rate: 18
+    t3Rate: 35
+    t4Rate: 30
+    t5Rate: 2
+  - minPlayerLevel: 17
+    t1Rate: 12
+    t2Rate: 15
+    t3Rate: 30
+    t4Rate: 37
+    t5Rate: 6
+  - minPlayerLevel: 19
+    t1Rate: 10
+    t2Rate: 12
+    t3Rate: 25
+    t4Rate: 43
+    t5Rate: 10
+  - minPlayerLevel: 20
+    t1Rate: 8
+    t2Rate: 10
+    t3Rate: 22
+    t4Rate: 50
+    t5Rate: 10
