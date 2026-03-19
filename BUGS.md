@@ -13,6 +13,7 @@
 | # | Severity | System | Description | Status |
 |---|----------|--------|-------------|--------|
 | 1 | CRITICAL | Team Builder / Heroes | Team builder crashes after hero assignment — `unitHero.def.emoji.charAt(0)` fails because HERO_DATA has no `emoji` field. Causes: can't navigate back, black squares on grid (partial render before crash). | **FIXED** — replaced with unicode ⚔ |
+| 2 | CRITICAL | Combat / Synergies | Combat crashes on wave start — `unitHasArchetype is not defined` (main-v2.js:6502). Function exists in synergies.js but that file is NOT loaded in V2. Combat board renders but units never fight. | **FIXED** — added `unitHasArchetype()` to units-core.js |
 
 ## Deferred to Unity
 

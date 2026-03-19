@@ -196,6 +196,16 @@ function getUnitXPToNext(level) {
     return Math.floor(100 * Math.pow(1.12, level - 1));
 }
 
+// Checks if a unit has a given archetype (primary or secondary via ascension)
+function unitHasArchetype(unit, archKey) {
+    if (unit.archetype === archKey) return true;
+    if (unit.secondaryArchetype && unit.secondaryArchetype === archKey) {
+        var tier = unit.ascensionTier;
+        if (tier === 'awakened' || tier === 'exalted' || tier === 'transcendent') return true;
+    }
+    return false;
+}
+
 // Returns effective stats for a unit factoring in stars, level, and ascension
 function getUnitStats(unit) {
     var tmpl = unit.evolved ? EVOLVED_TEMPLATES[unit.key] : UNIT_TEMPLATES[unit.key];
