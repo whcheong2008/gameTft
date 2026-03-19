@@ -4,7 +4,7 @@ namespace ShatteredVeil.Core.Combat
 {
     /// <summary>
     /// Full 13-step damage pipeline from GROUND-TRUTH.md section 1.
-    /// Steps 1-6 and 10-12 fully implemented. Steps 7-9 and 13 are stubs for Prompt 38.
+    /// All 13 steps fully implemented.
     /// </summary>
     public static class DamageCalculator
     {
@@ -66,13 +66,17 @@ namespace ShatteredVeil.Core.Combat
             // Step 6: Minimum damage floor
             int finalDmg = Math.Max(1, (int)Math.Floor(dmg));
 
-            // Step 7: Freeze vulnerability (stub — filled in Prompt 38)
-            // if (target.IsFrozen) finalDmg = (int)Math.Floor(finalDmg * FREEZE_VULNERABILITY);
+            // Step 7: Freeze vulnerability — frozen targets take +20% damage
+            if (target.IsFrozen)
+                finalDmg = (int)Math.Floor(finalDmg * FREEZE_VULNERABILITY);
 
-            // Step 8: Vulnerability status (stub — filled in Prompt 38)
-            // if (target.Vulnerability > 0) finalDmg = (int)Math.Floor(finalDmg * (1 + target.Vulnerability));
+            // Step 8: Vulnerability status — take +vulnPct% damage
+            if (target.Vulnerability > 0)
+                finalDmg = (int)Math.Floor(finalDmg * (1f + target.Vulnerability));
 
-            // Step 9: Ranger mark amplification (stub — filled in Prompt 38)
+            // Step 9: Ranger mark amplification — marked targets take +markAmp% damage
+            if (context.RangerMarkAmp > 0)
+                finalDmg = (int)Math.Floor(finalDmg * (1f + context.RangerMarkAmp));
 
             // Step 10: Dodge check
             float totalDodge = target.DodgeChance;
@@ -103,8 +107,37 @@ namespace ShatteredVeil.Core.Combat
 
             result.Damage = finalDmg + shieldAbsorbed;
 
-            // Step 13: Post-damage triggers (stub — filled in Prompt 38)
-            // Mana gen, reflect, on-hit, lifesteal, death check
+            // Step 13: Post-damage triggers
+            int totalDamageDealt = finalDmg + shieldAbsorbed;
+
+            // Reflect: melee attackers take reflect damage back
+            if (context.ReflectPct > 0 && totalDamageDealt > 0 && attacker.IsAlive)
+            {
+                int reflectDmg = (int)Math.Floor(totalDamageDealt * context.ReflectPct);
+                if (reflectDmg > 0)
+                {
+                    attacker.CurrentHP -= reflectDmg;
+                    if (attacker.CurrentHP <= 0)
+                    {
+                        attacker.CurrentHP = 0;
+                        attacker.IsAlive = false;
+                    }
+                    result.ReflectDamage = reflectDmg;
+                }
+            }
+
+            // Lifesteal: heal attacker for % of damage dealt
+            if (context.LifestealPct > 0 && totalDamageDealt > 0 && attacker.IsAlive)
+            {
+                int healAmount = (int)Math.Floor(totalDamageDealt * context.LifestealPct);
+                if (healAmount > 0)
+                {
+                    attacker.CurrentHP += healAmount;
+                    if (attacker.CurrentHP > attacker.MaxHP)
+                        attacker.CurrentHP = attacker.MaxHP;
+                    result.LifestealHealed = healAmount;
+                }
+            }
 
             return result;
         }

@@ -20,6 +20,15 @@ namespace ShatteredVeil.Core.Combat
         /// <summary>Bonus crit damage from synergies (added to base 1.5x).</summary>
         public float BonusCritDamage;
 
+        /// <summary>Ranger mark amplification (0-1). Marked targets take +X% damage.</summary>
+        public float RangerMarkAmp;
+
+        /// <summary>Reflect percentage (0-1). Melee attackers take X% of damage back.</summary>
+        public float ReflectPct;
+
+        /// <summary>Lifesteal percentage (0-1). Attacker heals for X% of damage dealt.</summary>
+        public float LifestealPct;
+
         public DamageContext()
         {
             AbilityMultiplier = 0f;
@@ -27,6 +36,9 @@ namespace ShatteredVeil.Core.Combat
             IsTrueDamage = false;
             SpellPenetration = 0f;
             BonusCritDamage = 0f;
+            RangerMarkAmp = 0f;
+            ReflectPct = 0f;
+            LifestealPct = 0f;
         }
     }
 
@@ -40,6 +52,8 @@ namespace ShatteredVeil.Core.Combat
         public bool IsDodged;
         public float ElementMultiplier;
         public int ShieldAbsorbed;
+        public int ReflectDamage;
+        public int LifestealHealed;
 
         public override string ToString()
         {
