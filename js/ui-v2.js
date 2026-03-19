@@ -1095,8 +1095,8 @@ function renderHeroScreen() {
             ELEMENTS[unitTmpl.element].emoji + ' ' + unitTmpl.name + ' ' + rUnit.stars + '\u2605' +
             '<span style="color:#e2b714; font-weight:normal;">' + heroLabel + '</span></div>';
 
-        var slotNames = ['weapon', 'helmet', 'armor', 'boots', 'gloves', 'accessory', 'trinket1', 'trinket2'];
-        var slotLabels = { weapon: '\u2694Wpn', helmet: '\u{1F3A9}Hlm', armor: '\u{1F6E1}Arm', boots: '\u{1F45F}Bts', gloves: '\u270A Glv', accessory: '\u{1F48D}Acc', trinket1: '\u2728Tr1', trinket2: '\u2728Tr2' };
+        var slotNames = ['weapon', 'helm', 'chest', 'gauntlets', 'boots', 'offhand', 'accessory1', 'accessory2'];
+        var slotLabels = { weapon: '\u2694Wpn', helm: '\u{1F3A9}Hlm', chest: '\u{1F6E1}Chest', gauntlets: '\u{1F94A}Glt', boots: '\u{1F462}Bts', offhand: '\u{1F52E}Off', accessory1: '\u{1F48D}Acc1', accessory2: '\u{1F4FF}Acc2' };
         var slotsHtml = '<div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:4px;">';
 
         for (var si = 0; si < slotNames.length; si++) {
@@ -3447,7 +3447,8 @@ function renderCombatSynergyBar() {
     var bar = document.getElementById('combat-synergy-bar');
     if (!bar || !combatState) { if (bar) bar.innerHTML = ''; return; }
 
-    var html = '';
+    // Use vertical layout for readable synergy descriptions
+    var html = '<div style="display:flex; flex-direction:column; gap:3px;">';
 
     // Active archetype synergies
     var archKeys = Object.keys(combatState.activeSynergies || {});
@@ -3462,8 +3463,14 @@ function renderCombatSynergyBar() {
         }
         if (tierReached > 0) {
             var archDesc = getSynergyArchBonusDesc(aKey, tierReached - 1);
-            html += '<span style="background:#2a3a5e; padding:2px 6px; border-radius:4px; white-space:nowrap;" title="' + arch.name + ': ' + archDesc + '">' +
-                arch.emoji + ' ' + arch.name + ' ' + count + '<span style="font-size:9px; color:#999; margin-left:3px;">' + archDesc.substring(0, 30) + (archDesc.length > 30 ? '...' : '') + '</span></span>';
+            var thresholdStr = '';
+            for (var th = 0; th < arch.thresholds.length; th++) {
+                thresholdStr += (th === tierReached - 1 ? '<b style="color:#e2b714;">' + arch.thresholds[th] + '</b>' : '<span style="color:#555;">' + arch.thresholds[th] + '</span>');
+                if (th < arch.thresholds.length - 1) thresholdStr += '/';
+            }
+            html += '<div style="background:#2a3a5e; padding:3px 8px; border-radius:4px; border-left:3px solid #e2b714;">' +
+                '<div style="font-size:11px;">' + arch.emoji + ' <b>' + arch.name + '</b> <span style="color:#e2b714;">' + count + '</span> (' + thresholdStr + ')</div>' +
+                '<div style="font-size:10px; color:#aaa; margin-top:1px;">' + archDesc + '</div></div>';
         }
     }
 
@@ -3476,17 +3483,24 @@ function renderCombatSynergyBar() {
         if (!elemSyn) continue;
         var eCount = (combatState.activeElements || {})[eKey] || 0;
         var isPrismatic = elemBonuses[eKey] && elemBonuses[eKey].isPrismatic;
-        var bgColor = isPrismatic ? '#5a4a2e' : '#2a3a5e';
+        var bgColor = isPrismatic ? '#5a4a2e' : '#1a2a4e';
+        var borderColor = isPrismatic ? '#e2b714' : (elemSyn.color || '#4a6a9e');
         var eTierReached = 0;
         for (var et = 0; et < elemSyn.thresholds.length; et++) {
             if (eCount >= elemSyn.thresholds[et]) eTierReached = et + 1;
         }
         var elemDesc = (eTierReached > 0 && elemSyn.bonuses[eTierReached - 1]) ? elemSyn.bonuses[eTierReached - 1].desc : '';
-        if (elemDesc.length > 35) elemDesc = elemDesc.substring(0, 32) + '...';
-        html += '<span style="background:' + bgColor + '; padding:2px 6px; border-radius:4px; white-space:nowrap; color:' + (elemSyn.color || '#fff') + ';" title="' + elemSyn.name + ': ' + elemDesc + '">' +
-            elemSyn.emoji + ' ' + elemSyn.name + ' ' + eCount + '<span style="font-size:9px; color:#999; margin-left:3px;">' + elemDesc + '</span></span>';
+        var eThresholdStr = '';
+        for (var eth = 0; eth < elemSyn.thresholds.length; eth++) {
+            eThresholdStr += (eth === eTierReached - 1 ? '<b style="color:' + (elemSyn.color || '#e2b714') + ';">' + elemSyn.thresholds[eth] + '</b>' : '<span style="color:#555;">' + elemSyn.thresholds[eth] + '</span>');
+            if (eth < elemSyn.thresholds.length - 1) eThresholdStr += '/';
+        }
+        html += '<div style="background:' + bgColor + '; padding:3px 8px; border-radius:4px; border-left:3px solid ' + borderColor + ';">' +
+            '<div style="font-size:11px; color:' + (elemSyn.color || '#fff') + ';">' + elemSyn.emoji + ' <b>' + elemSyn.name + '</b> <span style="color:' + (elemSyn.color || '#e2b714') + ';">' + eCount + '</span> (' + eThresholdStr + ')</div>' +
+            '<div style="font-size:10px; color:#aaa; margin-top:1px;">' + elemDesc + '</div></div>';
     }
 
+    html += '</div>';
     bar.innerHTML = html || '<span class="text-muted">No active synergies</span>';
 }
 
