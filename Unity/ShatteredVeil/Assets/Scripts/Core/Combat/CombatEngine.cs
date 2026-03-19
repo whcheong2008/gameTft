@@ -6,6 +6,7 @@ namespace ShatteredVeil.Core.Combat
     /// <summary>
     /// Main combat loop orchestrator.
     /// Headless combat runner — equivalent to combat-benchmark.js.
+    /// Integrates passive triggers and boss phase/enrage/telegraph logic.
     /// </summary>
     public class CombatEngine
     {
@@ -14,19 +15,56 @@ namespace ShatteredVeil.Core.Combat
         private readonly GridSystem _grid;
         private Queue<CombatUnit> _turnQueue;
 
+        // Subsystems
+        private readonly PassiveSystem _passiveSystem;
+        private readonly BossSystem _bossSystem;
+
+        // Boss tracking
+        private CombatUnit _bossUnit;
+        private BossData _bossData;
+        private float _elapsed;
+
+        public PassiveSystem PassiveSystem => _passiveSystem;
+        public BossSystem BossSystem => _bossSystem;
+        public GridSystem Grid => _grid;
+
         public CombatEngine(CombatState state, Random rng)
         {
             _state = state;
             _rng = rng;
             _grid = new GridSystem();
+            _passiveSystem = new PassiveSystem();
+            _bossSystem = new BossSystem();
+            _elapsed = 0f;
 
             // Place units on grid
             PlaceTeam(_state.PlayerTeam, 0); // rows 0-1
             PlaceTeam(_state.EnemyTeam, 2);  // rows 2-3
 
+            // Detect boss unit
+            _bossUnit = null;
+            _bossData = null;
+            if (_state.IsBoss)
+            {
+                foreach (var unit in _state.EnemyTeam)
+                {
+                    var bd = BossCatalog.Get(unit.UnitId);
+                    if (bd != null)
+                    {
+                        _bossUnit = unit;
+                        _bossData = bd;
+                        _bossSystem.InitBoss(unit, bd, _grid);
+                        break;
+                    }
+                }
+            }
+
             _state.Phase = BattlePhase.InProgress;
             _state.TurnNumber = 0;
             RebuildTurnQueue();
+
+            // Fire CombatStart passives
+            _passiveSystem.OnCombatStart(_state);
         }
 
         private void PlaceTeam(List<CombatUnit> team, int startRow)
@@ -83,21 +121,36 @@ namespace ShatteredVeil.Core.Combat
                 actor = DequeueNextAlive();
                 if (actor == null)
                 {
-                    _state.Phase = BattlePhase.Defeat; // No one alive = draw = loss
+                    _state.Phase = BattlePhase.Defeat;
                     return new TurnResult { BattleOver = true, EndPhase = BattlePhase.Defeat };
                 }
             }
 
             _state.TurnNumber++;
+            _elapsed += 1.0f; // Approximate 1s per turn for timing
 
             var result = new TurnResult { Attacker = actor };
+
+            // Boss phase check before boss turn
+            if (_bossUnit != null && _bossData != null && actor == _bossUnit)
+            {
+                if (_bossSystem.CheckPhaseTransition(_bossUnit, _bossData))
+                {
+                    _bossSystem.TransitionPhase(_bossUnit, _bossData);
+                }
+
+                // Check enrage
+                _bossSystem.CheckEnrage(_bossUnit, _bossData, _elapsed);
+
+                // Tick boss cooldowns
+                _bossSystem.Tick(_bossUnit, _bossData, 1.0f);
+            }
 
             // Check stun/freeze skip
             if (TurnOrderSystem.ShouldSkipTurn(actor))
             {
                 result.Skipped = true;
                 result.SkipReason = actor.IsStunned ? "Stunned" : "Frozen";
-                // Clear stun after skip
                 actor.IsStunned = false;
                 actor.IsFrozen = false;
                 CheckWinCondition(result);
@@ -110,7 +163,6 @@ namespace ShatteredVeil.Core.Combat
 
             if (target == null)
             {
-                // No enemies alive — win
                 _state.Phase = actor.Team == Team.Player
                     ? BattlePhase.Victory
                     : BattlePhase.Defeat;
@@ -134,10 +186,8 @@ namespace ShatteredVeil.Core.Combat
                     result.MovedTo = actor.Position;
                 }
 
-                // After moving, check if now in range
                 if (!_grid.IsInRange(actor.Position, target.Position, range))
                 {
-                    // Still not in range — turn spent moving
                     CheckWinCondition(result);
                     return result;
                 }
@@ -147,7 +197,6 @@ namespace ShatteredVeil.Core.Combat
             var abilityData = AbilityCatalog.Get(actor.UnitId);
             if (abilityData != null && ManaSystem.CanCastAbility(actor))
             {
-                // Cast ability
                 var abilityResult = AbilityExecutor.Execute(actor, abilityData, _state, _grid, _rng);
                 ManaSystem.ConsumeMana(actor);
 
@@ -155,7 +204,6 @@ namespace ShatteredVeil.Core.Combat
                 result.AbilityResult = abilityResult;
                 result.Damage = abilityResult.TotalDamage;
 
-                // Check if any target died from the ability
                 foreach (var dmgInst in abilityResult.DamageInstances)
                 {
                     if (dmgInst.Killed)
@@ -163,6 +211,13 @@ namespace ShatteredVeil.Core.Combat
                         result.TargetDied = true;
                         _grid.RemoveUnit(dmgInst.Target);
                     }
+                }
+
+                // Fire OnAttack passives for ability hits
+                if (target.IsAlive || result.TargetDied)
+                {
+                    var dmgResult = new DamageResult { Damage = abilityResult.TotalDamage };
+                    _passiveSystem.OnAttack(actor, target, dmgResult, _state);
                 }
             }
             else
@@ -175,6 +230,13 @@ namespace ShatteredVeil.Core.Combat
                 result.IsCrit = dmgResult.IsCrit;
                 result.IsDodged = dmgResult.IsDodged;
 
+                // Fire OnAttack passive for attacker
+                _passiveSystem.OnAttack(actor, target, dmgResult, _state);
+
+                // Fire OnHit passive for defender
+                if (target.IsAlive && dmgResult.Damage > 0)
+                    _passiveSystem.OnHit(target, actor, dmgResult.Damage, _state);
+
                 // Mana gain on auto-attack
                 ManaSystem.GainManaOnAttack(actor);
 
@@ -182,13 +244,16 @@ namespace ShatteredVeil.Core.Combat
                 if (target.IsAlive && dmgResult.Damage > 0)
                     ManaSystem.GainManaOnHit(target, dmgResult.Damage);
 
-                // Check if target died
                 if (!target.IsAlive)
                 {
                     result.TargetDied = true;
                     _grid.RemoveUnit(target);
                 }
             }
+
+            // Tick auras and periodic passives each turn
+            _passiveSystem.TickAuras(_state, 1.0f);
+            _passiveSystem.TickPeriodic(_state, 1.0f);
 
             CheckWinCondition(result);
             return result;
@@ -222,7 +287,6 @@ namespace ShatteredVeil.Core.Combat
                 result.EndPhase = BattlePhase.Defeat;
             }
 
-            // Check turn limit (timeout → draw = loss)
             if (!result.BattleOver && _state.TurnNumber >= _state.MaxTurns)
             {
                 _state.Phase = BattlePhase.Defeat;
@@ -244,7 +308,6 @@ namespace ShatteredVeil.Core.Combat
 
             while (_state.Phase == BattlePhase.InProgress)
             {
-                // Rebuild queue each round
                 if (_turnQueue.Count == 0)
                     RebuildTurnQueue();
 
