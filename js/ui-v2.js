@@ -2988,15 +2988,15 @@ function showMissionResults(victory, stars) {
 
         document.getElementById('results-rewards').innerHTML = rewardHtml;
 
+        // Mark story mission complete FIRST (so boss clear raises level cap before XP is awarded)
+        if (pendingMissionIsStory && pendingMissionIndex >= 0) {
+            completeStoryMission(sd, pendingMissionIndex, stars);
+        }
+
         var leveled = applyMissionRewards(sd, rewards);
         if (leveled) {
             document.getElementById('results-rewards').innerHTML +=
                 '<br><span class="text-green" style="font-size:20px;">LEVEL UP!</span>';
-        }
-
-        // Mark story mission complete
-        if (pendingMissionIsStory && pendingMissionIndex >= 0) {
-            completeStoryMission(sd, pendingMissionIndex, stars);
         }
 
         // Show hero level-ups

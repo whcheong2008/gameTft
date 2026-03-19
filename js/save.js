@@ -20,7 +20,19 @@ function createDefaultSaveData() {
         // count = total copies owned (including invested in stars)
         // stars = current star level (starts at 1 when first obtained)
         // copiesForNext = copies banked toward next star-up
-        collection: {},
+        collection: {
+            // Starter set: 10 curated T1 units for a functional starting team
+            flame_warrior:  { stars: 1, copiesForNext: 0 },
+            stone_guard:    { stars: 1, copiesForNext: 0 },
+            frost_archer:   { stars: 1, copiesForNext: 0 },
+            wind_squire:    { stars: 1, copiesForNext: 0 },
+            pulse_mender:   { stars: 1, copiesForNext: 0 },
+            fire_acolyte:   { stars: 1, copiesForNext: 0 },
+            bramble_knight: { stars: 1, copiesForNext: 0 },
+            tide_hunter:    { stars: 1, copiesForNext: 0 },
+            spark_fencer:   { stars: 1, copiesForNext: 0 },
+            shadow_blade:   { stars: 1, copiesForNext: 0 }
+        },
         // Saved teams: array of team configs
         // Each team: { name: 'Team 1', slots: [ { key: 'flame_warrior', row: 0, col: 2 }, ... ] }
         teams: [
