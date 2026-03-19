@@ -12,7 +12,7 @@
 
 | # | Severity | System | Description | Status |
 |---|----------|--------|-------------|--------|
-| | | | (none yet) | |
+| 1 | CRITICAL | Team Builder / Heroes | Team builder crashes after hero assignment — `unitHero.def.emoji.charAt(0)` fails because HERO_DATA has no `emoji` field. Causes: can't navigate back, black squares on grid (partial render before crash). | **FIXED** — replaced with unicode ⚔ |
 
 ## Deferred to Unity
 

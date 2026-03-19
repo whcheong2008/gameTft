@@ -1668,7 +1668,7 @@ function renderTeamBuilderScreen() {
                 if (typeof getHeroForUnit === 'function') {
                     var unitHero = getHeroForUnit(sd, unitHere.key);
                     if (unitHero && unitHero.def) {
-                        heroIndicator = '<div style="font-size:8px; color:#e2b714; line-height:1;">' + unitHero.def.emoji.charAt(0) + ' ' + unitHero.def.name + '</div>';
+                        heroIndicator = '<div style="font-size:8px; color:#e2b714; line-height:1;">\u2694 ' + unitHero.def.name + '</div>';
                     } else {
                         heroIndicator = '<div style="font-size:7px; color:#666; line-height:1;">No Hero</div>';
                     }
