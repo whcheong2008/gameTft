@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bab5fc3d7d6dc3b458719cee86bb70d5, type: 3}
+  m_Name: predator
+  m_EditorClassIdentifier: GameData::ShatteredVeil.Data.SynergyDefinition
+  type: 1
+  synergyId: predator
+  tiers:
+  - requiredCount: 2
+    description: Predators +25% ATK spd
+    bonuses:
+    - stat: 6
+      modType: 1
+      value: 0.25
+  - requiredCount: 4
+    description: Predators +40% ATK spd
+    bonuses:
+    - stat: 6
+      modType: 1
+      value: 0.4
+  - requiredCount: 6
+    description: Predators +55% ATK spd
+    bonuses:
+    - stat: 6
+      modType: 1
+      value: 0.55
+  - requiredCount: 8
+    description: Predators +70% ATK spd
+    bonuses:
+    - stat: 6
+      modType: 1
+      value: 0.7

@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28d868f14ace0e24faf393112f6c6125, type: 3}
+  m_Name: spark_fencer
+  m_EditorClassIdentifier: GameData::ShatteredVeil.Data.UnitTemplate
+  unitId: spark_fencer
+  displayName: Spark Fencer
+  element: 4
+  archetype: 3
+  secondaryArchetype: 6
+  hasSecondaryArchetype: 1
+  tier: 1
+  evolvedFromId: 
+  evolvesIntoId: arc_duelist
+  isEvolved: 0
+  baseHP: 620
+  baseATK: 50
+  baseDEF: 0
+  baseSPD: 0
+  baseAttackSpeed: 0.85
+  baseCritChance: 0
+  baseCritDamage: 1.5
+  maxMana: 65
+  attackRange: 1
+  moveSpeed: 1.9
+  defaultTargeting: 0
+  abilityId: spark_fencer
+  passiveId: spark_fencer

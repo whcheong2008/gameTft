@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bab5fc3d7d6dc3b458719cee86bb70d5, type: 3}
+  m_Name: sage
+  m_EditorClassIdentifier: GameData::ShatteredVeil.Data.SynergyDefinition
+  type: 1
+  synergyId: sage
+  tiers:
+  - requiredCount: 2
+    description: Sages +35% healing power
+    bonuses:
+    - stat: 9
+      modType: 1
+      value: 0.35
+  - requiredCount: 4
+    description: Sages +70% healing
+    bonuses:
+    - stat: 9
+      modType: 1
+      value: 0.7
+  - requiredCount: 6
+    description: Sages +110% healing
+    bonuses:
+    - stat: 9
+      modType: 1
+      value: 1.1
+  - requiredCount: 8
+    description: Sages +160% healing
+    bonuses:
+    - stat: 9
+      modType: 1
+      value: 1.6
