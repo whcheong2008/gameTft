@@ -76,6 +76,25 @@ namespace ShatteredVeil.Mono.UI
             StartCoroutine(TransitionTo(sceneName));
         }
 
+        /// <summary>
+        /// Unload a scene by name. Safe to call from MonoBehaviours living in that scene
+        /// because this coroutine runs on the DontDestroyOnLoad SceneRouter.
+        /// </summary>
+        public void UnloadScene(string sceneName)
+        {
+            StartCoroutine(UnloadSceneCoroutine(sceneName));
+        }
+
+        private IEnumerator UnloadSceneCoroutine(string sceneName)
+        {
+            var scene = SceneManager.GetSceneByName(sceneName);
+            if (scene.isLoaded)
+            {
+                yield return SceneManager.UnloadSceneAsync(scene);
+                Debug.Log("[SceneRouter] Unloaded scene: " + sceneName);
+            }
+        }
+
         public void ReturnToHub()
         {
             LoadScene("Hub");
