@@ -628,28 +628,34 @@ When done, report: files created, tests passed/failed, any issues.
 
 ### Automated Orchestrator
 
-For running multiple prompts without manual copy-paste, use `orchestrators/run-prompts.sh`:
+For running multiple prompts without manual copy-paste, use the **PowerShell** orchestrator (Windows):
 
-```bash
+```powershell
+# From the Game TFT directory in PowerShell:
+
 # Run a single prompt
-./orchestrators/run-prompts.sh 52
+.\orchestrators\run-prompts.ps1 52
 
 # Run a range of prompts
-./orchestrators/run-prompts.sh 52 55
+.\orchestrators\run-prompts.ps1 52 55
 
 # Run all defined prompts (skips already-completed ones)
-./orchestrators/run-prompts.sh
+.\orchestrators\run-prompts.ps1
 ```
+
+There is also a bash version (`run-prompts.sh`) for Linux/Mac, but **Wei's machine is Windows — use the .ps1 version**.
 
 The script:
 1. Checks if each prompt is already done (skips if so)
 2. Builds the launch prompt automatically from its definitions
-3. Runs `claude -p` in non-interactive mode
+3. Runs `claude -p` in non-interactive mode with `--model opus --max-budget-usd 5`
 4. Verifies the commit exists after completion
-5. Logs output to `/tmp/prompt-<N>-output.log`
-6. Reports summary at the end
+5. Logs output to `orchestrators/logs/prompt-<N>.log`
+6. Reports color-coded summary at the end (green/red/yellow)
 
-**To add new prompts**: Edit the `PROMPTS` associative array in the script. Format: `PROMPTS[NN]="file|branch|commit-msg|doc1;doc2;doc3"`
+**To add new prompts**: Edit the `$Prompts` hashtable in the .ps1 script. Copy an existing entry and change the number, file, branch, commit message, and docs.
+
+**To retry a failed prompt**: `.\orchestrators\run-prompts.ps1 <N>`
 
 **When to use manual vs orchestrator**:
 - **Orchestrator**: Batch of prompts that are well-defined and don't need discussion
