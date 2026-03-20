@@ -1,7 +1,7 @@
 {
     "name": "GameMono",
     "rootNamespace": "ShatteredVeil.Mono",
-    "references": ["GameCore"],
+    "references": ["GameCore", "Unity.TextMeshPro"],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

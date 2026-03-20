@@ -7,34 +7,32 @@ namespace ShatteredVeil.Data
     public class GachaConfig : ScriptableObject, IGachaConfig
     {
         [Header("Pull Costs")]
-        public int pullCostVE = 50;
-        public int multiPullCount = 10;
-        public int multiPullDiscount = 50;
+        [Tooltip("VE cost for a single roll")]
+        public int singleRollCost = 50;
+
+        [Tooltip("Number of rolls in a multi-roll")]
+        public int multiRollCount = 10;
+
+        [Tooltip("Total VE cost for a multi-roll (discounted)")]
+        public int multiRollCost = 450;
 
         [Header("Pity")]
-        public int hardPityThreshold = 50;
-        public float softPityStartPull = 40;
-        public float softPityRateIncrease = 1.0f;
-
-        [Header("Evolved Copy")]
-        public float evolvedCopyChance = 0.15f;
+        [Tooltip("Guaranteed high-tier after this many rolls")]
+        public int pityThreshold = 50;
 
         [Header("Rate Tables (by Player Level)")]
         public GachaRateTable[] rateTables;
 
         // IGachaConfig implementation
-        int IGachaConfig.PullCostVE => pullCostVE;
-        int IGachaConfig.MultiPullCount => multiPullCount;
-        int IGachaConfig.MultiPullDiscount => multiPullDiscount;
-        int IGachaConfig.HardPityThreshold => hardPityThreshold;
-        float IGachaConfig.SoftPityStartPull => softPityStartPull;
-        float IGachaConfig.SoftPityRateIncrease => softPityRateIncrease;
-        int IGachaConfig.RateTableCount => rateTables != null ? rateTables.Length : 0;
-        float IGachaConfig.EvolvedCopyChance => evolvedCopyChance;
+        int IGachaConfig.SingleRollCost => singleRollCost;
+        int IGachaConfig.MultiRollCount => multiRollCount;
+        int IGachaConfig.MultiRollCost => multiRollCost;
+        int IGachaConfig.PityThreshold => pityThreshold;
 
-        float IGachaConfig.GetTierRate(int playerLevel, int tier)
+        int[] IGachaConfig.GetTierWeights(int playerLevel)
         {
-            if (rateTables == null || rateTables.Length == 0) return 0f;
+            if (rateTables == null || rateTables.Length == 0)
+                return new[] { 100, 0, 0, 0, 0 };
 
             // Find the highest rate table that applies to this player level
             GachaRateTable bestMatch = rateTables[0];
@@ -44,15 +42,14 @@ namespace ShatteredVeil.Data
                     bestMatch = rateTables[i];
             }
 
-            switch (tier)
+            return new[]
             {
-                case 1: return bestMatch.t1Rate;
-                case 2: return bestMatch.t2Rate;
-                case 3: return bestMatch.t3Rate;
-                case 4: return bestMatch.t4Rate;
-                case 5: return bestMatch.t5Rate;
-                default: return 0f;
-            }
+                bestMatch.t1Rate,
+                bestMatch.t2Rate,
+                bestMatch.t3Rate,
+                bestMatch.t4Rate,
+                bestMatch.t5Rate
+            };
         }
     }
 
@@ -60,10 +57,10 @@ namespace ShatteredVeil.Data
     public class GachaRateTable
     {
         public int minPlayerLevel;
-        public float t1Rate;
-        public float t2Rate;
-        public float t3Rate;
-        public float t4Rate;
-        public float t5Rate;
+        public int t1Rate;
+        public int t2Rate;
+        public int t3Rate;
+        public int t4Rate;
+        public int t5Rate;
     }
 }

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEditor;
+using ShatteredVeil.Core.Units;
 using ShatteredVeil.Data;
 
 namespace ShatteredVeil.Editor
@@ -76,9 +77,9 @@ namespace ShatteredVeil.Editor
                 var existing = AssetDatabase.LoadAssetAtPath<SynergyDefinition>(path);
                 var so = existing != null ? existing : ScriptableObject.CreateInstance<SynergyDefinition>();
 
-                so.synergyType = entry.synergyType;
-                so.synergyName = entry.synergyName;
-                so.tiers = entry.tiers;
+                so.type = entry.synergyType == "element" ? SynergyType.Element : SynergyType.Archetype;
+                so.synergyId = entry.synergyName;
+                so.tiers = ConvertTiers(entry.tiers);
 
                 if (existing == null)
                     AssetDatabase.CreateAsset(so, path);
@@ -89,6 +90,20 @@ namespace ShatteredVeil.Editor
             }
 
             Debug.Log($"[UnitDataImporter] Imported {count} synergy definitions.");
+        }
+
+        private static SynergyTierData[] ConvertTiers(SynergyTier[] tiers)
+        {
+            var result = new SynergyTierData[tiers.Length];
+            for (int i = 0; i < tiers.Length; i++)
+            {
+                result[i] = new SynergyTierData
+                {
+                    requiredCount = tiers[i].threshold,
+                    description = tiers[i].description
+                };
+            }
+            return result;
         }
 
         private static void EnsureFolder(string path)
@@ -292,6 +307,12 @@ namespace ShatteredVeil.Editor
             U("warforged_champion","Warforged Champion",4,"warrior","duelist","vanguard","force",950,105,0.85f,1f,1.8f,60,isEvo:true,baseId:"iron_duelist",template:"execute_striker"),
             U("cosmic_titan","Cosmic Titan",5,"warrior","duelist","vanguard","force",1350,140,0.9f,1f,1.8f,0,isEvo:true,baseId:"titan_lord",template:"transformer"),
         };
+    }
+
+    public struct SynergyTier
+    {
+        public int threshold;
+        public string description;
     }
 
     /// <summary>

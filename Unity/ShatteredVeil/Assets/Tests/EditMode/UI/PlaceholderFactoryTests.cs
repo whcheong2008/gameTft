@@ -34,7 +34,7 @@ namespace ShatteredVeil.Tests.EditMode.UI
         [Test]
         public void CreateIconSprite_ReturnsCorrectDimensions()
         {
-            var sprite = PlaceholderFactory.CreateIconSprite(Color.red, "Test");
+            var sprite = PlaceholderFactory.CreateIconSprite(Color.red);
 
             Assert.IsNotNull(sprite);
             Assert.AreEqual(64, sprite.texture.width);
@@ -70,15 +70,15 @@ namespace ShatteredVeil.Tests.EditMode.UI
         }
 
         [Test]
-        public void GetElementAbbreviation_ReturnsCorrectAbbreviations()
+        public void GetElementAbbrev_ReturnsCorrectAbbreviations()
         {
-            Assert.AreEqual("F", PlaceholderFactory.GetElementAbbreviation("Fire"));
-            Assert.AreEqual("W", PlaceholderFactory.GetElementAbbreviation("Water"));
-            Assert.AreEqual("E", PlaceholderFactory.GetElementAbbreviation("Earth"));
-            Assert.AreEqual("Wi", PlaceholderFactory.GetElementAbbreviation("Wind"));
-            Assert.AreEqual("L", PlaceholderFactory.GetElementAbbreviation("Lightning"));
-            Assert.AreEqual("Fo", PlaceholderFactory.GetElementAbbreviation("Force"));
-            Assert.AreEqual("?", PlaceholderFactory.GetElementAbbreviation("Unknown"));
+            Assert.AreEqual("F", PlaceholderFactory.GetElementAbbrev("Fire"));
+            Assert.AreEqual("W", PlaceholderFactory.GetElementAbbrev("Water"));
+            Assert.AreEqual("E", PlaceholderFactory.GetElementAbbrev("Earth"));
+            Assert.AreEqual("Wi", PlaceholderFactory.GetElementAbbrev("Wind"));
+            Assert.AreEqual("L", PlaceholderFactory.GetElementAbbrev("Lightning"));
+            Assert.AreEqual("Fo", PlaceholderFactory.GetElementAbbrev("Force"));
+            Assert.AreEqual("?", PlaceholderFactory.GetElementAbbrev("Unknown"));
         }
     }
 }

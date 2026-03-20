@@ -51,7 +51,7 @@ namespace ShatteredVeil.Mono.UI
                 elementIcon.color = elemColor;
 
             if (elementLabel != null)
-                elementLabel.text = PlaceholderFactory.GetElementAbbreviation(element);
+                elementLabel.text = PlaceholderFactory.GetElementAbbrev(element);
         }
     }
 }

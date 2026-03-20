@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using NUnit.Framework;
-using ShatteredVeil.Core.Combat;
 using ShatteredVeil.Core.Units;
 
 namespace ShatteredVeil.Tests.EditMode.Units
@@ -11,25 +10,18 @@ namespace ShatteredVeil.Tests.EditMode.Units
         private class MockUnit : IUnitData
         {
             public string UnitId { get; set; }
-            public string DisplayName { get; set; }
-            public Element Element { get; set; }
-            public Archetype Archetype { get; set; }
-            public Archetype? SecondaryArchetype { get; set; }
+            public string Name { get; set; }
+            public string Element { get; set; }
+            public string Archetype { get; set; }
             public int Tier { get; set; }
             public int BaseHP { get; set; }
             public int BaseATK { get; set; }
             public int BaseDEF { get; set; }
+            public float BaseAtkSpeed { get; set; }
             public int BaseSPD { get; set; }
-            public float BaseAttackSpeed { get; set; }
-            public float BaseCritChance { get; set; }
-            public float BaseCritDamage { get; set; }
-            public int MaxMana { get; set; }
-            public int AttackRange { get; set; }
-            public float MoveSpeed { get; set; }
-            public string AbilityId { get; set; }
-            public string PassiveId { get; set; }
-            public string EvolvedFromId { get; set; }
-            public string EvolvesIntoId { get; set; }
+            public int BaseMana { get; set; }
+            public float BaseCritRate { get; set; }
+            public float BaseCritDmg { get; set; }
             public bool IsEvolved { get; set; }
         }
 
@@ -166,8 +158,8 @@ namespace ShatteredVeil.Tests.EditMode.Units
         {
             var team = new List<IUnitData>
             {
-                new MockUnit { UnitId = "flame_warrior", Element = Element.Fire, Archetype = Archetype.Duelist, Tier = 1 },
-                new MockUnit { UnitId = "ember_scout", Element = Element.Fire, Archetype = Archetype.Predator, Tier = 1 }
+                new MockUnit { UnitId = "flame_warrior", Element = "Fire", Archetype = "Duelist", Tier = 1 },
+                new MockUnit { UnitId = "ember_scout", Element = "Fire", Archetype = "Predator", Tier = 1 }
             };
 
             var result = SynergyCalculator.CalculateSynergies(team);
@@ -186,10 +178,10 @@ namespace ShatteredVeil.Tests.EditMode.Units
         {
             var team = new List<IUnitData>
             {
-                new MockUnit { UnitId = "u1", Element = Element.Fire, Archetype = Archetype.Duelist, Tier = 1 },
-                new MockUnit { UnitId = "u2", Element = Element.Fire, Archetype = Archetype.Predator, Tier = 1 },
-                new MockUnit { UnitId = "u3", Element = Element.Fire, Archetype = Archetype.Ranger, Tier = 1 },
-                new MockUnit { UnitId = "u4", Element = Element.Fire, Archetype = Archetype.Guardian, Tier = 2 }
+                new MockUnit { UnitId = "u1", Element = "Fire", Archetype = "Duelist", Tier = 1 },
+                new MockUnit { UnitId = "u2", Element = "Fire", Archetype = "Predator", Tier = 1 },
+                new MockUnit { UnitId = "u3", Element = "Fire", Archetype = "Ranger", Tier = 1 },
+                new MockUnit { UnitId = "u4", Element = "Fire", Archetype = "Guardian", Tier = 2 }
             };
 
             var result = SynergyCalculator.CalculateSynergies(team);
@@ -207,11 +199,11 @@ namespace ShatteredVeil.Tests.EditMode.Units
         {
             var team = new List<IUnitData>
             {
-                new MockUnit { UnitId = "u1", Element = Element.Fire, Archetype = Archetype.Vanguard, Tier = 1 },
-                new MockUnit { UnitId = "u2", Element = Element.Water, Archetype = Archetype.Vanguard, Tier = 1 },
-                new MockUnit { UnitId = "u3", Element = Element.Earth, Archetype = Archetype.Duelist, Tier = 1 },
-                new MockUnit { UnitId = "u4", Element = Element.Wind, Archetype = Archetype.Duelist, Tier = 1 },
-                new MockUnit { UnitId = "u5", Element = Element.Lightning, Archetype = Archetype.Duelist, Tier = 1 }
+                new MockUnit { UnitId = "u1", Element = "Fire", Archetype = "Vanguard", Tier = 1 },
+                new MockUnit { UnitId = "u2", Element = "Water", Archetype = "Vanguard", Tier = 1 },
+                new MockUnit { UnitId = "u3", Element = "Earth", Archetype = "Duelist", Tier = 1 },
+                new MockUnit { UnitId = "u4", Element = "Wind", Archetype = "Duelist", Tier = 1 },
+                new MockUnit { UnitId = "u5", Element = "Lightning", Archetype = "Duelist", Tier = 1 }
             };
 
             var result = SynergyCalculator.CalculateSynergies(team);
@@ -234,7 +226,7 @@ namespace ShatteredVeil.Tests.EditMode.Units
         {
             var team = new List<IUnitData>
             {
-                new MockUnit { UnitId = "flame_warrior", Element = Element.Fire, Archetype = Archetype.Duelist, Tier = 1 }
+                new MockUnit { UnitId = "flame_warrior", Element = "Fire", Archetype = "Duelist", Tier = 1 }
             };
 
             var result = SynergyCalculator.CalculateSynergies(team);
@@ -249,7 +241,7 @@ namespace ShatteredVeil.Tests.EditMode.Units
         {
             var team = new List<IUnitData>
             {
-                new MockUnit { UnitId = "phoenix_reborn", Element = Element.Fire, Archetype = Archetype.Guardian, Tier = 5, IsEvolved = true }
+                new MockUnit { UnitId = "phoenix_reborn", Element = "Fire", Archetype = "Guardian", Tier = 5, IsEvolved = true }
             };
 
             var result = SynergyCalculator.CalculateSynergies(team);
@@ -269,7 +261,7 @@ namespace ShatteredVeil.Tests.EditMode.Units
             var team = new List<IUnitData>();
             for (int i = 0; i < 7; i++)
             {
-                team.Add(new MockUnit { UnitId = "u" + i, Element = Element.Fire, Archetype = Archetype.Duelist, Tier = 1 });
+                team.Add(new MockUnit { UnitId = "u" + i, Element = "Fire", Archetype = "Duelist", Tier = 1 });
             }
 
             var result = SynergyCalculator.CalculateSynergies(team);
