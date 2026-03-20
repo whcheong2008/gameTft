@@ -563,11 +563,11 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 | 49 | Gacha + Roster — rolling UI, rates, pity, roster grid, star-up, sell, evolve | Done |
 | 50 | Team Builder — 4×2 grid, unit placement, equipment, synergy preview, hero assign | Done |
 | 51 | Mission Select — region map (8 regions), stage list (74 stages), lock system | Done |
-| 52 | Combat — grid renderer, unit animations, damage numbers, playback, speed controls, results | PENDING ← **NEXT (final)** |
+| 52 | Combat — grid renderer, unit animations, damage numbers, playback, speed controls, results | Done |
 
-**Execution order**: 47 first (foundation), then 48-51 in any order, then 52 last (depends on all others).
+**Track B COMPLETE.** All scenes built with placeholder graphics.
 
-**Other tracks:**
+**Next tracks (need design discussion):**
 - **Track C: Story** — Dialogue system, 74 stages of narrative from STORY-STAGES-V2.md (3-5 sessions)
 - **Track D: Graphics** — Art direction, 132 unit sprites, VFX, audio (separate session/LLM)
 - **Track E: Mobile** — iOS/Android build modules installed, UI/input rework (future)
