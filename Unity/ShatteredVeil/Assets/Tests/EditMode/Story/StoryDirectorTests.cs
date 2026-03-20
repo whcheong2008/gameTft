@@ -85,7 +85,7 @@ namespace ShatteredVeil.Tests.EditMode.Story
             var beats = new List<StoryBeat>
             {
                 StoryBeat.Dialogue("kael", "Ready?"),
-                StoryBeat.Expression("kael", "determined"),
+                StoryBeat.SetExpression("kael", "determined"),
                 StoryBeat.PauseBeat(0.5f),
                 StoryBeat.Narration("The ground trembled."),
                 StoryBeat.Effect("shake", 1f),

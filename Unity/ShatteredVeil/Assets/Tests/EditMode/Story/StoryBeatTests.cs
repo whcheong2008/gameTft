@@ -82,7 +82,7 @@ namespace ShatteredVeil.Tests.EditMode.Story
         [Test]
         public void ExpressionFactory_SetsFields()
         {
-            var beat = StoryBeat.Expression("kael", "angry");
+            var beat = StoryBeat.SetExpression("kael", "angry");
             Assert.AreEqual(BeatType.SetExpression, beat.Type);
             Assert.AreEqual("kael", beat.CharacterId);
             Assert.AreEqual("angry", beat.Expression);
