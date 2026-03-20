@@ -9,7 +9,6 @@ namespace ShatteredVeil.Mono.UI
     /// Main controller for the Hub/Camp scene.
     /// Creates a scrollable grid of building cards, wires upgrade flow,
     /// and manages the building detail panel overlay.
-    /// Mirrors js/ui-v2.js renderHubScreen().
     /// </summary>
     public class HubSceneController : MonoBehaviour
     {
@@ -20,10 +19,12 @@ namespace ShatteredVeil.Mono.UI
         private BuildingPanelController panelController;
         private readonly List<BuildingCardController> cards = new List<BuildingCardController>();
 
+        private const float CardHeight = 100f;
+        private const float CardSpacing = 10f;
+        private const int CardPadding = 10;
+
         private void Start()
         {
-            // TODO: In production, BuildingSystem comes from SaveManager.
-            // For now, create a default one for testing the UI.
             var levels = new Dictionary<string, int>();
             buildingSystem = new BuildingSystem(levels, 1, 500);
 
@@ -43,9 +44,6 @@ namespace ShatteredVeil.Mono.UI
             GameEventBus.OnLevelUp -= HandleLevelUp;
         }
 
-        /// <summary>
-        /// Allows external code (e.g. SaveManager) to inject a BuildingSystem.
-        /// </summary>
         public void Initialize(BuildingSystem system)
         {
             if (buildingSystem != null)
@@ -58,7 +56,7 @@ namespace ShatteredVeil.Mono.UI
 
         private void CreateHubUI()
         {
-            // Hub canvas
+            // Canvas — use landscape reference resolution
             var canvasGo = new GameObject("HubCanvas");
             canvasGo.transform.SetParent(transform, false);
             hubCanvas = canvasGo.AddComponent<Canvas>();
@@ -66,66 +64,71 @@ namespace ShatteredVeil.Mono.UI
             hubCanvas.sortingOrder = 100;
             var scaler = canvasGo.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1080, 1920);
+            scaler.referenceResolution = new Vector2(1280, 720);
             scaler.matchWidthOrHeight = 0.5f;
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            // Title
+            // Title bar
             var titleGo = new GameObject("Title");
             titleGo.transform.SetParent(canvasGo.transform, false);
             var titleText = titleGo.AddComponent<Text>();
             titleText.text = "Camp Practices";
             titleText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            titleText.fontSize = 42;
-            titleText.color = new Color(0.886f, 0.718f, 0.078f); // Gold
+            titleText.fontSize = 28;
+            titleText.color = new Color(0.886f, 0.718f, 0.078f);
             titleText.alignment = TextAnchor.MiddleCenter;
             titleText.fontStyle = FontStyle.Bold;
             var titleRt = titleText.rectTransform;
             titleRt.anchorMin = new Vector2(0, 1);
             titleRt.anchorMax = new Vector2(1, 1);
             titleRt.pivot = new Vector2(0.5f, 1);
-            titleRt.anchoredPosition = new Vector2(0, -100);
-            titleRt.sizeDelta = new Vector2(0, 60);
+            titleRt.anchoredPosition = new Vector2(0, -5);
+            titleRt.sizeDelta = new Vector2(0, 40);
 
-            // Scroll view for building grid
-            var scrollGo = new GameObject("ScrollView");
+            // Viewport — separate GO for the Mask (not on the ScrollRect)
+            var viewportGo = new GameObject("Viewport");
+            viewportGo.transform.SetParent(canvasGo.transform, false);
+            var vpImg = viewportGo.AddComponent<Image>();
+            vpImg.color = new Color(0, 0, 0, 1);
+            var vpRt = vpImg.rectTransform;
+            vpRt.anchorMin = new Vector2(0.02f, 0.02f);
+            vpRt.anchorMax = new Vector2(0.98f, 0.92f);
+            vpRt.offsetMin = Vector2.zero;
+            vpRt.offsetMax = Vector2.zero;
+            var mask = viewportGo.AddComponent<Mask>();
+            mask.showMaskGraphic = false;
+
+            // Content container (children laid out manually — no ContentSizeFitter)
+            var contentGo = new GameObject("Content");
+            contentGo.transform.SetParent(viewportGo.transform, false);
+            contentRoot = contentGo.AddComponent<RectTransform>();
+            contentRoot.anchorMin = new Vector2(0, 1);
+            contentRoot.anchorMax = new Vector2(1, 1);
+            contentRoot.pivot = new Vector2(0.5f, 1);
+            contentRoot.anchoredPosition = Vector2.zero;
+            contentRoot.sizeDelta = new Vector2(0, 0);
+
+            // ScrollRect on a separate invisible GO parented to the canvas
+            var scrollGo = new GameObject("ScrollRect");
             scrollGo.transform.SetParent(canvasGo.transform, false);
-            var scrollImg = scrollGo.AddComponent<Image>();
-            scrollImg.color = new Color(0, 0, 0, 1); // Alpha must be >0 for Mask stencil to work
-            var scrollRt = scrollImg.rectTransform;
-            scrollRt.anchorMin = new Vector2(0.02f, 0.12f); // Leave room for bottom nav
-            scrollRt.anchorMax = new Vector2(0.98f, 0.88f); // Leave room for title + top bar
+            var scrollBg = scrollGo.AddComponent<Image>();
+            scrollBg.color = new Color(0, 0, 0, 0);
+            scrollBg.raycastTarget = true;
+            var scrollRt = scrollBg.rectTransform;
+            // Match the viewport area exactly
+            scrollRt.anchorMin = new Vector2(0.02f, 0.02f);
+            scrollRt.anchorMax = new Vector2(0.98f, 0.92f);
             scrollRt.offsetMin = Vector2.zero;
             scrollRt.offsetMax = Vector2.zero;
 
             var scrollRect = scrollGo.AddComponent<ScrollRect>();
             scrollRect.horizontal = false;
             scrollRect.vertical = true;
-
-            var mask = scrollGo.AddComponent<Mask>();
-            mask.showMaskGraphic = false;
-
-            // Content container (vertical layout)
-            var contentGo = new GameObject("Content");
-            contentGo.transform.SetParent(scrollGo.transform, false);
-            contentRoot = contentGo.AddComponent<RectTransform>();
-            contentRoot.anchorMin = new Vector2(0, 1);
-            contentRoot.anchorMax = new Vector2(1, 1);
-            contentRoot.pivot = new Vector2(0.5f, 1);
-            contentRoot.anchoredPosition = Vector2.zero;
-
-            var vlg = contentGo.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 16;
-            vlg.padding = new RectOffset(16, 16, 16, 16);
-            vlg.childForceExpandWidth = true;
-            vlg.childForceExpandHeight = false;
-            vlg.childControlWidth = true;
-            vlg.childControlHeight = true;
-
-            var csf = contentGo.AddComponent<ContentSizeFitter>();
-            csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
             scrollRect.content = contentRoot;
+            scrollRect.viewport = vpRt;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            scrollRect.scrollSensitivity = 20f;
+
             buildingGridContainer = contentGo;
 
             // Building panel overlay (hidden by default)
@@ -146,23 +149,36 @@ namespace ShatteredVeil.Mono.UI
             cards.Clear();
 
             // Create a card for each building
-            for (int i = 0; i < BuildingData.All.Length; i++)
+            int count = BuildingData.All.Length;
+            for (int i = 0; i < count; i++)
             {
                 var def = BuildingData.All[i];
                 var cardGo = new GameObject("Card_" + def.Id);
                 cardGo.transform.SetParent(buildingGridContainer.transform, false);
 
-                var le = cardGo.AddComponent<LayoutElement>();
-                le.preferredHeight = 160;
+                // Position each card manually — no LayoutGroup needed
+                var cardRt = cardGo.AddComponent<RectTransform>();
+                cardRt.anchorMin = new Vector2(0, 1);
+                cardRt.anchorMax = new Vector2(1, 1);
+                cardRt.pivot = new Vector2(0.5f, 1);
+                float yPos = CardPadding + i * (CardHeight + CardSpacing);
+                cardRt.anchoredPosition = new Vector2(0, -yPos);
+                cardRt.sizeDelta = new Vector2(-CardPadding * 2, CardHeight);
 
                 var card = cardGo.AddComponent<BuildingCardController>();
                 card.Setup(def, buildingSystem, OnCardClicked);
                 cards.Add(card);
             }
+
+            // Set content height so ScrollRect knows how far to scroll
+            float totalHeight = CardPadding * 2 + count * CardHeight + (count - 1) * CardSpacing;
+            contentRoot.sizeDelta = new Vector2(0, totalHeight);
         }
 
         private void OnCardClicked(string buildingId)
         {
+            Debug.Log("[Hub] Card clicked: " + buildingId);
+
             if (buildingSystem.HasDetailPanel(buildingId))
             {
                 panelController.Show(buildingId, buildingSystem, OnUpgradeFromPanel);
@@ -187,9 +203,16 @@ namespace ShatteredVeil.Mono.UI
                 }
                 else
                 {
-                    // Fallback: just upgrade directly
-                    buildingSystem.TryUpgrade(buildingId);
+                    if (buildingSystem.TryUpgrade(buildingId))
+                    {
+                        Debug.Log("[Hub] Upgraded " + buildingId);
+                        RefreshGrid();
+                    }
                 }
+            }
+            else
+            {
+                Debug.Log("[Hub] Cannot upgrade " + buildingId + " (locked or insufficient VE)");
             }
         }
 
