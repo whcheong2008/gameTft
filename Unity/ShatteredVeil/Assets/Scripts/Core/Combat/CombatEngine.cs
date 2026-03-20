@@ -157,9 +157,75 @@ namespace ShatteredVeil.Core.Combat
                 return result;
             }
 
-            // Select target
-            var enemies = actor.Team == Team.Player ? _state.EnemyTeam : _state.PlayerTeam;
-            var target = TargetingSystem.GetTarget(actor, enemies, TargetingRule.Nearest, _rng);
+            // === HEALER AUTO-HEAL BRANCH ===
+            // Healers target lowest-HP ally instead of enemies (Prompt 45 fix)
+            if (actor.IsHealer)
+            {
+                var allies = actor.Team == Team.Player ? _state.PlayerTeam : _state.EnemyTeam;
+                CombatUnit healTarget = null;
+                float lowestPct = 1.0f;
+                foreach (var ally in allies)
+                {
+                    if (!ally.IsAlive || ally == actor) continue;
+                    float pct = (float)ally.CurrentHP / ally.MaxHP;
+                    if (pct < 1.0f && pct < lowestPct)
+                    {
+                        lowestPct = pct;
+                        healTarget = ally;
+                    }
+                }
+
+                if (healTarget != null)
+                {
+                    // Check template ability cast first
+                    var healerTemplate = AbilityTemplateCatalog.Get(actor.AbilityTemplateId);
+                    if (healerTemplate != null && ManaSystem.CanCastAbility(actor))
+                    {
+                        var enemies = actor.Team == Team.Player ? _state.EnemyTeam : _state.PlayerTeam;
+                        var abilityResult = healerTemplate.ExecuteAbility(
+                            actor, healTarget, enemies, allies, _grid, _rng);
+                        ManaSystem.ConsumeMana(actor);
+                        result.UsedAbility = true;
+                        result.AbilityResult = abilityResult;
+                        result.Damage = abilityResult.TotalDamage;
+                        foreach (var dmgInst in abilityResult.DamageInstances)
+                        {
+                            if (dmgInst.Killed)
+                            {
+                                result.TargetDied = true;
+                                _grid.RemoveUnit(dmgInst.Target);
+                            }
+                        }
+                        // Fire OnAbilityCast passive
+                        _passiveSystem.OnAbilityCast(actor, _state);
+                        CheckWinCondition(result);
+                        return result;
+                    }
+
+                    // Auto-heal: ATK stat becomes heal amount
+                    int healAmount = actor.ATK;
+                    healTarget.CurrentHP = Math.Min(healTarget.MaxHP, healTarget.CurrentHP + healAmount);
+
+                    // Mana from auto-heal (same as auto-attack: +10)
+                    ManaSystem.GainManaOnAttack(actor);
+
+                    // Fire onHeal passive (NOT onHit!)
+                    _passiveSystem.OnHeal(actor, healTarget, healAmount, _state);
+
+                    result.IsHeal = true;
+                    result.HealAmount = healAmount;
+                    result.HealTarget = healTarget;
+                    result.Target = healTarget;
+
+                    CheckWinCondition(result);
+                    return result;
+                }
+                // else: all allies full HP → fall through to normal attack
+            }
+
+            // Select target (enemies)
+            var enemyTeam = actor.Team == Team.Player ? _state.EnemyTeam : _state.PlayerTeam;
+            var target = TargetingSystem.GetTarget(actor, enemyTeam, TargetingRule.Nearest, _rng);
 
             if (target == null)
             {
@@ -193,11 +259,13 @@ namespace ShatteredVeil.Core.Combat
                 }
             }
 
-            // Check ability cast: mana full → cast ability → reset mana
-            var abilityData = AbilityCatalog.Get(actor.UnitId);
-            if (abilityData != null && ManaSystem.CanCastAbility(actor))
+            // Check template ability cast: mana full → execute template → reset mana
+            var template = AbilityTemplateCatalog.Get(actor.AbilityTemplateId);
+            if (template != null && ManaSystem.CanCastAbility(actor))
             {
-                var abilityResult = AbilityExecutor.Execute(actor, abilityData, _state, _grid, _rng);
+                var allyTeam = actor.Team == Team.Player ? _state.PlayerTeam : _state.EnemyTeam;
+                var abilityResult = template.ExecuteAbility(
+                    actor, target, AliveOnly(enemyTeam), allyTeam, _grid, _rng);
                 ManaSystem.ConsumeMana(actor);
 
                 result.UsedAbility = true;
@@ -213,14 +281,44 @@ namespace ShatteredVeil.Core.Combat
                     }
                 }
 
-                // Fire OnAttack passives for ability hits
-                if (target.IsAlive || result.TargetDied)
+                // Fire OnAbilityCast passive
+                _passiveSystem.OnAbilityCast(actor, _state);
+            }
+            // Fallback to old AbilityCatalog if no template assigned
+            else if (template == null)
+            {
+                var abilityData = AbilityCatalog.Get(actor.UnitId);
+                if (abilityData != null && ManaSystem.CanCastAbility(actor))
                 {
-                    var dmgResult = new DamageResult { Damage = abilityResult.TotalDamage };
-                    _passiveSystem.OnAttack(actor, target, dmgResult, _state);
+                    var abilityResult = AbilityExecutor.Execute(actor, abilityData, _state, _grid, _rng);
+                    ManaSystem.ConsumeMana(actor);
+
+                    result.UsedAbility = true;
+                    result.AbilityResult = abilityResult;
+                    result.Damage = abilityResult.TotalDamage;
+
+                    foreach (var dmgInst in abilityResult.DamageInstances)
+                    {
+                        if (dmgInst.Killed)
+                        {
+                            result.TargetDied = true;
+                            _grid.RemoveUnit(dmgInst.Target);
+                        }
+                    }
+                }
+                else if (!ManaSystem.CanCastAbility(actor))
+                {
+                    goto autoAttack;
                 }
             }
             else
+            {
+                goto autoAttack;
+            }
+
+            goto postAttack;
+
+            autoAttack:
             {
                 // Auto-attack
                 var ctx = new DamageContext();
@@ -232,6 +330,12 @@ namespace ShatteredVeil.Core.Combat
 
                 // Fire OnAttack passive for attacker
                 _passiveSystem.OnAttack(actor, target, dmgResult, _state);
+
+                // Fire template OnHit passive
+                if (target.IsAlive && dmgResult.Damage > 0 && template != null)
+                {
+                    _passiveSystem.OnTemplateHit(actor, target, dmgResult.Damage, _state);
+                }
 
                 // Fire OnHit passive for defender
                 if (target.IsAlive && dmgResult.Damage > 0)
@@ -248,8 +352,14 @@ namespace ShatteredVeil.Core.Combat
                 {
                     result.TargetDied = true;
                     _grid.RemoveUnit(target);
+
+                    // Fire OnKill template passive
+                    if (template != null)
+                        _passiveSystem.OnTemplateKill(actor, target, _state);
                 }
             }
+
+            postAttack:
 
             // Tick auras and periodic passives each turn
             _passiveSystem.TickAuras(_state, 1.0f);
@@ -293,6 +403,13 @@ namespace ShatteredVeil.Core.Combat
                 result.BattleOver = true;
                 result.EndPhase = BattlePhase.Defeat;
             }
+        }
+
+        private static List<CombatUnit> AliveOnly(List<CombatUnit> units)
+        {
+            var result = new List<CombatUnit>();
+            foreach (var u in units) if (u.IsAlive) result.Add(u);
+            return result;
         }
 
         private bool HasAliveUnits(List<CombatUnit> team)

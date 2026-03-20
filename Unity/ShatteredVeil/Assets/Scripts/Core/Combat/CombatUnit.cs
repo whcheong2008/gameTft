@@ -15,6 +15,11 @@ namespace ShatteredVeil.Core.Combat
         public int Star;
         public Team Team;
 
+        // Template system (Prompt 45 rework)
+        public string AbilityTemplateId;  // e.g., "dot_spreader", "heal_and_harm"
+        public string UnitType;            // "warrior", "healer", "tank", "assassin", "mage", "archer"
+        public bool IsHealer => UnitType == "healer";
+
         // Core stats
         public int CurrentHP;
         public int MaxHP;
