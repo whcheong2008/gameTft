@@ -91,7 +91,7 @@ namespace ShatteredVeil.Mono.UI
             var scrollGo = new GameObject("ScrollView");
             scrollGo.transform.SetParent(canvasGo.transform, false);
             var scrollImg = scrollGo.AddComponent<Image>();
-            scrollImg.color = new Color(0, 0, 0, 0);
+            scrollImg.color = new Color(0, 0, 0, 1); // Alpha must be >0 for Mask stencil to work
             var scrollRt = scrollImg.rectTransform;
             scrollRt.anchorMin = new Vector2(0.02f, 0.12f); // Leave room for bottom nav
             scrollRt.anchorMax = new Vector2(0.98f, 0.88f); // Leave room for title + top bar
