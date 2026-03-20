@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Shattered Veil — R1 Frontier Combat UI</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #0d0d1a;
+    color: #ccc;
+    font-family: 'Segoe UI', sans-serif;
+    user-select: none;
+    overflow: hidden;
+    height: 100vh;
+}
+
+/* ==============================
+   MAIN LAYOUT
+   ============================== */
+.game-container {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* --- TOP BAR --- */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: #0f0f1e;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    z-index: 30;
+}
+
+.top-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.back-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #aaa;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.back-btn:hover { background: rgba(255,255,255,0.1); color: #ddd; }
+
+.stage-title {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #ddd;
+}
+
+.wave-info {
+    font-size: 0.75em;
+    color: #888;
+}
+
+.top-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.stat-item {
+    font-size: 0.75em;
+}
+
+.stat-label { color: #FFD700; font-weight: bold; }
+.stat-value { color: #aaa; }
+.ve-display { color: #9370DB; font-weight: bold; }
+
+.speed-btn {
+    background: rgba(255,215,0,0.08);
+    border: 1px solid #FFD700;
+    color: #FFD700;
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-size: 0.7em;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* --- MIDDLE SECTION --- */
+.middle-section {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0;
+    overflow: hidden;
+    position: relative;
+    transition: grid-template-columns 0.3s ease;
+}
+
+.middle-section.left-hidden { grid-template-columns: 0px 1fr auto; }
+.middle-section.right-hidden { grid-template-columns: auto 1fr 0px; }
+.middle-section.left-hidden.right-hidden { grid-template-columns: 0px 1fr 0px; }
+
+/* Panel toggle buttons */
+.panel-toggle {
+    position: absolute;
+    z-index: 25;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #999;
+    width: 24px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.7em;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+}
+
+.panel-toggle:hover {
+    background: rgba(255,255,255,0.1);
+    color: #ddd;
+}
+
+.panel-toggle.left {
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 0 4px 4px 0;
+    border-left: none;
+}
+
+.panel-toggle.right {
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 4px 0 0 4px;
+    border-right: none;
+}
+
+.panel-toggle.bottom {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 20px;
+    border-radius: 4px 4px 0 0;
+    border-bottom: none;
+    position: relative;
+}
+
+/* --- SYNERGY PANEL (left) --- */
+.synergy-panel {
+    background: #0f0f1e;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    padding: 10px;
+    overflow-y: auto;
+    z-index: 20;
+    width: 220px;
+    transition: width 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+}
+
+.synergy-panel.hidden {
+    width: 0;
+    padding: 0;
+    opacity: 0;
+    overflow: hidden;
+    border-right: none;
+}
+
+.synergy-header {
+    font-size: 0.65em;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.synergy-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-left: 3px solid;
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.synergy-card:hover {
+    background: rgba(255,255,255,0.06);
+}
+
+.synergy-card.active {
+    background: rgba(255,255,255,0.05);
+}
+
+.synergy-card.inactive {
+    opacity: 0.45;
+}
+
+.synergy-name {
+    font-size: 0.78em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.synergy-icon {
+    font-size: 0.85em;
+}
+
+.synergy-threshold {
+    font-size: 0.65em;
+    color: #888;
+    margin-left: auto;
+}
+
+.synergy-threshold .current { color: #FFD700; font-weight: bold; }
+.synergy-threshold .needed { color: #555; }
+
+.synergy-desc {
+    font-size: 0.65em;
+    color: #777;
+    margin-top: 3px;
+    line-height: 1.4;
+}
+
+.synergy-tier {
+    display: inline-flex;
+    gap: 3px;
+    margin-top: 3px;
+}
+
+.tier-pip {
+    width: 16px;
+    height: 3px;
+    border-radius: 1px;
+    background: #222;
+}
+
+.tier-pip.filled { background: #FFD700; }
+.tier-pip.active-tier { background: #44cc44; }
+
+/* --- BATTLE AREA (center) --- */
+.battle-area {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Environment layers */
+.env-sky {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,
+        #1a1a2e 0%, #1e2a3a 12%, #2a3a4a 25%,
+        #3a4a55 40%, #4a5a55 55%, #5a6a5a 70%,
+        #4a5a40 85%, #3a4a30 100%);
+    z-index: 0;
+}
+
+.env-sky::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(1px 1px at 10% 8%, rgba(255,255,255,0.4), transparent),
+        radial-gradient(1px 1px at 30% 5%, rgba(255,255,255,0.3), transparent),
+        radial-gradient(1px 1px at 55% 10%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 75% 3%, rgba(255,255,255,0.3), transparent),
+        radial-gradient(1px 1px at 88% 12%, rgba(255,255,255,0.4), transparent);
+}
+
+.env-veil-shimmer {
+    position: absolute;
+    top: 18%;
+    left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg,
+        transparent, rgba(147,112,219,0) 20%, rgba(147,112,219,0.15) 45%,
+        rgba(147,112,219,0.2) 50%, rgba(147,112,219,0.15) 55%,
+        rgba(147,112,219,0) 80%, transparent);
+    filter: blur(3px);
+    z-index: 1;
+    animation: shimmer 8s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.7; }
+}
+
+.env-hills {
+    position: absolute;
+    top: 16%; left: 0; right: 0;
+    height: 160px;
+    z-index: 2;
+}
+
+.hill {
+    position: absolute;
+    border-radius: 50%;
+    bottom: 0;
+}
+
+.env-palisade {
+    position: absolute;
+    top: 27%; left: 0; right: 0;
+    height: 40px;
+    z-index: 3;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+}
+
+.palisade-post {
+    width: 7px;
+    background: linear-gradient(180deg, #5a4a30, #3a2a18);
+    border-radius: 2px 2px 0 0;
+    flex-shrink: 0;
+    margin: 0 0.5px;
+}
+
+.env-ground {
+    position: absolute;
+    top: 30%; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(180deg,
+        #3a4a30 0%, #2f3f22 15%, #2a3a1e 35%,
+        #25351a 55%, #1e2e15 75%, #182810 100%);
+    z-index: 4;
+}
+
+.env-ground::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        repeating-linear-gradient(85deg, transparent, transparent 22px, rgba(60,80,40,0.1) 22px, rgba(60,80,40,0.1) 23px),
+        repeating-linear-gradient(95deg, transparent, transparent 28px, rgba(50,70,35,0.07) 28px, rgba(50,70,35,0.07) 29px);
+}
+
+.env-fog {
+    position: absolute;
+    top: 44%; left: 0; right: 0;
+    height: 8%;
+    background: linear-gradient(180deg,
+        transparent, rgba(100,110,90,0.08) 30%, rgba(100,110,90,0.1) 50%,
+        rgba(100,110,90,0.08) 70%, transparent);
+    z-index: 5;
+    animation: fog-drift 12s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes fog-drift {
+    0%, 100% { transform: translateX(0); opacity: 0.5; }
+    50% { transform: translateX(15px); opacity: 0.8; }
+}
+
+/* Watchtower */
+.watchtower {
+    position: absolute;
+    top: 20%; right: 12%;
+    z-index: 3;
+}
+
+.tower-base { width: 20px; height: 44px; background: linear-gradient(180deg, #5a4a30, #4a3a20); margin: 0 auto; border-radius: 2px; }
+.tower-top { width: 28px; height: 14px; background: linear-gradient(180deg, #6a5a40, #5a4a30); border-radius: 2px 2px 0 0; position: relative; }
+.tower-light { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; background: #ffaa44; border-radius: 50%; box-shadow: 0 0 8px #ffaa44; animation: flicker 2s ease-in-out infinite; }
+
+@keyframes flicker {
+    0%, 100% { opacity: 0.8; } 50% { opacity: 0.5; }
+}
+
+/* --- GRID --- */
+.grid-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+}
+
+.team-label {
+    color: rgba(255,255,255,0.25);
+    font-size: 0.55em;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    margin: 2px 0;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(8, var(--cell-size));
+    grid-template-rows: repeat(4, var(--cell-size));
+    gap: 2px;
+}
+
+:root {
+    --cell-size: 54px;
+}
+
+.divider-row {
+    width: 100%;
+    height: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.divider-line {
+    width: 70%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+}
+
+.cell {
+    width: var(--cell-size);
+    height: var(--cell-size);
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.15s;
+}
+
+.cell:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); }
+
+.grid.enemy .cell { background: rgba(180,50,50,0.015); }
+
+/* Ready overlay */
+.ready-overlay {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 15;
+    text-align: center;
+    display: none;
+}
+
+.ready-overlay.visible { display: block; }
+
+.ready-text {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: #ddd;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+}
+
+.ready-sub {
+    font-size: 0.8em;
+    color: #888;
+    margin-top: 4px;
+}
+
+.start-btn {
+    margin-top: 12px;
+    background: #FFD700;
+    color: #1a1a2e;
+    border: none;
+    padding: 8px 24px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.start-btn:hover { background: #ffe44d; transform: scale(1.05); }
+
+/* --- COMBAT STATS PANEL (right) --- */
+.stats-panel {
+    background: #0f0f1e;
+    border-left: 1px solid rgba(255,255,255,0.06);
+    padding: 10px;
+    overflow-y: auto;
+    z-index: 20;
+    font-size: 0.75em;
+    width: 220px;
+    transition: width 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+}
+
+.stats-panel.hidden {
+    width: 0;
+    padding: 0;
+    opacity: 0;
+    overflow: hidden;
+    border-left: none;
+}
+
+.stats-header {
+    font-size: 0.85em;
+    color: #999;
+    text-align: center;
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-weight: 600;
+}
+
+.stats-team-label {
+    font-size: 0.7em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 8px 0 4px 0;
+    padding: 2px 0;
+}
+
+.stats-team-label.player { color: #4AAEFF; border-bottom: 1px solid rgba(74,174,255,0.2); }
+.stats-team-label.enemy { color: #FF6A6A; border-bottom: 1px solid rgba(255,106,106,0.2); }
+
+.unit-stat-row {
+    display: flex;
+    flex-direction: column;
+    padding: 4px 6px;
+    margin-bottom: 3px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 3px;
+    border-left: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.unit-stat-row:hover { background: rgba(255,255,255,0.05); }
+
+.unit-stat-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.unit-name {
+    font-weight: 600;
+    color: #ccc;
+    font-size: 0.95em;
+}
+
+.unit-hp {
+    font-size: 0.85em;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.unit-hp .current { font-weight: bold; }
+.unit-hp .max { color: #555; }
+
+.unit-hp-bar {
+    width: 100%;
+    height: 2px;
+    background: #1a1a1a;
+    border-radius: 1px;
+    margin: 2px 0;
+    overflow: hidden;
+}
+
+.unit-hp-fill {
+    height: 100%;
+    border-radius: 1px;
+    transition: width 0.5s;
+}
+
+.unit-stat-bottom {
+    display: flex;
+    gap: 10px;
+    font-size: 0.85em;
+}
+
+.dmg-done { color: #cc6666; }
+.dmg-taken { color: #888; }
+.heal-done { color: #66cc66; }
+
+/* Meter bars */
+.meter-section {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.meter-title {
+    font-size: 0.7em;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+}
+
+.meter-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.meter-name {
+    font-size: 0.8em;
+    color: #999;
+    width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.meter-bar {
+    flex: 1;
+    height: 6px;
+    background: #1a1a1a;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.meter-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s;
+}
+
+.meter-fill.dmg { background: linear-gradient(90deg, #cc3333, #ff5555); }
+.meter-fill.heal { background: linear-gradient(90deg, #33aa33, #55cc55); }
+.meter-fill.taken { background: linear-gradient(90deg, #666, #888); }
+
+.meter-value {
+    font-size: 0.75em;
+    color: #777;
+    width: 30px;
+    text-align: right;
+}
+
+/* --- COMBAT LOG (bottom) --- */
+.combat-log {
+    background: #0a0a16;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding: 6px 16px;
+    height: 80px;
+    overflow-y: auto;
+    z-index: 30;
+    font-size: 0.7em;
+    line-height: 1.6;
+    transition: height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+}
+
+.combat-log.hidden {
+    height: 0;
+    padding: 0;
+    opacity: 0;
+    overflow: hidden;
+    border-top: none;
+}
+
+.log-toggle-bar {
+    background: #0a0a16;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    justify-content: center;
+    padding: 2px 0;
+    z-index: 31;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.log-toggle-bar:hover { background: rgba(255,255,255,0.04); }
+
+.log-toggle-bar span {
+    color: #555;
+    font-size: 0.6em;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.log-entry {
+    color: #666;
+}
+
+.log-entry .attacker { color: #4AAEFF; }
+.log-entry .defender { color: #FF6A6A; }
+.log-entry .damage { color: #cc6666; font-weight: bold; }
+.log-entry .heal { color: #66cc66; font-weight: bold; }
+.log-entry .crit { color: #FFD700; font-weight: bold; }
+.log-entry .ability { color: #9370DB; }
+.log-entry .status { color: #FF8C00; }
+.log-entry .system { color: #888; font-style: italic; }
+
+.log-timestamp {
+    color: #444;
+    margin-right: 6px;
+}
+
+/* ==============================
+   TOKENS (same as before)
+   ============================== */
+.token {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    position: relative;
+    animation: idle-bob 2.5s ease-in-out infinite;
+}
+
+@keyframes idle-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+}
+
+/* Echo tokens */
+.token.fire-echo { background: radial-gradient(circle at 40% 35%, rgba(255,255,255,0.8) 0%, #FF6A00 20%, #FF4500 40%, #cc3300 65%, #661a00 100%); border: 2px solid #FF4500; box-shadow: 0 0 10px rgba(255,69,0,0.6); animation: idle-bob 2.5s ease-in-out infinite, fire-glow 1.5s ease-in-out infinite; }
+@keyframes fire-glow { 0%, 100% { box-shadow: 0 0 10px rgba(255,69,0,0.5); } 50% { box-shadow: 0 0 16px rgba(255,69,0,0.8); } }
+
+.token.water-echo { background: radial-gradient(circle at 40% 35%, rgba(255,255,255,0.7) 0%, #4AAEFF 25%, #1E90FF 45%, #0a5acc 70%, #042a66 100%); border: 2px solid #1E90FF; box-shadow: 0 0 10px rgba(30,144,255,0.6); }
+.token.earth-echo { background: radial-gradient(circle at 40% 35%, rgba(255,255,255,0.6) 0%, #3CB43C 25%, #228B22 45%, #1a6b1a 70%, #0d360d 100%); border: 2px solid #228B22; box-shadow: 0 0 10px rgba(34,139,34,0.6); }
+.token.wind-echo { background: radial-gradient(circle at 40% 35%, rgba(255,255,255,0.7) 0%, #A8DDF0 25%, #87CEEB 45%, #5ea8cc 70%, #2d5466 100%); border: 2px solid #87CEEB; box-shadow: 0 0 10px rgba(135,206,235,0.5); }
+.token.lightning-echo { background: radial-gradient(circle at 40% 35%, rgba(255,255,255,0.8) 0%, #FFE44D 20%, #FFD700 40%, #ccaa00 65%, #665500 100%); border: 2px solid #FFD700; box-shadow: 0 0 10px rgba(255,215,0,0.6); }
+.token.force-echo { background: radial-gradient(circle at 40% 35%, rgba(255,255,255,0.7) 0%, #B08AEF 25%, #9370DB 45%, #6a4cbb 70%, #352666 100%); border: 2px solid #9370DB; box-shadow: 0 0 10px rgba(147,112,219,0.6); }
+
+/* Voidspawn tokens */
+.token.fire-voidspawn { background: radial-gradient(circle at 50% 50%, rgba(255,80,0,0.6) 0%, #331100 35%, #1a0a00 60%, #0a0400 100%); border: 2px solid #882200; box-shadow: 0 0 8px rgba(255,69,0,0.25), inset 0 0 10px rgba(255,69,0,0.2); }
+.token.water-voidspawn { background: radial-gradient(circle at 50% 50%, rgba(30,144,255,0.5) 0%, #0a1a33 40%, #050d1a 70%, #020508 100%); border: 2px solid #0a4a88; box-shadow: 0 0 8px rgba(30,144,255,0.25); }
+.token.earth-voidspawn { background: radial-gradient(circle at 50% 50%, rgba(34,139,34,0.5) 0%, #0d1a0d 40%, #060d06 70%, #030503 100%); border: 2px solid #145014; box-shadow: 0 0 8px rgba(34,139,34,0.25); }
+.token.wind-voidspawn { background: radial-gradient(circle at 50% 50%, rgba(135,206,235,0.4) 0%, #1a2a33 40%, #0d151a 70%, #050a0d 100%); border: 2px solid #4a7a8a; box-shadow: 0 0 6px rgba(135,206,235,0.2); }
+.token.lightning-voidspawn { background: radial-gradient(circle at 50% 50%, rgba(255,215,0,0.5) 0%, #332a00 40%, #1a1500 70%, #0d0a00 100%); border: 2px solid #997f00; box-shadow: 0 0 8px rgba(255,215,0,0.25); }
+.token.force-voidspawn { background: radial-gradient(circle at 50% 50%, rgba(147,112,219,0.5) 0%, #1a1133 40%, #0d081a 70%, #05030d 100%); border: 2px solid #5a4088; box-shadow: 0 0 8px rgba(147,112,219,0.25); }
+
+/* Tier sizing */
+.token.t1 { width: 34px; height: 34px; opacity: 0.85; }
+.token.t2 { width: 38px; height: 38px; }
+.token.t5 { width: 48px; height: 48px; }
+
+/* Tier stars */
+.tier-stars { position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%); display: flex; gap: 1.5px; }
+.tier-star { width: 3px; height: 3px; border-radius: 50%; border: 0.5px solid rgba(255,255,255,0.3); }
+
+/* Health bar on token */
+.token-hp { position: absolute; bottom: -4px; left: 10%; width: 80%; height: 2px; background: rgba(0,0,0,0.5); border-radius: 1px; overflow: hidden; }
+.token-hp-fill { height: 100%; border-radius: 1px; }
+.token-hp-fill.high { background: #44cc44; }
+.token-hp-fill.mid { background: #cccc00; }
+.token-hp-fill.low { background: #cc4444; }
+
+/* Unit name label under token */
+.unit-label {
+    position: absolute;
+    bottom: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.45em;
+    color: rgba(255,255,255,0.4);
+    white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+/* Particles */
+.ember-p { position: absolute; width: 2px; height: 2px; background: #FF6A00; border-radius: 50%; box-shadow: 0 0 3px #FF4500; animation: ember-up 1.5s ease-out infinite; pointer-events: none; }
+@keyframes ember-up { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-30px) translateX(6px) scale(0); opacity: 0; } }
+
+.smoke-p { position: absolute; width: 3px; height: 3px; background: rgba(80,50,30,0.35); border-radius: 50%; animation: smoke-up 2.5s ease-out infinite; pointer-events: none; }
+@keyframes smoke-up { 0% { transform: translateY(0) scale(1); opacity: 0.3; } 100% { transform: translateY(-20px) scale(2.5); opacity: 0; } }
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+
+    <!-- TOP BAR -->
+    <div class="top-bar">
+        <div class="top-left">
+            <button class="back-btn">← Back</button>
+            <div>
+                <div class="stage-title">First Steps — <span class="wave-info">Wave 1 / 2</span></div>
+            </div>
+        </div>
+        <div class="top-right">
+            <span class="stat-item"><span class="stat-label">Lv. 1</span> <span class="stat-value">XP: 0/100</span></span>
+            <span class="stat-item ve-display">✦ 0 VE</span>
+            <button class="speed-btn" id="speedBtn" onclick="cycleSpeed()">1×</button>
+        </div>
+    </div>
+
+    <!-- MIDDLE -->
+    <div class="middle-section">
+
+        <!-- Panel toggle buttons -->
+        <div class="panel-toggle left" id="toggleLeft" onclick="togglePanel('left')" title="Toggle Synergies">◀</div>
+        <div class="panel-toggle right" id="toggleRight" onclick="togglePanel('right')" title="Toggle Stats">▶</div>
+
+        <!-- SYNERGY PANEL -->
+        <div class="synergy-panel" id="synergyPanel">
+            <div class="synergy-header">Active Synergies</div>
+
+            <div class="synergy-card active" style="border-left-color: #FF4500;">
+                <div class="synergy-name">
+                    <span class="synergy-icon">🔥</span> Fire
+                    <span class="synergy-threshold"><span class="current">3</span>/<span class="needed">2/4/7/10</span></span>
+                </div>
+                <div class="synergy-desc">Fire units deal +15% ATK damage</div>
+                <div class="synergy-tier">
+                    <div class="tier-pip active-tier"></div>
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                </div>
+            </div>
+
+            <div class="synergy-card active" style="border-left-color: #228B22;">
+                <div class="synergy-name">
+                    <span class="synergy-icon">🌿</span> Earth
+                    <span class="synergy-threshold"><span class="current">3</span>/<span class="needed">2/4/7/10</span></span>
+                </div>
+                <div class="synergy-desc">Earth units gain +200 HP, +20 ATK (×2 front row)</div>
+                <div class="synergy-tier">
+                    <div class="tier-pip active-tier"></div>
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                </div>
+            </div>
+
+            <div class="synergy-card active" style="border-left-color: #FFD700;">
+                <div class="synergy-name">
+                    <span class="synergy-icon">⚡</span> Lightning
+                    <span class="synergy-threshold"><span class="current">2</span>/<span class="needed">2/4/7/10</span></span>
+                </div>
+                <div class="synergy-desc">Lightning units +15% attack speed</div>
+                <div class="synergy-tier">
+                    <div class="tier-pip active-tier"></div>
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                </div>
+            </div>
+
+            <div class="synergy-card inactive" style="border-left-color: #1E90FF;">
+                <div class="synergy-name">
+                    <span class="synergy-icon">💧</span> Water
+                    <span class="synergy-threshold"><span class="current">1</span>/<span class="needed">2/4/7/10</span></span>
+                </div>
+                <div class="synergy-desc">Enemy attack speed -15%</div>
+                <div class="synergy-tier">
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                </div>
+            </div>
+
+            <div class="synergy-card inactive" style="border-left-color: #87CEEB;">
+                <div class="synergy-name">
+                    <span class="synergy-icon">💨</span> Wind
+                    <span class="synergy-threshold"><span class="current">1</span>/<span class="needed">2/4/7/10</span></span>
+                </div>
+                <div class="synergy-desc">Wind units +20% evasion</div>
+                <div class="synergy-tier">
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                </div>
+            </div>
+
+            <div class="synergy-card inactive" style="border-left-color: #9370DB;">
+                <div class="synergy-name">
+                    <span class="synergy-icon">🔮</span> Force
+                    <span class="synergy-threshold"><span class="current">1</span>/<span class="needed">2/4/7/10</span></span>
+                </div>
+                <div class="synergy-desc">Force units +15% ability power</div>
+                <div class="synergy-tier">
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                </div>
+            </div>
+
+            <div class="synergy-header" style="margin-top: 12px;">Archetype Synergies</div>
+
+            <div class="synergy-card active" style="border-left-color: #cc8844;">
+                <div class="synergy-name">
+                    <span class="synergy-icon">🛡</span> Vanguard
+                    <span class="synergy-threshold"><span class="current">2</span>/<span class="needed">2/4/6</span></span>
+                </div>
+                <div class="synergy-desc">Vanguards +200 HP, +20 ATK (×2 front row)</div>
+                <div class="synergy-tier">
+                    <div class="tier-pip active-tier"></div>
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                </div>
+            </div>
+
+            <div class="synergy-card inactive" style="border-left-color: #aa4444;">
+                <div class="synergy-name">
+                    <span class="synergy-icon">⚔</span> Predator
+                    <span class="synergy-threshold"><span class="current">1</span>/<span class="needed">2/4/6</span></span>
+                </div>
+                <div class="synergy-desc">Predators +20% crit chance</div>
+                <div class="synergy-tier">
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                    <div class="tier-pip"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BATTLE AREA -->
+        <div class="battle-area">
+            <div class="env-sky"></div>
+            <div class="env-veil-shimmer"></div>
+            <div class="env-hills">
+                <div class="hill" style="width:400px;height:120px;left:-30px;background:linear-gradient(180deg,#3a4a38,#2a3a28);"></div>
+                <div class="hill" style="width:500px;height:140px;left:200px;bottom:-15px;background:linear-gradient(180deg,#354535,#253525);"></div>
+                <div class="hill" style="width:380px;height:110px;left:480px;bottom:5px;background:linear-gradient(180deg,#3a4838,#2a3828);"></div>
+                <div class="hill" style="width:450px;height:130px;left:700px;bottom:-8px;background:linear-gradient(180deg,#384538,#283528);"></div>
+            </div>
+            <div class="env-palisade" id="palisade"></div>
+            <div class="watchtower">
+                <div class="tower-top"><div class="tower-light"></div></div>
+                <div class="tower-base"></div>
+            </div>
+            <div class="env-ground"></div>
+            <div class="env-fog"></div>
+
+            <!-- Grid -->
+            <div class="grid-container">
+                <div class="team-label">— Voidspawn —</div>
+                <div class="grid enemy" id="enemy-grid"></div>
+                <div class="divider-row"><div class="divider-line"></div></div>
+                <div class="grid player" id="player-grid"></div>
+                <div class="team-label">— Echoes —</div>
+            </div>
+        </div>
+
+        <!-- COMBAT STATS PANEL -->
+        <div class="stats-panel" id="statsPanel">
+            <div class="stats-header">Combat Stats</div>
+
+            <div class="stats-team-label player">Your Team</div>
+            <div id="player-stats"></div>
+
+            <div class="stats-team-label enemy">Enemy Team</div>
+            <div id="enemy-stats"></div>
+
+            <!-- Damage meters -->
+            <div class="meter-section">
+                <div class="meter-title">Damage Done</div>
+                <div id="dmg-meters"></div>
+            </div>
+
+            <div class="meter-section">
+                <div class="meter-title">Healing Done</div>
+                <div id="heal-meters"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- COMBAT LOG toggle bar + log -->
+    <div class="log-toggle-bar" onclick="togglePanel('log')">
+        <span id="logToggleLabel">▼ Combat Log ▼</span>
+    </div>
+    <div class="combat-log" id="combatLog">
+        <div class="log-entry"><span class="log-timestamp">0:00</span><span class="system">⚔ Wave 1 begins!</span></div>
+    </div>
+
+</div>
+
+<script>
+// Palisade
+const palisade = document.getElementById('palisade');
+for (let i = 0; i < 120; i++) {
+    const p = document.createElement('div');
+    p.className = 'palisade-post';
+    p.style.height = (16 + Math.random() * 18) + 'px';
+    if (Math.random() > 0.88) p.style.transform = `rotate(${(Math.random()-0.5)*5}deg)`;
+    palisade.appendChild(p);
+}
+
+const EC = {
+    fire: '#FF4500', water: '#1E90FF', earth: '#228B22',
+    wind: '#87CEEB', lightning: '#FFD700', force: '#9370DB'
+};
+
+const unitNames = {
+    fire:  { echo: ['Flame Warrior','Cinder Archer','Fire Acolyte','Inferno Fox','Pyro Knight','Ember Scout','Salamander Sage','Blaze Berserker','Ashen Watcher','Phoenix'],
+             voidspawn: ['Slag Crawler','Char Pebble','Molten Mass','Thermal Vent','Pyroclast','Magma Lurker','Basalt Beast','Cinder Worm','Lava Mound','Volcanic Titan'] },
+    water: { echo: ['Tide Hunter','Whirlpool Mage','Reef Guard','Hydro Squire','Coral Sage'],
+             voidspawn: ['Abyssal Ooze','Deep Lurker','Brine Mass','Murk Crawler','Pressure Entity'] },
+    earth: { echo: ['Bramble Knight','Stone Warden','Root Anchor','Crystal Guard','Abyssal Guardian'],
+             voidspawn: ['Fossil Crawl','Calcite Mass','Petrified Colony','Sediment Beast','Tectonic Husk'] },
+    wind:  { echo: ['Sky Archer','Gale Dancer','Zephyr Wisp','Breeze Scout'],
+             voidspawn: ['Static Swarm','Tatter Wing','Debris Cloud','Storm Knot'] },
+    lightning: { echo: ['Spark Lancer','Volt Runner','Arc Mage','Thunderlord','Storm Sage'],
+                 voidspawn: ['Nerve Tangle','Shock Cluster','Overload Mass','Static Beast','Surge Titan'] },
+    force: { echo: ['Gravity Acolyte','Warp Blade','Void Wyrm','Phase Walker'],
+             voidspawn: ['Fracture Anomaly','Warp Shard','Null Mass','Rift Beast'] }
+};
+
+function getUnitName(element, type, index) {
+    const names = unitNames[element]?.[type] || ['Unknown'];
+    return names[index % names.length];
+}
+
+// Teams
+const playerUnits = [
+    { element: 'water', tier: 3, row: 0, col: 2, hp: 92, maxHp: 100, dmgDone: 245, dmgTaken: 80, healDone: 120, idx: 0 },
+    { element: 'force', tier: 3, row: 0, col: 5, hp: 88, maxHp: 95, dmgDone: 310, dmgTaken: 65, healDone: 0, idx: 0 },
+    { element: 'lightning', tier: 3, row: 1, col: 1, hp: 72, maxHp: 80, dmgDone: 520, dmgTaken: 110, healDone: 0, idx: 2 },
+    { element: 'wind', tier: 2, row: 1, col: 4, hp: 55, maxHp: 70, dmgDone: 380, dmgTaken: 95, healDone: 0, idx: 0 },
+    { element: 'lightning', tier: 2, row: 1, col: 6, hp: 60, maxHp: 75, dmgDone: 290, dmgTaken: 85, healDone: 0, idx: 1 },
+    { element: 'fire', tier: 3, row: 2, col: 2, hp: 65, maxHp: 85, dmgDone: 610, dmgTaken: 150, healDone: 0, idx: 7 },
+    { element: 'earth', tier: 2, row: 2, col: 5, hp: 75, maxHp: 90, dmgDone: 180, dmgTaken: 200, healDone: 0, idx: 1 },
+    { element: 'earth', tier: 4, row: 3, col: 1, hp: 100, maxHp: 100, dmgDone: 150, dmgTaken: 320, healDone: 0, idx: 4 },
+    { element: 'fire', tier: 1, row: 3, col: 3, hp: 30, maxHp: 60, dmgDone: 140, dmgTaken: 180, healDone: 0, idx: 1 },
+    { element: 'fire', tier: 1, row: 3, col: 5, hp: 45, maxHp: 60, dmgDone: 170, dmgTaken: 160, healDone: 0, idx: 2 },
+    { element: 'earth', tier: 2, row: 3, col: 7, hp: 78, maxHp: 85, dmgDone: 120, dmgTaken: 250, healDone: 0, idx: 2 },
+];
+
+const enemyUnits = [
+    { element: 'earth', tier: 3, row: 0, col: 1, hp: 70, maxHp: 90, dmgDone: 280, dmgTaken: 320, healDone: 0, idx: 2 },
+    { element: 'fire', tier: 2, row: 0, col: 3, hp: 25, maxHp: 65, dmgDone: 190, dmgTaken: 280, healDone: 0, idx: 0 },
+    { element: 'water', tier: 1, row: 0, col: 5, hp: 18, maxHp: 55, dmgDone: 90, dmgTaken: 210, healDone: 0, idx: 0 },
+    { element: 'earth', tier: 2, row: 0, col: 7, hp: 55, maxHp: 80, dmgDone: 160, dmgTaken: 190, healDone: 0, idx: 3 },
+    { element: 'fire', tier: 3, row: 1, col: 2, hp: 45, maxHp: 80, dmgDone: 420, dmgTaken: 350, healDone: 0, idx: 2 },
+    { element: 'wind', tier: 2, row: 1, col: 4, hp: 40, maxHp: 65, dmgDone: 310, dmgTaken: 180, healDone: 0, idx: 1 },
+    { element: 'lightning', tier: 5, row: 1, col: 6, hp: 88, maxHp: 95, dmgDone: 680, dmgTaken: 120, healDone: 0, idx: 4 },
+    { element: 'force', tier: 3, row: 2, col: 3, hp: 60, maxHp: 75, dmgDone: 340, dmgTaken: 140, healDone: 0, idx: 2 },
+    { element: 'fire', tier: 1, row: 2, col: 5, hp: 0, maxHp: 50, dmgDone: 80, dmgTaken: 210, healDone: 0, idx: 1 },
+    { element: 'water', tier: 4, row: 3, col: 2, hp: 75, maxHp: 85, dmgDone: 120, dmgTaken: 60, healDone: 280, idx: 3 },
+    { element: 'lightning', tier: 3, row: 3, col: 5, hp: 70, maxHp: 80, dmgDone: 450, dmgTaken: 90, healDone: 0, idx: 2 },
+];
+
+function createToken(unit, type) {
+    const tierClass = unit.tier <= 1 ? ' t1' : unit.tier === 2 ? ' t2' : unit.tier >= 5 ? ' t5' : '';
+    const token = document.createElement('div');
+    token.className = `token ${unit.element}-${type}${tierClass}`;
+    token.style.animationDelay = (Math.random() * 2.5) + 's';
+
+    if (unit.hp <= 0) {
+        token.style.opacity = '0.15';
+        token.style.filter = 'grayscale(0.8)';
+        token.style.animation = 'none';
+    }
+
+    // Stars
+    const stars = document.createElement('div');
+    stars.className = 'tier-stars';
+    for (let i = 0; i < unit.tier; i++) {
+        const s = document.createElement('div');
+        s.className = 'tier-star';
+        s.style.background = EC[unit.element];
+        stars.appendChild(s);
+    }
+    token.appendChild(stars);
+
+    // HP bar
+    const hp = document.createElement('div');
+    hp.className = 'token-hp';
+    const hpF = document.createElement('div');
+    hpF.className = 'token-hp-fill';
+    const hpPct = unit.maxHp > 0 ? (unit.hp / unit.maxHp * 100) : 0;
+    hpF.classList.add(hpPct > 60 ? 'high' : hpPct > 30 ? 'mid' : 'low');
+    hpF.style.width = hpPct + '%';
+    hp.appendChild(hpF);
+    token.appendChild(hp);
+
+    // Name
+    const label = document.createElement('div');
+    label.className = 'unit-label';
+    label.textContent = getUnitName(unit.element, type, unit.idx);
+    token.appendChild(label);
+
+    // Particles
+    if (unit.hp > 0 && unit.element === 'fire' && type === 'echo') {
+        for (let i = 0; i < 2; i++) {
+            const e = document.createElement('div');
+            e.className = 'ember-p';
+            e.style.left = (20+Math.random()*55)+'%';
+            e.style.top = (5+Math.random()*25)+'%';
+            e.style.animationDelay = (Math.random()*1.5)+'s';
+            token.appendChild(e);
+        }
+    }
+    if (unit.hp > 0 && unit.element === 'fire' && type === 'voidspawn') {
+        const s = document.createElement('div');
+        s.className = 'smoke-p';
+        s.style.left = '40%'; s.style.top = '20%';
+        s.style.animationDelay = (Math.random()*2)+'s';
+        token.appendChild(s);
+    }
+
+    return token;
+}
+
+function buildGrid(gridId, units, type) {
+    const grid = document.getElementById(gridId);
+    grid.innerHTML = '';
+    for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 8; c++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            const u = units.find(u => u.row === r && u.col === c);
+            if (u) cell.appendChild(createToken(u, type));
+            grid.appendChild(cell);
+        }
+    }
+}
+
+const enemyFlipped = enemyUnits.map(u => ({...u, row: 3 - u.row}));
+buildGrid('enemy-grid', enemyFlipped, 'voidspawn');
+buildGrid('player-grid', playerUnits, 'echo');
+
+// Combat stats panel
+function buildStats(containerId, units, type) {
+    const container = document.getElementById(containerId);
+    units.forEach(u => {
+        const name = getUnitName(u.element, type, u.idx);
+        const hpPct = u.maxHp > 0 ? (u.hp / u.maxHp * 100) : 0;
+        const hpColor = hpPct > 60 ? '#44cc44' : hpPct > 30 ? '#cccc00' : '#cc4444';
+        const dead = u.hp <= 0;
+
+        const row = document.createElement('div');
+        row.className = 'unit-stat-row';
+        row.style.borderLeftColor = EC[u.element];
+        if (dead) row.style.opacity = '0.4';
+
+        row.innerHTML = `
+            <div class="unit-stat-top">
+                <span class="unit-name" style="color:${EC[u.element]}">${name}</span>
+                <span class="unit-hp"><span class="current" style="color:${hpColor}">${u.hp}</span><span class="max">/${u.maxHp}</span></span>
+            </div>
+            <div class="unit-hp-bar"><div class="unit-hp-fill" style="width:${hpPct}%;background:${hpColor}"></div></div>
+            <div class="unit-stat-bottom">
+                <span class="dmg-done">${u.dmgDone} dmg</span>
+                <span class="dmg-taken">${u.dmgTaken} taken</span>
+                ${u.healDone > 0 ? `<span class="heal-done">${u.healDone} heal</span>` : ''}
+            </div>
+        `;
+        container.appendChild(row);
+    });
+}
+
+buildStats('player-stats', playerUnits, 'echo');
+buildStats('enemy-stats', enemyUnits, 'voidspawn');
+
+// Damage meters
+function buildMeters() {
+    const allPlayerUnits = playerUnits.map(u => ({
+        name: getUnitName(u.element, 'echo', u.idx),
+        element: u.element,
+        dmg: u.dmgDone,
+        heal: u.healDone
+    })).sort((a,b) => b.dmg - a.dmg);
+
+    const maxDmg = Math.max(...allPlayerUnits.map(u => u.dmg), 1);
+    const dmgContainer = document.getElementById('dmg-meters');
+    allPlayerUnits.slice(0, 5).forEach(u => {
+        const row = document.createElement('div');
+        row.className = 'meter-row';
+        row.innerHTML = `
+            <span class="meter-name" style="color:${EC[u.element]}">${u.name}</span>
+            <div class="meter-bar"><div class="meter-fill dmg" style="width:${u.dmg/maxDmg*100}%"></div></div>
+            <span class="meter-value">${u.dmg}</span>
+        `;
+        dmgContainer.appendChild(row);
+    });
+
+    const healers = allPlayerUnits.filter(u => u.heal > 0).sort((a,b) => b.heal - a.heal);
+    if (healers.length > 0) {
+        const maxHeal = Math.max(...healers.map(u => u.heal), 1);
+        const healContainer = document.getElementById('heal-meters');
+        healers.forEach(u => {
+            const row = document.createElement('div');
+            row.className = 'meter-row';
+            row.innerHTML = `
+                <span class="meter-name" style="color:${EC[u.element]}">${u.name}</span>
+                <div class="meter-bar"><div class="meter-fill heal" style="width:${u.heal/maxHeal*100}%"></div></div>
+                <span class="meter-value">${u.heal}</span>
+            `;
+            healContainer.appendChild(row);
+        });
+    }
+}
+buildMeters();
+
+// Combat log simulation
+const logEntries = [
+    '<span class="attacker">Blaze Berserker</span> attacks <span class="defender">Petrified Colony</span> for <span class="damage">85</span> damage',
+    '<span class="defender">Slag Crawler</span> takes <span class="damage">62</span> damage from <span class="attacker">Cinder Archer</span>',
+    '<span class="attacker">Surge Titan</span> casts <span class="ability">Chain Lightning</span> — hits 3 targets for <span class="crit">142</span> (CRIT!)',
+    '<span class="attacker">Abyssal Guardian</span> taunts nearby enemies',
+    '<span class="attacker">Tide Hunter</span> heals <span class="attacker">Cinder Archer</span> for <span class="heal">45</span> HP',
+    '<span class="defender">Char Pebble</span> is <span class="status">defeated!</span>',
+    '<span class="attacker">Sky Archer</span> attacks <span class="defender">Tatter Wing</span> for <span class="damage">58</span> damage',
+    '<span class="attacker">Molten Mass</span> applies <span class="status">Burn</span> to <span class="defender">Flame Warrior</span>',
+    '<span class="attacker">Thunderlord</span> casts <span class="ability">Arc Strike</span> for <span class="damage">120</span> damage',
+    '<span class="attacker">Gravity Acolyte</span> casts <span class="ability">Gravity Well</span> — pulls 2 enemies',
+];
+
+let logTime = 3;
+let logIdx = 0;
+function addLogEntry() {
+    if (logIdx >= logEntries.length) return;
+    const log = document.getElementById('combatLog');
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="log-timestamp">${Math.floor(logTime/60)}:${(logTime%60).toString().padStart(2,'0')}</span>${logEntries[logIdx]}`;
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+    logIdx++;
+    logTime += 1 + Math.floor(Math.random() * 3);
+}
+
+// Drip log entries
+let logInterval = setInterval(() => { addLogEntry(); if (logIdx >= logEntries.length) clearInterval(logInterval); }, 2000);
+
+// Speed button
+const speeds = ['1×','2×','4×'];
+let speedIdx = 0;
+function cycleSpeed() {
+    speedIdx = (speedIdx + 1) % speeds.length;
+    document.getElementById('speedBtn').textContent = speeds[speedIdx];
+}
+
+// Panel toggles
+function togglePanel(panel) {
+    const middle = document.querySelector('.middle-section');
+
+    if (panel === 'left') {
+        const sp = document.getElementById('synergyPanel');
+        const btn = document.getElementById('toggleLeft');
+        sp.classList.toggle('hidden');
+        if (sp.classList.contains('hidden')) {
+            btn.textContent = '▶';
+            btn.title = 'Show Synergies';
+            middle.classList.add('left-hidden');
+        } else {
+            btn.textContent = '◀';
+            btn.title = 'Hide Synergies';
+            middle.classList.remove('left-hidden');
+        }
+    }
+
+    if (panel === 'right') {
+        const sp = document.getElementById('statsPanel');
+        const btn = document.getElementById('toggleRight');
+        sp.classList.toggle('hidden');
+        if (sp.classList.contains('hidden')) {
+            btn.textContent = '◀';
+            btn.title = 'Show Stats';
+            middle.classList.add('right-hidden');
+        } else {
+            btn.textContent = '▶';
+            btn.title = 'Hide Stats';
+            middle.classList.remove('right-hidden');
+        }
+    }
+
+    if (panel === 'log') {
+        const cl = document.getElementById('combatLog');
+        const label = document.getElementById('logToggleLabel');
+        cl.classList.toggle('hidden');
+        if (cl.classList.contains('hidden')) {
+            label.textContent = '▲ Combat Log ▲';
+        } else {
+            label.textContent = '▼ Combat Log ▼';
+        }
+    }
+}
+
+// Keyboard shortcuts for panels
+document.addEventListener('keydown', (e) => {
+    if (e.key === 's' || e.key === 'S') togglePanel('left');
+    if (e.key === 'd' || e.key === 'D') togglePanel('right');
+    if (e.key === 'l' || e.key === 'L') togglePanel('log');
+});
+</script>
+</body>
+</html>

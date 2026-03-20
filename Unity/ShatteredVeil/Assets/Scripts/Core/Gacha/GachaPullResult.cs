@@ -1,20 +1,27 @@
 namespace ShatteredVeil.Core.Gacha
 {
-    public struct GachaPullResult
+    /// <summary>
+    /// Result of a single gacha pull.
+    /// </summary>
+    public class GachaPullResult
     {
-        public string UnitId;
-        public int Tier;
-        public bool IsPity;
-        public int NewPityCount;
-        public bool IsEvolvedCopy;
+        public bool Success { get; set; }
+        public string Reason { get; set; }
+        public string UnitId { get; set; }
+        public int Tier { get; set; }
+        public bool PityTriggered { get; set; }
+        public bool IsNew { get; set; }
+        public bool IsEvolvedCopy { get; set; }
     }
 
-    public struct RateDisplay
+    /// <summary>
+    /// Result of a multi-pull (10x).
+    /// </summary>
+    public class GachaMultiPullResult
     {
-        public float T1Rate;
-        public float T2Rate;
-        public float T3Rate;
-        public float T4Rate;
-        public float T5Rate;
+        public bool Success { get; set; }
+        public string Reason { get; set; }
+        public GachaPullResult[] Results { get; set; }
+        public int TotalCost { get; set; }
     }
 }

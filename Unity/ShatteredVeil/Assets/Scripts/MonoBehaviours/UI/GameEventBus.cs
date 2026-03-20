@@ -3,19 +3,20 @@ using System;
 namespace ShatteredVeil.Mono.UI
 {
     /// <summary>
-    /// Lightweight pub/sub for Core↔UI communication.
+    /// Lightweight pub/sub for Core-to-UI communication.
     /// Static class — no MonoBehaviour needed.
+    /// Fire from Core systems, subscribe from UI controllers.
     /// </summary>
     public static class GameEventBus
     {
         // Economy
         public static event Action<int> OnGoldChanged;
-        public static event Action<int, int> OnXPChanged;
+        public static event Action<int, int> OnXPChanged; // currentXP, xpToNext
         public static event Action<int> OnLevelUp;
 
         // Units
         public static event Action<string> OnUnitRolled;
-        public static event Action<string, int> OnUnitStarredUp;
+        public static event Action<string, int> OnUnitStarredUp; // unitId, newStars
 
         // Team
         public static event Action<int> OnTeamChanged;
@@ -48,6 +49,9 @@ namespace ShatteredVeil.Mono.UI
         public static void FireBuildingUpgraded(string buildingId, int newLevel) => OnBuildingUpgraded?.Invoke(buildingId, newLevel);
         public static void FireSaveCompleted() => OnSaveCompleted?.Invoke();
         public static void FireToastRequested(string message) => OnToastRequested?.Invoke(message);
+
+        // Alias from theirs branch
+        public static void FireToast(string message) => OnToastRequested?.Invoke(message);
 
         /// <summary>
         /// Clears all subscribers. Call on scene teardown or test cleanup.

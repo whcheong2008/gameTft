@@ -1,0 +1,9 @@
+﻿Fire Echo v2 keeper shortlist
+Picked for clearly non-humanoid / abstract flame-entity silhouettes.
+Files:
+sv-fire-echo-test_00010_.png
+sv-fire-echo-v2-curation_00003_.png
+sv-fire-echo-v2-curation-b_00001_.png
+sv-fire-echo-v2-curation-b_00002_.png
+sv-fire-echo-v2-curation-b_00006_.png
+sv-fire-echo-v2-curation-b_00020_.png

@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unit Simulator — Auto Battler Balance Tool</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a1a; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, sans-serif; padding: 20px; }
+h1 { color: #ffd700; margin-bottom: 10px; font-size: 24px; }
+h2 { color: #88ccff; margin: 20px 0 10px; font-size: 18px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+h3 { color: #aaddff; margin: 12px 0 6px; font-size: 15px; }
+
+.controls { display: flex; gap: 15px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; padding: 12px; background: #111128; border-radius: 8px; border: 1px solid #333; }
+.controls label { font-size: 13px; color: #aaa; }
+.controls select, .controls input { background: #1a1a2e; color: #fff; border: 1px solid #444; padding: 6px 10px; border-radius: 4px; font-size: 13px; }
+.controls button { background: #2a6; color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
+.controls button:hover { background: #3b7; }
+.controls button.secondary { background: #446; }
+.controls button.secondary:hover { background: #557; }
+
+.tabs { display: flex; gap: 4px; margin-bottom: 15px; }
+.tab { padding: 8px 16px; background: #1a1a2e; border: 1px solid #333; border-bottom: none; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 13px; color: #888; }
+.tab.active { background: #222244; color: #ffd700; border-color: #555; }
+
+.panel { display: none; }
+.panel.active { display: block; }
+
+table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 15px; }
+th { background: #222; color: #ffd700; padding: 6px 8px; text-align: left; position: sticky; top: 0; cursor: pointer; user-select: none; }
+th:hover { background: #333; }
+th.sorted-asc::after { content: ' ▲'; }
+th.sorted-desc::after { content: ' ▼'; }
+td { padding: 5px 8px; border-bottom: 1px solid #1a1a2e; }
+tr:nth-child(even) { background: #111128; }
+tr:nth-child(odd) { background: #0d0d20; }
+tr:hover { background: #1a1a3e; }
+
+.tier-1 { color: #aaa; }
+.tier-2 { color: #2a2; }
+.tier-3 { color: #44f; }
+.tier-4 { color: #a4a; }
+.tier-5 { color: #ffd700; }
+
+.type-warrior { color: #e88; }
+.type-tank { color: #8ae; }
+.type-archer { color: #8e8; }
+.type-mage { color: #e8e; }
+.type-assassin { color: #ee8; }
+.type-healer { color: #8ee; }
+
+.stat-bar { display: inline-block; height: 12px; border-radius: 3px; vertical-align: middle; }
+.stat-bar.power { background: linear-gradient(90deg, #447, #88f); }
+.stat-bar.combat { background: linear-gradient(90deg, #474, #8f8); }
+
+.outlier-over { color: #ff4444; font-weight: bold; }
+.outlier-under { color: #4488ff; font-weight: bold; }
+
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.summary-card { background: #111128; border: 1px solid #333; border-radius: 8px; padding: 12px; }
+.summary-card .label { font-size: 11px; color: #888; text-transform: uppercase; }
+.summary-card .value { font-size: 24px; font-weight: bold; color: #ffd700; }
+.summary-card .detail { font-size: 12px; color: #aaa; margin-top: 4px; }
+
+.ttk-check { display: inline-block; margin-right: 8px; }
+.ttk-pass { color: #4f4; }
+.ttk-fail { color: #f44; }
+.ttk-close { color: #ff8; }
+
+#output { max-height: 70vh; overflow-y: auto; }
+.loading { color: #888; font-style: italic; padding: 20px; }
+
+.element-badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: bold; }
+.elem-fire { background: #631; color: #fa5; }
+.elem-water { background: #135; color: #5af; }
+.elem-earth { background: #353; color: #8d8; }
+.elem-wind { background: #445; color: #adf; }
+.elem-lightning { background: #553; color: #ff5; }
+.elem-force { background: #444; color: #ccc; }
+
+.detail-panel { background: #111128; border: 1px solid #444; border-radius: 8px; padding: 15px; margin: 10px 0; display: none; }
+.detail-panel.visible { display: block; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.detail-item { font-size: 12px; }
+.detail-item .dlabel { color: #888; }
+.detail-item .dvalue { color: #fff; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>Unit Simulator — Balance Tool</h1>
+
+<div class="controls">
+    <div>
+        <label>Stars:</label>
+        <select id="simStars">
+            <option value="1">1★</option>
+            <option value="2">2★</option>
+            <option value="3" selected>3★</option>
+        </select>
+    </div>
+    <div>
+        <label>Level:</label>
+        <input type="number" id="simLevel" value="15" min="1" max="30" style="width:60px;">
+    </div>
+    <div>
+        <label>Ascension:</label>
+        <select id="simAscension">
+            <option value="">None</option>
+            <option value="awakened">Awakened</option>
+            <option value="exalted">Exalted</option>
+            <option value="transcendent">Transcendent</option>
+        </select>
+    </div>
+    <div>
+        <label>Unit Set:</label>
+        <select id="simSet">
+            <option value="base">Base Units (66)</option>
+            <option value="evolved">Evolved Units (66)</option>
+            <option value="all">All Units (132)</option>
+        </select>
+    </div>
+    <button onclick="runFullSimulation()">Run Simulation</button>
+    <button class="secondary" onclick="runTTKAnalysis()">TTK Check</button>
+    <button class="secondary" onclick="runSingleUnit()">Single Unit</button>
+</div>
+
+<div class="tabs">
+    <div class="tab active" onclick="switchTab('overview')">Overview</div>
+    <div class="tab" onclick="switchTab('roster')">Full Roster</div>
+    <div class="tab" onclick="switchTab('byrole')">By Role</div>
+    <div class="tab" onclick="switchTab('bytier')">By Tier</div>
+    <div class="tab" onclick="switchTab('balance')">Balance Analysis</div>
+    <div class="tab" onclick="switchTab('ttk')">TTK Targets</div>
+    <div class="tab" onclick="switchTab('single')">Single Unit</div>
+</div>
+
+<div id="output">
+    <div class="panel active" id="panel-overview">
+        <p class="loading">Click "Run Simulation" to begin.</p>
+    </div>
+    <div class="panel" id="panel-roster"></div>
+    <div class="panel" id="panel-byrole"></div>
+    <div class="panel" id="panel-bytier"></div>
+    <div class="panel" id="panel-balance"></div>
+    <div class="panel" id="panel-ttk"></div>
+    <div class="panel" id="panel-single">
+        <div class="controls" style="margin-bottom:10px;">
+            <label>Unit:</label>
+            <select id="singleUnitSelect" style="width:200px;"></select>
+        </div>
+        <div id="singleUnitResult"></div>
+    </div>
+</div>
+
+<!-- Load game JS files -->
+<script src="js/units-core.js"></script>
+<script src="js/units-templates.js"></script>
+<script src="js/units-abilities.js"></script>
+<script src="js/units-bonds.js"></script>
+<script src="js/units-ascension.js"></script>
+<script src="js/unit-simulator.js"></script>
+
+<script>
+var lastResults = [];
+var lastAnalysis = null;
+
+function getSimOptions() {
+    return {
+        stars: parseInt(document.getElementById('simStars').value),
+        level: parseInt(document.getElementById('simLevel').value),
+        ascension: document.getElementById('simAscension').value || null
+    };
+}
+
+function switchTab(name) {
+    var tabs = document.querySelectorAll('.tab');
+    var panels = document.querySelectorAll('.panel');
+    tabs.forEach(function(t) { t.classList.remove('active'); });
+    panels.forEach(function(p) { p.classList.remove('active'); });
+    event.target.classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+}
+
+function tierClass(tier) { return 'tier-' + tier; }
+function typeClass(type) { return 'type-' + type; }
+function elemClass(elem) { return 'elem-' + elem; }
+
+function elemBadge(elem) {
+    return '<span class="element-badge ' + elemClass(elem) + '">' + elem.charAt(0).toUpperCase() + elem.slice(1) + '</span>';
+}
+
+function barHTML(value, maxValue, cls) {
+    var pct = Math.min(100, Math.round(value / maxValue * 100));
+    return '<span class="stat-bar ' + cls + '" style="width:' + pct + 'px;" title="' + value + '"></span> ' + value;
+}
+
+// ===========================================================================
+// RENDER FUNCTIONS
+// ===========================================================================
+
+function renderOverview(results, analysis) {
+    var html = '';
+
+    // Summary cards
+    html += '<div class="summary-grid">';
+    html += '<div class="summary-card"><div class="label">Total Units</div><div class="value">' + results.length + '</div></div>';
+
+    // Avg combat rating
+    var totalCR = 0;
+    for (var i = 0; i < results.length; i++) totalCR += results[i].combatRating;
+    var avgCR = Math.floor(totalCR / results.length);
+    html += '<div class="summary-card"><div class="label">Avg Combat Rating</div><div class="value">' + avgCR + '</div></div>';
+
+    // Outliers
+    html += '<div class="summary-card"><div class="label">Overpowered</div><div class="value outlier-over">' + analysis.outliers.overpowered.length + '</div><div class="detail">&gt;30% above tier avg</div></div>';
+    html += '<div class="summary-card"><div class="label">Underpowered</div><div class="value outlier-under">' + analysis.outliers.underpowered.length + '</div><div class="detail">&lt;30% below tier avg</div></div>';
+
+    // Top 5
+    html += '<div class="summary-card"><div class="label">Highest Combat Rating</div><div class="value">' + results[0].unitName + '</div><div class="detail">CR: ' + results[0].combatRating + ' (' + results[0].type + ', T' + results[0].tier + ')</div></div>';
+
+    // Lowest
+    var lowest = results[results.length - 1];
+    html += '<div class="summary-card"><div class="label">Lowest Combat Rating</div><div class="value">' + lowest.unitName + '</div><div class="detail">CR: ' + lowest.combatRating + ' (' + lowest.type + ', T' + lowest.tier + ')</div></div>';
+    html += '</div>';
+
+    // Tier scaling
+    html += '<h2>Tier Scaling (Combat Rating)</h2>';
+    html += '<table><tr><th>Tier</th><th>Units</th><th>Avg CR</th><th>Min CR</th><th>Max CR</th><th>Spread</th><th>Ratio to T1</th></tr>';
+    for (var t = 1; t <= 5; t++) {
+        var tb = analysis.tierBreakdown[t];
+        if (!tb) continue;
+        var scaling = analysis.tierScaling.find(function(s) { return s.tier == t; });
+        html += '<tr>';
+        html += '<td class="' + tierClass(t) + '">T' + t + '</td>';
+        html += '<td>' + tb.count + '</td>';
+        html += '<td>' + tb.avgCombatRating + '</td>';
+        html += '<td>' + tb.minCR + '</td>';
+        html += '<td>' + tb.maxCR + '</td>';
+        html += '<td>' + tb.spreadCR + '</td>';
+        html += '<td>' + (scaling ? scaling.ratioToT1 + 'x' : '-') + '</td>';
+        html += '</tr>';
+    }
+    html += '</table>';
+
+    // Role averages
+    html += '<h2>Role Averages</h2>';
+    html += '<table><tr><th>Role</th><th>Units</th><th>Avg Power Rating</th><th>Avg Combat Rating</th></tr>';
+    var roles = ['warrior', 'tank', 'archer', 'mage', 'assassin', 'healer'];
+    for (var r = 0; r < roles.length; r++) {
+        var rb = analysis.roleBreakdown[roles[r]];
+        if (!rb) continue;
+        html += '<tr><td class="' + typeClass(roles[r]) + '">' + roles[r].charAt(0).toUpperCase() + roles[r].slice(1) + '</td>';
+        html += '<td>' + rb.count + '</td><td>' + rb.avgPowerRating + '</td><td>' + rb.avgCombatRating + '</td></tr>';
+    }
+    html += '</table>';
+
+    // Element averages
+    html += '<h2>Element Averages</h2>';
+    html += '<table><tr><th>Element</th><th>Units</th><th>Avg Power Rating</th><th>Avg Combat Rating</th></tr>';
+    var elems = ['fire', 'water', 'earth', 'wind', 'lightning', 'force'];
+    for (var e = 0; e < elems.length; e++) {
+        var eb = analysis.elementBreakdown[elems[e]];
+        if (!eb) continue;
+        html += '<tr><td>' + elemBadge(elems[e]) + '</td><td>' + eb.count + '</td><td>' + eb.avgPowerRating + '</td><td>' + eb.avgCombatRating + '</td></tr>';
+    }
+    html += '</table>';
+
+    document.getElementById('panel-overview').innerHTML = html;
+}
+
+function renderRoster(results) {
+    var maxCR = results.length > 0 ? results[0].combatRating : 1;
+    var maxPR = 0;
+    for (var i = 0; i < results.length; i++) { if (results[i].powerRating > maxPR) maxPR = results[i].powerRating; }
+
+    var html = '<table id="rosterTable">';
+    html += '<tr><th data-col="rank">#</th><th data-col="name">Unit</th><th data-col="tier">Tier</th><th data-col="type">Type</th>';
+    html += '<th data-col="archetype">Archetype</th><th data-col="element">Element</th>';
+    html += '<th data-col="hp">HP</th><th data-col="atk">ATK</th><th data-col="atkSpd">SPD</th>';
+    html += '<th data-col="powerRating">Power Rating</th><th data-col="combatRating">Combat Rating</th>';
+    html += '<th data-col="primary">Primary Metric</th></tr>';
+
+    for (var i = 0; i < results.length; i++) {
+        var r = results[i];
+        var primary = getPrimaryMetric(r);
+        html += '<tr>';
+        html += '<td>' + (i + 1) + '</td>';
+        html += '<td>' + (r.evolved ? '★ ' : '') + r.unitName + '</td>';
+        html += '<td class="' + tierClass(r.tier) + '">T' + r.tier + '</td>';
+        html += '<td class="' + typeClass(r.type) + '">' + r.type + '</td>';
+        html += '<td>' + r.archetype + '</td>';
+        html += '<td>' + elemBadge(r.element) + '</td>';
+        html += '<td>' + r.hp + '</td>';
+        html += '<td>' + r.attack + '</td>';
+        html += '<td>' + r.attackSpd + '</td>';
+        html += '<td>' + barHTML(r.powerRating, maxPR, 'power') + '</td>';
+        html += '<td>' + barHTML(r.combatRating, maxCR, 'combat') + '</td>';
+        html += '<td>' + primary + '</td>';
+        html += '</tr>';
+    }
+    html += '</table>';
+    document.getElementById('panel-roster').innerHTML = html;
+
+    // Add sorting
+    document.querySelectorAll('#rosterTable th').forEach(function(th) {
+        th.addEventListener('click', function() { sortTable('rosterTable', th); });
+    });
+}
+
+function getPrimaryMetric(r) {
+    var sim = r.simulation;
+    switch (r.type) {
+        case 'warrior': return sim.dps + ' DPS, ' + sim.timeAlive + 's alive';
+        case 'tank': return sim.effectiveHP + ' EffHP, ' + sim.ccSeconds + 's CC';
+        case 'archer': return sim.dps + ' DPS, ' + sim.abilityDamagePercent + '% ability';
+        case 'mage': return sim.abilityDPS + ' AbilDPS, ' + (sim.isAoE ? 'AoE' : 'ST');
+        case 'assassin': return sim.burstDPS + ' burst, ' + sim.timeToKill + 's TTK';
+        case 'healer': return sim.hps + ' HPS, ' + sim.buffValue + ' buff, ' + sim.abilityCasts + ' casts';
+        default: return '-';
+    }
+}
+
+function renderByRole(results) {
+    var byRole = { warrior: [], tank: [], archer: [], mage: [], assassin: [], healer: [] };
+    for (var i = 0; i < results.length; i++) {
+        if (byRole[results[i].type]) byRole[results[i].type].push(results[i]);
+    }
+
+    var html = '';
+    var roleHeaders = {
+        warrior: ['DPS', 'Time Alive', 'Self Heal', 'Ability Casts', 'Kills Est.'],
+        tank:    ['Eff. HP', 'Time Alive', 'CC Seconds', 'Self Shield', 'Ally Shield', 'Team Protect'],
+        archer:  ['DPS', 'Ability Dmg', 'Auto Dmg', 'Ability %', 'Time Alive'],
+        mage:    ['Ability DPS', 'Total DPS', 'CC Seconds', 'Mana Eff.', 'AoE?'],
+        assassin:['Burst DPS', 'TTK', 'Kill Potential', 'Total DPS', 'Time Alive'],
+        healer:  ['HPS', 'Total Healing', 'Buff Value', 'Ally Shields', 'Lives Saved']
+    };
+
+    for (var role in byRole) {
+        var units = byRole[role];
+        if (units.length === 0) continue;
+        units.sort(function(a, b) { return b.combatRating - a.combatRating; });
+
+        html += '<h2 class="' + typeClass(role) + '">' + role.charAt(0).toUpperCase() + role.slice(1) + 's (' + units.length + ')</h2>';
+        html += '<table><tr><th>#</th><th>Unit</th><th>T</th><th>Element</th><th>PR</th><th>CR</th>';
+        var headers = roleHeaders[role] || [];
+        for (var h = 0; h < headers.length; h++) html += '<th>' + headers[h] + '</th>';
+        html += '</tr>';
+
+        for (var j = 0; j < units.length; j++) {
+            var u = units[j];
+            var s = u.simulation;
+            html += '<tr><td>' + (j+1) + '</td>';
+            html += '<td>' + (u.evolved ? '★ ' : '') + u.unitName + '</td>';
+            html += '<td class="' + tierClass(u.tier) + '">T' + u.tier + '</td>';
+            html += '<td>' + elemBadge(u.element) + '</td>';
+            html += '<td>' + u.powerRating + '</td>';
+            html += '<td style="font-weight:bold;">' + u.combatRating + '</td>';
+
+            switch (role) {
+                case 'warrior':
+                    html += '<td>' + s.dps + '</td><td>' + s.timeAlive + 's</td><td>' + s.selfHealing + '</td><td>' + s.abilityCasts + '</td><td>' + s.killsEstimated + '</td>';
+                    break;
+                case 'tank':
+                    html += '<td>' + s.effectiveHP + '</td><td>' + s.timeAlive + 's</td><td>' + s.ccSeconds + '</td><td>' + s.totalShieldSelf + '</td><td>' + s.totalShieldAllies + '</td><td>' + s.teamProtection + '</td>';
+                    break;
+                case 'archer':
+                    html += '<td>' + s.dps + '</td><td>' + s.abilityDamage + '</td><td>' + s.autoAttackDamage + '</td><td>' + s.abilityDamagePercent + '%</td><td>' + s.timeAlive + 's</td>';
+                    break;
+                case 'mage':
+                    html += '<td>' + s.abilityDPS + '</td><td>' + s.dps + '</td><td>' + s.ccSeconds + '</td><td>' + s.manaEfficiency + '</td><td>' + (s.isAoE ? 'Yes' : 'No') + '</td>';
+                    break;
+                case 'assassin':
+                    html += '<td>' + s.burstDPS + '</td><td>' + s.timeToKill + 's</td><td>' + s.killPotential + '</td><td>' + s.dps + '</td><td>' + s.timeAlive + 's</td>';
+                    break;
+                case 'healer':
+                    html += '<td>' + s.hps + '</td><td>' + s.totalHealing + '</td><td>' + s.buffValue + '</td><td>' + s.allyShields + '</td><td>' + s.allyLivesSaved + '</td>';
+                    break;
+            }
+            html += '</tr>';
+        }
+        html += '</table>';
+    }
+
+    document.getElementById('panel-byrole').innerHTML = html;
+}
+
+function renderByTier(results) {
+    var byTier = {};
+    for (var i = 0; i < results.length; i++) {
+        var t = results[i].tier;
+        if (!byTier[t]) byTier[t] = [];
+        byTier[t].push(results[i]);
+    }
+
+    var html = '';
+    for (var tier = 1; tier <= 5; tier++) {
+        var units = byTier[tier];
+        if (!units || units.length === 0) continue;
+        units.sort(function(a, b) { return b.combatRating - a.combatRating; });
+
+        var avgCR = 0;
+        for (var k = 0; k < units.length; k++) avgCR += units[k].combatRating;
+        avgCR = Math.floor(avgCR / units.length);
+
+        html += '<h2 class="' + tierClass(tier) + '">Tier ' + tier + ' (' + units.length + ' units, avg CR: ' + avgCR + ')</h2>';
+        html += '<table><tr><th>#</th><th>Unit</th><th>Type</th><th>Archetype</th><th>Element</th><th>HP</th><th>ATK</th><th>PR</th><th>CR</th><th>Dev%</th><th>Primary</th></tr>';
+
+        for (var j = 0; j < units.length; j++) {
+            var u = units[j];
+            var dev = Math.round((u.combatRating - avgCR) / avgCR * 100);
+            var devClass = dev > 30 ? 'outlier-over' : (dev < -30 ? 'outlier-under' : '');
+            html += '<tr>';
+            html += '<td>' + (j+1) + '</td>';
+            html += '<td>' + (u.evolved ? '★ ' : '') + u.unitName + '</td>';
+            html += '<td class="' + typeClass(u.type) + '">' + u.type + '</td>';
+            html += '<td>' + u.archetype + '</td>';
+            html += '<td>' + elemBadge(u.element) + '</td>';
+            html += '<td>' + u.hp + '</td><td>' + u.attack + '</td>';
+            html += '<td>' + u.powerRating + '</td>';
+            html += '<td style="font-weight:bold;">' + u.combatRating + '</td>';
+            html += '<td class="' + devClass + '">' + (dev >= 0 ? '+' : '') + dev + '%</td>';
+            html += '<td>' + getPrimaryMetric(u) + '</td>';
+            html += '</tr>';
+        }
+        html += '</table>';
+    }
+
+    document.getElementById('panel-bytier').innerHTML = html;
+}
+
+function renderBalance(analysis) {
+    var html = '';
+
+    // Outliers
+    html += '<h2>Overpowered Units (&gt;30% above tier average)</h2>';
+    if (analysis.outliers.overpowered.length === 0) {
+        html += '<p style="color:#4f4;">No overpowered outliers detected.</p>';
+    } else {
+        html += '<table><tr><th>Unit</th><th>Tier</th><th>Type</th><th>Element</th><th>CR</th><th>Tier Avg</th><th>Deviation</th></tr>';
+        for (var i = 0; i < analysis.outliers.overpowered.length; i++) {
+            var o = analysis.outliers.overpowered[i];
+            html += '<tr><td class="outlier-over">' + o.name + '</td>';
+            html += '<td class="' + tierClass(o.tier) + '">T' + o.tier + '</td>';
+            html += '<td class="' + typeClass(o.type) + '">' + o.type + '</td>';
+            html += '<td>' + elemBadge(o.element) + '</td>';
+            html += '<td>' + o.combatRating + '</td><td>' + o.tierAvg + '</td>';
+            html += '<td class="outlier-over">+' + o.deviationPercent + '%</td></tr>';
+        }
+        html += '</table>';
+    }
+
+    html += '<h2>Underpowered Units (&lt;30% below tier average)</h2>';
+    if (analysis.outliers.underpowered.length === 0) {
+        html += '<p style="color:#4f4;">No underpowered outliers detected.</p>';
+    } else {
+        html += '<table><tr><th>Unit</th><th>Tier</th><th>Type</th><th>Element</th><th>CR</th><th>Tier Avg</th><th>Deviation</th></tr>';
+        for (var j = 0; j < analysis.outliers.underpowered.length; j++) {
+            var u = analysis.outliers.underpowered[j];
+            html += '<tr><td class="outlier-under">' + u.name + '</td>';
+            html += '<td class="' + tierClass(u.tier) + '">T' + u.tier + '</td>';
+            html += '<td class="' + typeClass(u.type) + '">' + u.type + '</td>';
+            html += '<td>' + elemBadge(u.element) + '</td>';
+            html += '<td>' + u.combatRating + '</td><td>' + u.tierAvg + '</td>';
+            html += '<td class="outlier-under">' + u.deviationPercent + '%</td></tr>';
+        }
+        html += '</table>';
+    }
+
+    // Tier scaling health
+    html += '<h2>Tier Scaling Health</h2>';
+    html += '<p>Ideal: T2 ~1.5-2x T1, T3 ~2.5-3.5x T1, T4 ~4-6x T1, T5 ~6-10x T1</p>';
+    html += '<table><tr><th>Tier</th><th>Avg CR</th><th>Ratio to T1</th><th>Expected</th><th>Status</th></tr>';
+    var expectedRanges = { 1: [1, 1], 2: [1.5, 2.0], 3: [2.5, 3.5], 4: [4.0, 6.0], 5: [6.0, 10.0] };
+    for (var t = 0; t < analysis.tierScaling.length; t++) {
+        var ts = analysis.tierScaling[t];
+        var expected = expectedRanges[ts.tier];
+        var status = '';
+        if (ts.ratioToT1 < expected[0]) status = '<span class="ttk-fail">LOW</span>';
+        else if (ts.ratioToT1 > expected[1]) status = '<span class="ttk-fail">HIGH</span>';
+        else status = '<span class="ttk-pass">OK</span>';
+        html += '<tr><td class="' + tierClass(ts.tier) + '">T' + ts.tier + '</td>';
+        html += '<td>' + ts.avgCR + '</td><td>' + ts.ratioToT1 + 'x</td>';
+        html += '<td>' + expected[0] + '-' + expected[1] + 'x</td><td>' + status + '</td></tr>';
+    }
+    html += '</table>';
+
+    // Role balance
+    html += '<h2>Role Balance (Within-Tier)</h2>';
+    html += '<p>Each role should have comparable combat ratings within the same tier. Large spreads indicate imbalance.</p>';
+    html += '<table><tr><th>Tier</th><th>Spread (max-min CR)</th><th>CV%</th><th>Status</th></tr>';
+    for (var tier in analysis.tierBreakdown) {
+        var tb = analysis.tierBreakdown[tier];
+        var cv = tb.avgCombatRating > 0 ? Math.round(tb.spreadCR / tb.avgCombatRating * 100) : 0;
+        var spreadStatus = cv > 50 ? '<span class="ttk-fail">HIGH SPREAD</span>' : (cv > 30 ? '<span class="ttk-close">MODERATE</span>' : '<span class="ttk-pass">OK</span>');
+        html += '<tr><td class="' + tierClass(tier) + '">T' + tier + '</td>';
+        html += '<td>' + tb.spreadCR + '</td><td>' + cv + '%</td><td>' + spreadStatus + '</td></tr>';
+    }
+    html += '</table>';
+
+    document.getElementById('panel-balance').innerHTML = html;
+}
+
+function renderTTK(ttkData) {
+    var html = '<h2>Time-to-Kill Analysis</h2>';
+    html += '<p>Based on ' + ttkData.unitCount + ' units at current simulation settings.</p>';
+
+    html += '<div class="summary-grid">';
+
+    // DPS vs DPS
+    var dpsCheck = checkTTK(ttkData.dpsVsDps, 4, 8);
+    html += '<div class="summary-card"><div class="label">DPS vs DPS</div><div class="value">' + ttkData.dpsVsDps + 's</div><div class="detail">Target: ' + ttkData.targets.dpsVsDps + ' ' + dpsCheck + '</div></div>';
+
+    // DPS vs Tank
+    var tankCheck = checkTTK(ttkData.dpsVsTank, 10, 18);
+    html += '<div class="summary-card"><div class="label">DPS vs Tank</div><div class="value">' + ttkData.dpsVsTank + 's</div><div class="detail">Target: ' + ttkData.targets.dpsVsTank + ' ' + tankCheck + '</div></div>';
+
+    // DPS vs Tank+Healer
+    var thCheck = checkTTK(ttkData.dpsVsTankHealer, 15, 25);
+    html += '<div class="summary-card"><div class="label">DPS vs Tank+Healer</div><div class="value">' + ttkData.dpsVsTankHealer + 's</div><div class="detail">Target: ' + ttkData.targets.dpsVsTankHealer + ' ' + thCheck + '</div></div>';
+
+    html += '</div>';
+
+    html += '<h3>Underlying Stats</h3>';
+    html += '<table><tr><th>Metric</th><th>Value</th></tr>';
+    html += '<tr><td>Avg DPS (damage dealers)</td><td>' + ttkData.avgDPS + '</td></tr>';
+    html += '<tr><td>Avg DPS HP</td><td>' + ttkData.avgDPSHP + '</td></tr>';
+    html += '<tr><td>Avg Tank Effective HP</td><td>' + ttkData.avgTankEffHP + '</td></tr>';
+    html += '<tr><td>Avg Healer HPS</td><td>' + ttkData.avgHPS + '</td></tr>';
+    html += '</table>';
+
+    document.getElementById('panel-ttk').innerHTML = html;
+}
+
+function checkTTK(value, min, max) {
+    if (value >= min && value <= max) return '<span class="ttk-pass">PASS</span>';
+    if (value >= min * 0.7 && value <= max * 1.3) return '<span class="ttk-close">CLOSE</span>';
+    return '<span class="ttk-fail">FAIL (' + (value < min ? 'too fast' : 'too slow') + ')</span>';
+}
+
+function renderSingleUnit(result) {
+    if (!result) {
+        document.getElementById('singleUnitResult').innerHTML = '<p>Unit not found.</p>';
+        return;
+    }
+
+    var r = result;
+    var s = r.simulation;
+    var html = '<div class="detail-panel visible">';
+    html += '<h2>' + (r.evolved ? '★ ' : '') + r.unitName + ' <span class="' + tierClass(r.tier) + '">(T' + r.tier + ')</span> ' + elemBadge(r.element) + '</h2>';
+
+    html += '<div class="detail-grid">';
+    html += '<div class="detail-item"><span class="dlabel">Type:</span> <span class="dvalue ' + typeClass(r.type) + '">' + r.type + '</span></div>';
+    html += '<div class="detail-item"><span class="dlabel">Archetype:</span> <span class="dvalue">' + r.archetype + '</span></div>';
+    html += '<div class="detail-item"><span class="dlabel">HP:</span> <span class="dvalue">' + r.hp + '</span></div>';
+    html += '<div class="detail-item"><span class="dlabel">ATK:</span> <span class="dvalue">' + r.attack + '</span></div>';
+    html += '<div class="detail-item"><span class="dlabel">ATK Speed:</span> <span class="dvalue">' + r.attackSpd + 's</span></div>';
+    html += '<div class="detail-item"><span class="dlabel">Range:</span> <span class="dvalue">' + r.range + '</span></div>';
+    html += '<div class="detail-item"><span class="dlabel">Max Mana:</span> <span class="dvalue">' + r.maxMana + '</span></div>';
+    html += '<div class="detail-item"><span class="dlabel">Stars:</span> <span class="dvalue">' + r.stars + '★</span></div>';
+    html += '<div class="detail-item"><span class="dlabel">Level:</span> <span class="dvalue">' + r.level + '</span></div>';
+    html += '</div>';
+
+    html += '<h3>Ratings</h3>';
+    html += '<div class="detail-grid">';
+    html += '<div class="detail-item"><span class="dlabel">Power Rating:</span> <span class="dvalue" style="color:#88f;">' + r.powerRating + '</span></div>';
+    html += '<div class="detail-item"><span class="dlabel">Combat Rating:</span> <span class="dvalue" style="color:#8f8;">' + r.combatRating + '</span></div>';
+    html += '</div>';
+
+    html += '<h3>Simulation Results (' + r.type + ' scenario)</h3>';
+    html += '<div class="detail-grid">';
+    for (var key in s) {
+        var label = key.replace(/([A-Z])/g, ' $1').replace(/^./, function(c) { return c.toUpperCase(); });
+        html += '<div class="detail-item"><span class="dlabel">' + label + ':</span> <span class="dvalue">' + s[key] + '</span></div>';
+    }
+    html += '</div>';
+
+    html += '<h3>Mechanics Detected</h3>';
+    html += '<div class="detail-grid">';
+    for (var mk in r.mechanics) {
+        if (r.mechanics[mk]) {
+            var mLabel = mk.replace(/([A-Z])/g, ' $1').replace(/^./, function(c) { return c.toUpperCase(); });
+            html += '<div class="detail-item"><span class="dlabel">' + mLabel + ':</span> <span class="dvalue" style="color:#ffd700;">' + r.mechanics[mk] + '</span></div>';
+        }
+    }
+    html += '</div>';
+
+    html += '</div>';
+    document.getElementById('singleUnitResult').innerHTML = html;
+}
+
+// ===========================================================================
+// TABLE SORTING
+// ===========================================================================
+
+var sortStates = {};
+function sortTable(tableId, th) {
+    var table = document.getElementById(tableId);
+    if (!table) return;
+    var col = th.dataset.col;
+    var colIdx = Array.from(th.parentNode.children).indexOf(th);
+
+    // Toggle direction
+    var dir = sortStates[tableId + col] === 'asc' ? 'desc' : 'asc';
+    sortStates[tableId + col] = dir;
+
+    // Clear sort indicators
+    th.parentNode.querySelectorAll('th').forEach(function(h) { h.classList.remove('sorted-asc', 'sorted-desc'); });
+    th.classList.add('sorted-' + dir);
+
+    var rows = Array.from(table.querySelectorAll('tr')).slice(1); // skip header
+    rows.sort(function(a, b) {
+        var aVal = a.children[colIdx].textContent.trim();
+        var bVal = b.children[colIdx].textContent.trim();
+        var aNum = parseFloat(aVal.replace(/[^0-9.-]/g, ''));
+        var bNum = parseFloat(bVal.replace(/[^0-9.-]/g, ''));
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+            return dir === 'asc' ? aNum - bNum : bNum - aNum;
+        }
+        return dir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    });
+
+    var tbody = table.querySelector('tbody') || table;
+    rows.forEach(function(r) { tbody.appendChild(r); });
+}
+
+// ===========================================================================
+// ACTION HANDLERS
+// ===========================================================================
+
+function runFullSimulation() {
+    var opts = getSimOptions();
+    var setType = document.getElementById('simSet').value;
+
+    var results;
+    if (setType === 'base') {
+        results = simulateAllUnits(opts);
+    } else if (setType === 'evolved') {
+        results = simulateAllEvolvedUnits(opts);
+    } else {
+        results = simulateAllUnits(opts).concat(simulateAllEvolvedUnits(opts));
+        results.sort(function(a, b) { return b.combatRating - a.combatRating; });
+    }
+
+    lastResults = results;
+    lastAnalysis = analyzeBalance(results);
+
+    renderOverview(results, lastAnalysis);
+    renderRoster(results);
+    renderByRole(results);
+    renderByTier(results);
+    renderBalance(lastAnalysis);
+
+    // Also run TTK
+    var ttkData = analyzeTTK(opts);
+    renderTTK(ttkData);
+}
+
+function runTTKAnalysis() {
+    var opts = getSimOptions();
+    var ttkData = analyzeTTK(opts);
+    renderTTK(ttkData);
+    switchTab('ttk');
+    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.tab')[5].classList.add('active');
+}
+
+function runSingleUnit() {
+    var select = document.getElementById('singleUnitSelect');
+    var unitKey = select.value;
+    if (!unitKey) return;
+
+    var opts = getSimOptions();
+    var result = simulateUnit(unitKey, opts);
+    renderSingleUnit(result);
+
+    // Switch to single tab
+    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.tab')[6].classList.add('active');
+    document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+    document.getElementById('panel-single').classList.add('active');
+}
+
+// Populate unit selector
+function populateUnitSelector() {
+    var select = document.getElementById('singleUnitSelect');
+    var allKeys = Object.keys(UNIT_TEMPLATES);
+    var evolvedKeys = Object.keys(EVOLVED_TEMPLATES);
+
+    select.innerHTML = '<optgroup label="Base Units">';
+    for (var i = 0; i < allKeys.length; i++) {
+        var t = UNIT_TEMPLATES[allKeys[i]];
+        select.innerHTML += '<option value="' + allKeys[i] + '">' + t.name + ' (T' + t.cost + ' ' + t.type + ')</option>';
+    }
+    select.innerHTML += '</optgroup><optgroup label="Evolved Units">';
+    for (var j = 0; j < evolvedKeys.length; j++) {
+        if (UNIT_TEMPLATES[evolvedKeys[j]]) continue;
+        var et = EVOLVED_TEMPLATES[evolvedKeys[j]];
+        select.innerHTML += '<option value="' + evolvedKeys[j] + '">★ ' + et.name + ' (T' + (et.cost || et.baseCost) + ' ' + et.type + ')</option>';
+    }
+    select.innerHTML += '</optgroup>';
+}
+
+// Init
+populateUnitSelector();
+</script>
+</body>
+</html>

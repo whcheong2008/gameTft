@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Shattered Veil — Battle Grid Mockup</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #0a0a12;
+    color: #ccc;
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+h1 { color: #ddd; margin-bottom: 5px; font-size: 1.4em; }
+.subtitle { color: #888; margin-bottom: 20px; font-size: 0.9em; }
+
+.controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.controls label { color: #aaa; font-size: 0.85em; }
+.controls select, .controls input {
+    background: #1a1a2e;
+    color: #ccc;
+    border: 1px solid #333;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.battle-area {
+    position: relative;
+    background: linear-gradient(180deg, #12111a 0%, #1a1520 50%, #151218 100%);
+    border: 2px solid #2a2a3a;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.5);
+}
+
+.grid-container {
+    display: flex;
+    gap: 60px;
+    align-items: center;
+}
+
+.team-label {
+    text-align: center;
+    font-size: 0.75em;
+    color: #666;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.grid {
+    display: grid;
+    gap: 4px;
+}
+
+.cell {
+    width: var(--cell-size, 64px);
+    height: var(--cell-size, 64px);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.cell:hover {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.12);
+}
+
+.cell.has-unit {
+    cursor: pointer;
+}
+
+/* Token on the grid */
+.token {
+    width: 90%;
+    height: 90%;
+    border-radius: 50%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(var(--cell-size, 64px) * 0.3);
+    animation: idle-bob 2s ease-in-out infinite;
+}
+
+/* Element-specific token styles */
+.token.fire-echo {
+    background: radial-gradient(circle at 40% 40%,
+        #fff8 0%, #FF4500 30%, #cc3300 60%, #661a00 100%);
+    border: 2px solid #FF4500;
+    box-shadow: 0 0 12px rgba(255,69,0,0.6), inset 0 0 8px rgba(255,200,100,0.3);
+}
+
+.token.fire-voidspawn {
+    background: radial-gradient(circle at 50% 50%,
+        #FF4500aa 0%, #331100 40%, #1a0a00 70%, #0d0500 100%);
+    border: 2px solid #993300;
+    box-shadow: 0 0 8px rgba(255,69,0,0.3), inset 0 0 12px rgba(255,69,0,0.2);
+}
+
+.token.water-echo {
+    background: radial-gradient(circle at 40% 40%,
+        #fff8 0%, #1E90FF 30%, #1060cc 60%, #082a66 100%);
+    border: 2px solid #1E90FF;
+    box-shadow: 0 0 12px rgba(30,144,255,0.6), inset 0 0 8px rgba(100,180,255,0.3);
+}
+
+.token.water-voidspawn {
+    background: radial-gradient(circle at 50% 50%,
+        #1E90FFaa 0%, #0a1a33 40%, #050d1a 70%, #020508 100%);
+    border: 2px solid #0a4a88;
+    box-shadow: 0 0 8px rgba(30,144,255,0.3), inset 0 0 12px rgba(30,144,255,0.2);
+}
+
+.token.earth-echo {
+    background: radial-gradient(circle at 40% 40%,
+        #fff8 0%, #228B22 30%, #1a6b1a 60%, #0d360d 100%);
+    border: 2px solid #228B22;
+    box-shadow: 0 0 12px rgba(34,139,34,0.6), inset 0 0 8px rgba(100,200,100,0.3);
+}
+
+.token.earth-voidspawn {
+    background: radial-gradient(circle at 50% 50%,
+        #228B22aa 0%, #0d1a0d 40%, #060d06 70%, #030503 100%);
+    border: 2px solid #145014;
+    box-shadow: 0 0 8px rgba(34,139,34,0.3), inset 0 0 12px rgba(34,139,34,0.2);
+}
+
+.token.wind-echo {
+    background: radial-gradient(circle at 40% 40%,
+        #fff8 0%, #87CEEB 30%, #5ea8cc 60%, #2d5466 100%);
+    border: 2px solid #87CEEB;
+    box-shadow: 0 0 12px rgba(135,206,235,0.6), inset 0 0 8px rgba(180,230,250,0.3);
+}
+
+.token.wind-voidspawn {
+    background: radial-gradient(circle at 50% 50%,
+        #87CEEBaa 0%, #1a2a33 40%, #0d151a 70%, #050a0d 100%);
+    border: 2px solid #4a7a8a;
+    box-shadow: 0 0 8px rgba(135,206,235,0.3), inset 0 0 12px rgba(135,206,235,0.2);
+}
+
+.token.lightning-echo {
+    background: radial-gradient(circle at 40% 40%,
+        #fff8 0%, #FFD700 30%, #ccaa00 60%, #665500 100%);
+    border: 2px solid #FFD700;
+    box-shadow: 0 0 12px rgba(255,215,0,0.6), inset 0 0 8px rgba(255,235,100,0.3);
+}
+
+.token.lightning-voidspawn {
+    background: radial-gradient(circle at 50% 50%,
+        #FFD700aa 0%, #332a00 40%, #1a1500 70%, #0d0a00 100%);
+    border: 2px solid #997f00;
+    box-shadow: 0 0 8px rgba(255,215,0,0.3), inset 0 0 12px rgba(255,215,0,0.2);
+}
+
+.token.force-echo {
+    background: radial-gradient(circle at 40% 40%,
+        #fff8 0%, #9370DB 30%, #6a4cbb 60%, #352666 100%);
+    border: 2px solid #9370DB;
+    box-shadow: 0 0 12px rgba(147,112,219,0.6), inset 0 0 8px rgba(180,150,235,0.3);
+}
+
+.token.force-voidspawn {
+    background: radial-gradient(circle at 50% 50%,
+        #9370DBaa 0%, #1a1133 40%, #0d081a 70%, #05030d 100%);
+    border: 2px solid #5a4088;
+    box-shadow: 0 0 8px rgba(147,112,219,0.3), inset 0 0 12px rgba(147,112,219,0.2);
+}
+
+/* Tier stars */
+.tier-stars {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 2px;
+}
+
+.tier-star {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.6);
+}
+
+/* Health bar */
+.health-bar {
+    position: absolute;
+    bottom: -6px;
+    left: 10%;
+    width: 80%;
+    height: 3px;
+    background: #333;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.health-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #44cc44, #88ee44);
+    border-radius: 2px;
+    transition: width 0.3s;
+}
+
+/* Mana bar */
+.mana-bar {
+    position: absolute;
+    bottom: -10px;
+    left: 15%;
+    width: 70%;
+    height: 2px;
+    background: #222;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.mana-fill {
+    height: 100%;
+    background: #4466cc;
+    border-radius: 2px;
+}
+
+/* Animations */
+@keyframes idle-bob {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-2px); }
+}
+
+@keyframes fire-flicker {
+    0%, 100% { box-shadow: 0 0 12px rgba(255,69,0,0.6); }
+    50% { box-shadow: 0 0 18px rgba(255,69,0,0.8); }
+}
+
+.token.fire-echo, .token.fire-voidspawn {
+    animation: idle-bob 2s ease-in-out infinite, fire-flicker 1.5s ease-in-out infinite;
+}
+
+/* VS divider */
+.vs-divider {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: #444;
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+.vs-line {
+    width: 2px;
+    height: 80px;
+    background: linear-gradient(180deg, transparent, #333, transparent);
+}
+
+/* Info panel */
+.info-panel {
+    margin-top: 20px;
+    background: #1a1a2e;
+    border: 1px solid #2a2a3a;
+    border-radius: 8px;
+    padding: 15px 20px;
+    max-width: 700px;
+    font-size: 0.85em;
+    line-height: 1.6;
+    color: #999;
+}
+
+.info-panel h3 { color: #bbb; margin-bottom: 8px; }
+.info-panel code { color: #FF4500; background: #1a1010; padding: 1px 4px; border-radius: 2px; }
+
+/* Scale reference */
+.scale-ref {
+    margin-top: 15px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.scale-item {
+    text-align: center;
+    color: #666;
+    font-size: 0.75em;
+}
+
+.scale-box {
+    border: 1px dashed #444;
+    margin: 5px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    font-size: 0.7em;
+}
+</style>
+</head>
+<body>
+
+<h1>Shattered Veil — Battle Grid Preview</h1>
+<p class="subtitle">8×7 combat grid with token placement. Hover over units to see details.</p>
+
+<div class="controls">
+    <div>
+        <label>Cell Size:</label>
+        <select id="cellSize" onchange="updateCellSize()">
+            <option value="48">48px (small screen)</option>
+            <option value="64" selected>64px (standard)</option>
+            <option value="80">80px (large screen)</option>
+            <option value="96">96px (detail view)</option>
+        </select>
+    </div>
+    <div>
+        <label>Grid:</label>
+        <select id="gridLayout" onchange="generateGrid()">
+            <option value="8x7" selected>8×7 (standard)</option>
+            <option value="6x5">6×5 (compact)</option>
+        </select>
+    </div>
+</div>
+
+<div class="battle-area">
+    <div class="grid-container">
+        <div>
+            <div class="team-label">Player — Echoes</div>
+            <div class="grid" id="player-grid"></div>
+        </div>
+        <div class="vs-divider">
+            <div class="vs-line"></div>
+            <span>VS</span>
+            <div class="vs-line"></div>
+        </div>
+        <div>
+            <div class="team-label">Enemy — Voidspawn</div>
+            <div class="grid" id="enemy-grid"></div>
+        </div>
+    </div>
+</div>
+
+<div class="info-panel">
+    <h3>What you're seeing</h3>
+    <p>
+        This mockup shows how the 256×256 token art will appear on the battle grid at various display sizes.
+        Each token uses CSS gradients as placeholders — in the real game, these would be your AI-generated
+        portraits cropped into circular tokens with element-colored borders.
+    </p>
+    <p>
+        The <code>fire-echo</code> tokens glow bright with radial light (energy radiating outward).
+        The <code>fire-voidspawn</code> tokens have a darker feel with light trapped inside (heat contained).
+        Each element pair follows this same luminous-echo vs dark-voidspawn pattern.
+    </p>
+    <p>
+        Tokens include: idle bobbing animation, element glow pulse, health bars, mana bars, and tier star indicators.
+        All driven by CSS — in Unity these would be shader effects and tweens.
+    </p>
+</div>
+
+<div class="scale-ref">
+    <div class="scale-item">
+        <div class="scale-box" style="width:32px;height:32px;">32</div>
+        Token at 32px
+    </div>
+    <div class="scale-item">
+        <div class="scale-box" style="width:48px;height:48px;">48</div>
+        Token at 48px
+    </div>
+    <div class="scale-item">
+        <div class="scale-box" style="width:64px;height:64px;">64</div>
+        Token at 64px
+    </div>
+    <div class="scale-item">
+        <div class="scale-box" style="width:96px;height:96px;">96</div>
+        Token at 96px
+    </div>
+    <div class="scale-item">
+        <div class="scale-box" style="width:128px;height:128px;">128</div>
+        Source: 256px
+    </div>
+</div>
+
+<script>
+const elements = ['fire', 'water', 'earth', 'wind', 'lightning', 'force'];
+const tiers = [1, 2, 3, 4, 5];
+
+// Sample team compositions
+const playerTeam = [
+    { element: 'fire', tier: 3, row: 1, col: 2 },
+    { element: 'fire', tier: 1, row: 2, col: 1 },
+    { element: 'water', tier: 4, row: 0, col: 3 },
+    { element: 'earth', tier: 2, row: 2, col: 2 },
+    { element: 'earth', tier: 5, row: 1, col: 0 },
+    { element: 'lightning', tier: 3, row: 0, col: 1 },
+    { element: 'wind', tier: 2, row: 2, col: 3 },
+    { element: 'force', tier: 4, row: 1, col: 3 },
+];
+
+const enemyTeam = [
+    { element: 'fire', tier: 3, row: 1, col: 1 },
+    { element: 'fire', tier: 2, row: 2, col: 2 },
+    { element: 'water', tier: 4, row: 0, col: 0 },
+    { element: 'water', tier: 1, row: 2, col: 0 },
+    { element: 'earth', tier: 3, row: 1, col: 2 },
+    { element: 'lightning', tier: 5, row: 0, col: 2 },
+    { element: 'wind', tier: 2, row: 2, col: 3 },
+    { element: 'force', tier: 3, row: 0, col: 3 },
+];
+
+function createToken(element, type, tier) {
+    const token = document.createElement('div');
+    token.className = `token ${element}-${type}`;
+
+    // Tier stars
+    const stars = document.createElement('div');
+    stars.className = 'tier-stars';
+    for (let i = 0; i < tier; i++) {
+        const star = document.createElement('div');
+        star.className = 'tier-star';
+        const colors = {
+            fire: '#FF4500', water: '#1E90FF', earth: '#228B22',
+            wind: '#87CEEB', lightning: '#FFD700', force: '#9370DB'
+        };
+        star.style.background = colors[element];
+        stars.appendChild(star);
+    }
+    token.appendChild(stars);
+
+    // Health bar
+    const healthBar = document.createElement('div');
+    healthBar.className = 'health-bar';
+    const healthFill = document.createElement('div');
+    healthFill.className = 'health-fill';
+    healthFill.style.width = (60 + Math.random() * 40) + '%';
+    healthBar.appendChild(healthFill);
+    token.appendChild(healthBar);
+
+    // Mana bar
+    const manaBar = document.createElement('div');
+    manaBar.className = 'mana-bar';
+    const manaFill = document.createElement('div');
+    manaFill.className = 'mana-fill';
+    manaFill.style.width = Math.random() * 100 + '%';
+    manaBar.appendChild(manaFill);
+    token.appendChild(manaBar);
+
+    // Random animation delay for variety
+    token.style.animationDelay = (Math.random() * 2) + 's';
+
+    return token;
+}
+
+function generateGrid() {
+    const layout = document.getElementById('gridLayout').value;
+    const [cols, rows] = layout.split('x').map(Number);
+
+    const playerGrid = document.getElementById('player-grid');
+    const enemyGrid = document.getElementById('enemy-grid');
+
+    playerGrid.innerHTML = '';
+    enemyGrid.innerHTML = '';
+
+    playerGrid.style.gridTemplateColumns = `repeat(${cols}, var(--cell-size, 64px))`;
+    playerGrid.style.gridTemplateRows = `repeat(${rows}, var(--cell-size, 64px))`;
+    enemyGrid.style.gridTemplateColumns = `repeat(${cols}, var(--cell-size, 64px))`;
+    enemyGrid.style.gridTemplateRows = `repeat(${rows}, var(--cell-size, 64px))`;
+
+    // Create cells
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            // Player cell
+            const pCell = document.createElement('div');
+            pCell.className = 'cell';
+            const pUnit = playerTeam.find(u => u.row === r && u.col === c);
+            if (pUnit) {
+                pCell.classList.add('has-unit');
+                pCell.appendChild(createToken(pUnit.element, 'echo', pUnit.tier));
+            }
+            playerGrid.appendChild(pCell);
+
+            // Enemy cell
+            const eCell = document.createElement('div');
+            eCell.className = 'cell';
+            const eUnit = enemyTeam.find(u => u.row === r && u.col === c);
+            if (eUnit) {
+                eCell.classList.add('has-unit');
+                eCell.appendChild(createToken(eUnit.element, 'voidspawn', eUnit.tier));
+            }
+            enemyGrid.appendChild(eCell);
+        }
+    }
+}
+
+function updateCellSize() {
+    const size = document.getElementById('cellSize').value;
+    document.documentElement.style.setProperty('--cell-size', size + 'px');
+}
+
+// Initialize
+generateGrid();
+</script>
+</body>
+</html>

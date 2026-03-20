@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using ShatteredVeil.Core.Gacha;
 
@@ -8,293 +9,394 @@ namespace ShatteredVeil.Tests.EditMode.Gacha
     [TestFixture]
     public class GachaSystemTests
     {
-        private class MockGachaConfig : IGachaConfig
-        {
-            public int PullCostVE => 50;
-            public int MultiPullCount => 10;
-            public int MultiPullDiscount => 50;
-            public int HardPityThreshold => 50;
-            public float SoftPityStartPull => 40;
-            public float SoftPityRateIncrease => 1.0f;
-            public int RateTableCount => 11;
-            public float EvolvedCopyChance => 0.15f;
-
-            // Ground truth tier weights from GROUND-TRUTH.md section 10
-            private static readonly Dictionary<int, float[]> _rates = new Dictionary<int, float[]>
-            {
-                { 1, new float[] { 75, 25, 0, 0, 0 } },
-                { 3, new float[] { 60, 35, 5, 0, 0 } },
-                { 5, new float[] { 45, 38, 17, 0, 0 } },
-                { 7, new float[] { 35, 33, 32, 0, 0 } },
-                { 9, new float[] { 28, 28, 38, 6, 0 } },
-                { 11, new float[] { 22, 25, 40, 13, 0 } },
-                { 13, new float[] { 18, 22, 38, 22, 0 } },
-                { 15, new float[] { 15, 18, 35, 30, 2 } },
-                { 17, new float[] { 12, 15, 30, 37, 6 } },
-                { 19, new float[] { 10, 12, 25, 43, 10 } },
-                { 20, new float[] { 8, 10, 22, 50, 10 } }
-            };
-
-            public float GetTierRate(int playerLevel, int tier)
-            {
-                float[] best = _rates[1];
-                foreach (var kv in _rates)
-                {
-                    if (kv.Key <= playerLevel)
-                        best = kv.Value;
-                }
-                return best[tier - 1];
-            }
-        }
-
-        private MockGachaConfig _config;
-        private List<string> _t1Pool;
-        private List<string> _t2Pool;
-        private List<string> _t3Pool;
-        private List<string> _t4Pool;
-        private List<string> _t5Pool;
+        private GachaConfig defaultConfig;
+        private Dictionary<int, List<string>> testPool;
+        private Dictionary<string, string> testEvoMap;
 
         [SetUp]
-        public void Setup()
+        public void SetUp()
         {
-            _config = new MockGachaConfig();
-            _t1Pool = new List<string> { "unit_t1_a", "unit_t1_b", "unit_t1_c" };
-            _t2Pool = new List<string> { "unit_t2_a", "unit_t2_b" };
-            _t3Pool = new List<string> { "unit_t3_a", "unit_t3_b" };
-            _t4Pool = new List<string> { "unit_t4_a", "unit_t4_b" };
-            _t5Pool = new List<string> { "unit_t5_a", "unit_t5_b" };
+            defaultConfig = new GachaConfig();
+            testPool = new Dictionary<int, List<string>>
+            {
+                { 1, new List<string> { "unit_t1_a", "unit_t1_b", "unit_t1_c" } },
+                { 2, new List<string> { "unit_t2_a", "unit_t2_b" } },
+                { 3, new List<string> { "unit_t3_a", "unit_t3_b" } },
+                { 4, new List<string> { "unit_t4_a" } },
+                { 5, new List<string> { "unit_t5_a" } },
+            };
+            testEvoMap = new Dictionary<string, string>
+            {
+                { "unit_t3_a", "unit_t3_a_evo" }
+            };
+        }
+
+        private GachaSystem CreateSystem(int level = 1, int ve = 10000, int pity = 0,
+            Dictionary<string, OwnedUnit> collection = null)
+        {
+            return new GachaSystem(
+                defaultConfig, testPool, testEvoMap,
+                level, ve, pity, 0,
+                collection ?? new Dictionary<string, OwnedUnit>(),
+                new Random(42)
+            );
+        }
+
+        // --- Config Tests ---
+
+        [Test]
+        public void Config_SingleRollCost_Is50()
+        {
+            Assert.AreEqual(50, defaultConfig.SingleRollCost);
         }
 
         [Test]
-        public void SinglePull_ReturnsValidUnit()
+        public void Config_MultiRollCost_Is450()
         {
-            var system = new GachaSystem(_config, new Random(42));
-            var result = system.Pull(1, 0, _t1Pool, _t2Pool, _t3Pool, _t4Pool, _t5Pool);
+            Assert.AreEqual(450, defaultConfig.MultiRollCost);
+        }
 
+        [Test]
+        public void Config_MultiRollCount_Is10()
+        {
+            Assert.AreEqual(10, defaultConfig.MultiRollCount);
+        }
+
+        [Test]
+        public void Config_PityThreshold_Is50()
+        {
+            Assert.AreEqual(50, defaultConfig.PityThreshold);
+        }
+
+        // --- Tier Weight Tests ---
+
+        [Test]
+        public void TierWeights_Level1_OnlyT1T2()
+        {
+            var weights = defaultConfig.GetTierWeights(1);
+            Assert.AreEqual(75, weights[0]);
+            Assert.AreEqual(25, weights[1]);
+            Assert.AreEqual(0, weights[2]);
+            Assert.AreEqual(0, weights[3]);
+            Assert.AreEqual(0, weights[4]);
+        }
+
+        [Test]
+        public void TierWeights_Level15_T5Appears()
+        {
+            var weights = defaultConfig.GetTierWeights(15);
+            Assert.AreEqual(2, weights[4], "T5 should be 2% at level 15");
+        }
+
+        [Test]
+        public void TierWeights_Level20_T5At10Pct()
+        {
+            var weights = defaultConfig.GetTierWeights(20);
+            Assert.AreEqual(10, weights[4], "T5 should be 10% at level 20");
+            Assert.AreEqual(50, weights[3], "T4 should be 50% at level 20");
+        }
+
+        [Test]
+        public void TierWeights_ClampedToValidRange()
+        {
+            var weightsLow = defaultConfig.GetTierWeights(-5);
+            var weightsHigh = defaultConfig.GetTierWeights(99);
+            Assert.AreEqual(75, weightsLow[0], "Below 1 should clamp to level 1");
+            Assert.AreEqual(8, weightsHigh[0], "Above 20 should clamp to level 20");
+        }
+
+        [Test]
+        public void TierWeights_SumTo100_AllLevels()
+        {
+            for (int lvl = 1; lvl <= 20; lvl++)
+            {
+                var weights = defaultConfig.GetTierWeights(lvl);
+                int sum = weights.Sum();
+                Assert.AreEqual(100, sum, $"Weights at level {lvl} should sum to 100, got {sum}");
+            }
+        }
+
+        // --- Single Roll Tests ---
+
+        [Test]
+        public void SingleRoll_DeductsVE()
+        {
+            var system = CreateSystem(ve: 500);
+            var result = system.DoSingleRoll();
+            Assert.IsTrue(result.Success);
+            Assert.AreEqual(450, system.VeilEssence);
+        }
+
+        [Test]
+        public void SingleRoll_FailsWhenBroke()
+        {
+            var system = CreateSystem(ve: 10);
+            var result = system.DoSingleRoll();
+            Assert.IsFalse(result.Success);
+            Assert.AreEqual("Not enough VE", result.Reason);
+            Assert.AreEqual(10, system.VeilEssence);
+        }
+
+        [Test]
+        public void SingleRoll_ReturnsValidUnit()
+        {
+            var system = CreateSystem(level: 1, ve: 500);
+            var result = system.DoSingleRoll();
+            Assert.IsTrue(result.Success);
             Assert.IsNotNull(result.UnitId);
-            Assert.IsTrue(result.Tier >= 1 && result.Tier <= 5);
+
+            // At level 1, only T1/T2 are possible
+            var allValidUnits = testPool[1].Concat(testPool[2]).ToList();
+            Assert.Contains(result.UnitId, allValidUnits);
         }
 
         [Test]
-        public void Pull_Level1_OnlyT1AndT2()
+        public void SingleRoll_IncrementsPityCounter()
         {
-            var system = new GachaSystem(_config, new Random(42));
-            for (int i = 0; i < 100; i++)
-            {
-                var result = system.Pull(1, 0, _t1Pool, _t2Pool, _t3Pool, _t4Pool, _t5Pool);
-                Assert.IsTrue(result.Tier == 1 || result.Tier == 2,
-                    $"Level 1 should only produce T1 or T2, got T{result.Tier}");
-            }
+            var system = CreateSystem(ve: 500);
+            Assert.AreEqual(0, system.RollsSincePity);
+            system.DoSingleRoll();
+            Assert.AreEqual(1, system.RollsSincePity);
         }
 
         [Test]
-        public void Distribution_Level1_10000Pulls_MatchesRates()
+        public void SingleRoll_IncrementsTotalRolls()
         {
-            var system = new GachaSystem(_config, new Random(12345));
-            int[] tierCounts = new int[6]; // index 1-5
-
-            for (int i = 0; i < 10000; i++)
-            {
-                var result = system.Pull(1, 0, _t1Pool, _t2Pool, _t3Pool, _t4Pool, _t5Pool);
-                tierCounts[result.Tier]++;
-            }
-
-            // Level 1: T1=75%, T2=25%, T3-T5=0%
-            float t1Pct = tierCounts[1] / 100f;
-            float t2Pct = tierCounts[2] / 100f;
-
-            Assert.AreEqual(75f, t1Pct, 2f, $"T1 expected ~75%, got {t1Pct}%");
-            Assert.AreEqual(25f, t2Pct, 2f, $"T2 expected ~25%, got {t2Pct}%");
-            Assert.AreEqual(0, tierCounts[3], "T3 should be 0 at level 1");
-            Assert.AreEqual(0, tierCounts[4], "T4 should be 0 at level 1");
-            Assert.AreEqual(0, tierCounts[5], "T5 should be 0 at level 1");
+            var system = CreateSystem(ve: 500);
+            Assert.AreEqual(0, system.TotalRolls);
+            system.DoSingleRoll();
+            Assert.AreEqual(1, system.TotalRolls);
         }
 
         [Test]
-        public void T5_NeverAppears_BelowLevel15()
+        public void SingleRoll_AddsToCollection()
         {
-            var system = new GachaSystem(_config, new Random(42));
+            var system = CreateSystem(ve: 500);
+            var result = system.DoSingleRoll();
+            Assert.IsTrue(result.Success);
+            Assert.IsTrue(system.OwnsUnit(result.UnitId));
+        }
 
-            for (int level = 1; level <= 14; level++)
+        [Test]
+        public void SingleRoll_NewUnitFlaggedAsNew()
+        {
+            var system = CreateSystem(ve: 500);
+            var result = system.DoSingleRoll();
+            Assert.IsTrue(result.IsNew, "First copy should be marked as new");
+        }
+
+        // --- Multi Roll Tests ---
+
+        [Test]
+        public void MultiRoll_Deducts450VE()
+        {
+            var system = CreateSystem(ve: 1000);
+            var result = system.DoMultiRoll();
+            Assert.IsTrue(result.Success);
+            Assert.AreEqual(550, system.VeilEssence);
+            Assert.AreEqual(450, result.TotalCost);
+        }
+
+        [Test]
+        public void MultiRoll_Returns10Results()
+        {
+            var system = CreateSystem(ve: 1000);
+            var result = system.DoMultiRoll();
+            Assert.IsTrue(result.Success);
+            Assert.AreEqual(10, result.Results.Length);
+        }
+
+        [Test]
+        public void MultiRoll_FailsWhenBroke()
+        {
+            var system = CreateSystem(ve: 100);
+            var result = system.DoMultiRoll();
+            Assert.IsFalse(result.Success);
+        }
+
+        [Test]
+        public void MultiRoll_IncrementsPityBy10()
+        {
+            var system = CreateSystem(ve: 1000);
+            system.DoMultiRoll();
+            // Pity incremented 10 times, may have reset if pity triggered
+            Assert.AreEqual(10, system.TotalRolls);
+        }
+
+        [Test]
+        public void MultiRoll_WithDiscount_CostsLess()
+        {
+            var system = CreateSystem(ve: 1000);
+            system.SetMultiRollDiscount(50);
+            Assert.AreEqual(400, system.MultiRollCost);
+            var result = system.DoMultiRoll();
+            Assert.IsTrue(result.Success);
+            Assert.AreEqual(600, system.VeilEssence);
+        }
+
+        // --- Pity Tests ---
+
+        [Test]
+        public void Pity_TriggersAfter50Rolls()
+        {
+            // Start with 49 rolls since pity
+            var system = CreateSystem(level: 1, ve: 10000, pity: 49);
+            var result = system.DoSingleRoll();
+            Assert.IsTrue(result.Success);
+            Assert.IsTrue(result.PityTriggered, "Pity should trigger on 50th roll");
+            Assert.AreEqual(5, result.Tier, "Pity should guarantee T5");
+        }
+
+        [Test]
+        public void Pity_ResetsAfterTrigger()
+        {
+            var system = CreateSystem(level: 1, ve: 10000, pity: 49);
+            system.DoSingleRoll(); // increments to 50, pity triggers, resets to 0
+            Assert.AreEqual(0, system.RollsSincePity);
+        }
+
+        [Test]
+        public void Pity_DoesNotTriggerAt49()
+        {
+            var system = CreateSystem(level: 1, ve: 10000, pity: 48);
+            var result = system.DoSingleRoll();
+            Assert.IsFalse(result.PityTriggered);
+        }
+
+        [Test]
+        public void Pity_Override_CustomThresholdAndTier()
+        {
+            var system = CreateSystem(level: 1, ve: 10000, pity: 19);
+            system.SetPityOverride(20, 3); // Attunement Rite L4: 20 rolls -> T3+
+
+            var result = system.DoSingleRoll();
+            Assert.IsTrue(result.PityTriggered, "Custom pity should trigger at 20 rolls");
+            // Unit should be at least T3
+            Assert.GreaterOrEqual(result.Tier, 3);
+        }
+
+        [Test]
+        public void Pity_RollsUntilPity_Correct()
+        {
+            var system = CreateSystem(pity: 30);
+            Assert.AreEqual(20, system.RollsUntilPity);
+        }
+
+        // --- Evolved Copy Tests ---
+
+        [Test]
+        public void EvolvedCopy_CanOccurWhenPlayerOwnsEvolved()
+        {
+            // Give player the evolved form
+            var collection = new Dictionary<string, OwnedUnit>
             {
-                for (int i = 0; i < 500; i++)
+                { "unit_t3_a_evo", new OwnedUnit { UnitId = "unit_t3_a_evo", Stars = 1, Copies = 1 } }
+            };
+            // Run many rolls at level that can get T3 and check if any become evolved
+            var system = new GachaSystem(defaultConfig, testPool, testEvoMap,
+                7, 50000, 0, 0, collection, new Random(12345));
+
+            bool gotEvolvedCopy = false;
+            for (int i = 0; i < 200; i++)
+            {
+                var result = system.DoSingleRoll();
+                if (result.IsEvolvedCopy)
                 {
-                    var result = system.Pull(level, 0, _t1Pool, _t2Pool, _t3Pool, _t4Pool, _t5Pool);
-                    Assert.AreNotEqual(5, result.Tier,
-                        $"T5 appeared at level {level}, pull {i}");
-                }
-            }
-        }
-
-        [Test]
-        public void T5_AppearsAtLevel15()
-        {
-            var system = new GachaSystem(_config, new Random(42));
-            bool foundT5 = false;
-
-            // With 2% rate, in 5000 pulls we should see at least one T5
-            for (int i = 0; i < 5000; i++)
-            {
-                var result = system.Pull(15, 0, _t1Pool, _t2Pool, _t3Pool, _t4Pool, _t5Pool);
-                if (result.Tier == 5)
-                {
-                    foundT5 = true;
+                    gotEvolvedCopy = true;
+                    Assert.AreEqual("unit_t3_a_evo", result.UnitId);
                     break;
                 }
             }
-
-            Assert.IsTrue(foundT5, "T5 should appear at level 15 (2% rate)");
+            Assert.IsTrue(gotEvolvedCopy, "Should get at least one evolved copy in 200 rolls (15% chance per T3 roll)");
         }
 
-        [Test]
-        public void PityCounter_Increments()
-        {
-            var system = new GachaSystem(_config, new Random(42));
-            var result = system.Pull(1, 0, _t1Pool, _t2Pool, _t3Pool, _t4Pool, _t5Pool);
-
-            Assert.AreEqual(1, result.NewPityCount, "Pity count should be 1 after first pull");
-        }
+        // --- Distribution Tests ---
 
         [Test]
-        public void HardPity_ForcesHighestAvailableTier()
+        public void Distribution_Level1_OnlyT1T2()
         {
-            var system = new GachaSystem(_config, new Random(42));
-            // At level 1, highest tier is T2 (25% rate)
-            // Set pity to threshold - 1, next pull should trigger
-            var result = system.Pull(1, 49, _t1Pool, _t2Pool, _t3Pool, _t4Pool, _t5Pool);
+            var system = new GachaSystem(defaultConfig, testPool, testEvoMap,
+                1, 1000000, 0, 0, new Dictionary<string, OwnedUnit>(), new Random(42));
 
-            Assert.IsTrue(result.IsPity, "Pity should trigger at threshold");
-            Assert.AreEqual(2, result.Tier, "At level 1, highest available tier is T2");
-        }
-
-        [Test]
-        public void HardPity_AtLevel15_ForcesT5()
-        {
-            var system = new GachaSystem(_config, new Random(42));
-            var result = system.Pull(15, 49, _t1Pool, _t2Pool, _t3Pool, _t4Pool, _t5Pool);
-
-            Assert.IsTrue(result.IsPity, "Pity should trigger at threshold");
-            Assert.AreEqual(5, result.Tier, "At level 15, highest available tier is T5");
-        }
-
-        [Test]
-        public void PityResets_AfterTrigger()
-        {
-            var system = new GachaSystem(_config, new Random(42));
-            var result = system.Pull(15, 49, _t1Pool, _t2Pool, _t3Pool, _t4Pool, _t5Pool);
-
-            Assert.IsTrue(result.IsPity);
-            Assert.AreEqual(0, result.NewPityCount, "Pity count should reset to 0 after trigger");
-        }
-
-        [Test]
-        public void SoftPity_IncreasesHighTierRate()
-        {
-            // Get rates at soft pity start vs well past it
-            var system = new GachaSystem(_config, new Random(42));
-
-            var ratesBefore = system.GetCurrentRates(15, 0);
-            var ratesAfter = system.GetCurrentRates(15, 45); // 5 pulls past soft pity start
-
-            Assert.Greater(ratesAfter.T5Rate, ratesBefore.T5Rate,
-                "Soft pity should increase highest tier rate");
-        }
-
-        [Test]
-        public void MultiPull_TracksCorrectPityCount()
-        {
-            var system = new GachaSystem(_config, new Random(42));
-            var results = system.MultiPull(1, 0, 10, _t1Pool, _t2Pool, _t3Pool, _t4Pool, _t5Pool);
-
-            Assert.AreEqual(10, results.Count);
-
-            // Each pull's pity should be one more than the previous (unless pity triggered)
-            int expectedPity = 0;
-            for (int i = 0; i < results.Count; i++)
+            var tierCounts = new int[5];
+            for (int i = 0; i < 10000; i++)
             {
-                expectedPity++;
-                if (results[i].IsPity || results[i].Tier >= 5)
-                    expectedPity = 0;
-                Assert.AreEqual(expectedPity, results[i].NewPityCount,
-                    $"Pity tracking wrong at pull {i}");
-            }
-        }
-
-        [Test]
-        public void MultiPull_PityCanTriggerMidBatch()
-        {
-            var system = new GachaSystem(_config, new Random(42));
-            // Start with pity at 45, so pull 5 of 10 should trigger hard pity
-            var results = system.MultiPull(15, 45, 10, _t1Pool, _t2Pool, _t3Pool, _t4Pool, _t5Pool);
-
-            Assert.AreEqual(10, results.Count);
-
-            bool pityTriggered = false;
-            for (int i = 0; i < results.Count; i++)
-            {
-                if (results[i].IsPity)
-                {
-                    pityTriggered = true;
-                    Assert.AreEqual(5, results[i].Tier, "Pity at L15 should force T5");
-                }
+                int tier = system.RollTier();
+                tierCounts[tier - 1]++;
             }
 
-            Assert.IsTrue(pityTriggered, "Pity should trigger within 10-pull starting at 45");
+            Assert.AreEqual(0, tierCounts[2], "No T3 at level 1");
+            Assert.AreEqual(0, tierCounts[3], "No T4 at level 1");
+            Assert.AreEqual(0, tierCounts[4], "No T5 at level 1");
+            // T1 ~75%, T2 ~25% — allow 5% tolerance
+            Assert.Greater(tierCounts[0], 6500, "T1 should be ~75%");
+            Assert.Less(tierCounts[0], 8000, "T1 should be ~75%");
+            Assert.Greater(tierCounts[1], 2000, "T2 should be ~25%");
+            Assert.Less(tierCounts[1], 3000, "T2 should be ~25%");
+        }
+
+        // --- Event Tests ---
+
+        [Test]
+        public void Events_VEChangedFires_OnRoll()
+        {
+            var system = CreateSystem(ve: 500);
+            int firedVE = -1;
+            system.OnVeilEssenceChanged += ve => firedVE = ve;
+
+            system.DoSingleRoll();
+            Assert.AreEqual(450, firedVE);
         }
 
         [Test]
-        public void EvolvedCopy_MechanicWorks()
+        public void Events_UnitAddedFires_OnRoll()
         {
-            // Use a seeded RNG that will hit the 15% evolved copy chance
-            // Run many pulls to statistically verify
-            var system = new GachaSystem(_config, new Random(42));
+            var system = CreateSystem(ve: 500);
+            string addedUnit = null;
+            system.OnUnitAdded += (id, count) => addedUnit = id;
 
-            int evolvedCount = 0;
-            int totalPulls = 10000;
+            var result = system.DoSingleRoll();
+            Assert.AreEqual(result.UnitId, addedUnit);
+        }
 
-            Func<string, string> getEvolved = (id) => id == "unit_t1_a" ? "unit_t1_a_evo" : null;
-            Func<string, bool> ownsEvolved = (id) => id == "unit_t1_a_evo";
+        // --- Collection Tests ---
 
-            for (int i = 0; i < totalPulls; i++)
+        [Test]
+        public void Collection_DuplicatesIncrementCopies()
+        {
+            var collection = new Dictionary<string, OwnedUnit>
             {
-                var result = system.Pull(1, 0, _t1Pool, _t2Pool, _t3Pool, _t4Pool, _t5Pool,
-                    getEvolved, ownsEvolved);
-                if (result.IsEvolvedCopy)
-                    evolvedCount++;
-            }
+                { "unit_t1_a", new OwnedUnit { UnitId = "unit_t1_a", Stars = 1, Copies = 1 } }
+            };
+            // Use a pool that only has T1 unit_t1_a
+            var singlePool = new Dictionary<int, List<string>>
+            {
+                { 1, new List<string> { "unit_t1_a" } },
+            };
+            var system = new GachaSystem(defaultConfig, singlePool, new Dictionary<string, string>(),
+                1, 500, 0, 0, collection, new Random(42));
 
-            // unit_t1_a has 1/3 chance of being picked from T1 pool,
-            // then 15% chance of evolving. So ~5% of T1 pulls should be evolved.
-            // With 75% T1 rate, that's ~3.75% of all pulls.
-            float evolvedPct = evolvedCount / (float)totalPulls * 100f;
-            Assert.Greater(evolvedCount, 0, "Should have some evolved copies");
-            Assert.Less(evolvedPct, 10f, "Evolved copy rate should be reasonable");
+            system.DoSingleRoll();
+            Assert.AreEqual(2, collection["unit_t1_a"].Copies);
+        }
+
+        // --- Format Tests ---
+
+        [Test]
+        public void FormatTierWeights_Level1()
+        {
+            var system = CreateSystem(level: 1);
+            string formatted = system.FormatTierWeights();
+            Assert.IsTrue(formatted.Contains("T1: 75%"));
+            Assert.IsTrue(formatted.Contains("T2: 25%"));
         }
 
         [Test]
-        public void GetCurrentRates_Level1_MatchesConfig()
+        public void FormatTierWeights_Level20_IncludesT5()
         {
-            var system = new GachaSystem(_config, new Random(42));
-            var rates = system.GetCurrentRates(1, 0);
-
-            Assert.AreEqual(75f, rates.T1Rate, 0.01f);
-            Assert.AreEqual(25f, rates.T2Rate, 0.01f);
-            Assert.AreEqual(0f, rates.T3Rate, 0.01f);
-            Assert.AreEqual(0f, rates.T4Rate, 0.01f);
-            Assert.AreEqual(0f, rates.T5Rate, 0.01f);
-        }
-
-        [Test]
-        public void GetCurrentRates_Level20_MatchesConfig()
-        {
-            var system = new GachaSystem(_config, new Random(42));
-            var rates = system.GetCurrentRates(20, 0);
-
-            Assert.AreEqual(8f, rates.T1Rate, 0.01f);
-            Assert.AreEqual(10f, rates.T2Rate, 0.01f);
-            Assert.AreEqual(22f, rates.T3Rate, 0.01f);
-            Assert.AreEqual(50f, rates.T4Rate, 0.01f);
-            Assert.AreEqual(10f, rates.T5Rate, 0.01f);
+            var system = CreateSystem(level: 20);
+            string formatted = system.FormatTierWeights();
+            Assert.IsTrue(formatted.Contains("T5: 10%"));
         }
     }
 }

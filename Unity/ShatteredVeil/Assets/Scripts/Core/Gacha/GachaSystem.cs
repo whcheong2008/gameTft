@@ -3,219 +3,320 @@ using System.Collections.Generic;
 
 namespace ShatteredVeil.Core.Gacha
 {
+    /// <summary>
+    /// Pure C# gacha rolling system. Mirrors js/gacha.js.
+    /// Handles: tier-weighted rolls, pity counter, evolved copy chance.
+    /// No Unity dependencies — fully unit-testable.
+    /// </summary>
     public class GachaSystem
     {
-        private readonly IGachaConfig _config;
-        private readonly Random _rng;
+        private readonly IGachaConfig config;
+        private readonly Random rng;
 
-        public GachaSystem(IGachaConfig config, Random rng)
+        // Pool of unit IDs grouped by cost tier (1-5)
+        private readonly Dictionary<int, List<string>> unitsByTier;
+
+        // Evolution map: baseUnitId -> evolvedUnitId
+        private readonly Dictionary<string, string> evolutionMap;
+
+        // Player state
+        private int playerLevel;
+        private int veilEssence;
+        private int rollsSincePity;
+        private int totalRolls;
+
+        // Collection: unitId -> owned copies info
+        private readonly Dictionary<string, OwnedUnit> collection;
+
+        // Pity override from buildings (Attunement Rite)
+        private int pityThresholdOverride;
+        private int pityMinTierOverride;
+
+        // Multi-roll discount from buildings
+        private int multiRollDiscount;
+
+        public event Action<int> OnVeilEssenceChanged;
+        public event Action<string, int> OnUnitAdded; // unitId, newCopyCount
+
+        public GachaSystem(
+            IGachaConfig config,
+            Dictionary<int, List<string>> unitsByTier,
+            Dictionary<string, string> evolutionMap,
+            int playerLevel,
+            int veilEssence,
+            int rollsSincePity,
+            int totalRolls,
+            Dictionary<string, OwnedUnit> collection,
+            Random rng = null)
         {
-            _config = config ?? throw new ArgumentNullException(nameof(config));
-            _rng = rng ?? throw new ArgumentNullException(nameof(rng));
+            this.config = config ?? throw new ArgumentNullException(nameof(config));
+            this.unitsByTier = unitsByTier ?? new Dictionary<int, List<string>>();
+            this.evolutionMap = evolutionMap ?? new Dictionary<string, string>();
+            this.playerLevel = Math.Max(1, Math.Min(20, playerLevel));
+            this.veilEssence = veilEssence;
+            this.rollsSincePity = rollsSincePity;
+            this.totalRolls = totalRolls;
+            this.collection = collection ?? new Dictionary<string, OwnedUnit>();
+            this.rng = rng ?? new Random();
         }
 
-        public GachaPullResult Pull(
-            int playerLevel,
-            int currentPityCount,
-            IReadOnlyList<string> unitsByTier1,
-            IReadOnlyList<string> unitsByTier2,
-            IReadOnlyList<string> unitsByTier3,
-            IReadOnlyList<string> unitsByTier4,
-            IReadOnlyList<string> unitsByTier5,
-            Func<string, string> getEvolvedForm = null,
-            Func<string, bool> ownsEvolvedForm = null)
+        // --- Getters ---
+
+        public int PlayerLevel => playerLevel;
+        public int VeilEssence => veilEssence;
+        public int RollsSincePity => rollsSincePity;
+        public int TotalRolls => totalRolls;
+        public int SingleRollCost => config.SingleRollCost;
+        public int MultiRollCost => Math.Max(0, config.MultiRollCost - multiRollDiscount);
+        public int PityThreshold => pityThresholdOverride > 0 ? pityThresholdOverride : config.PityThreshold;
+        public int PityMinTier => pityMinTierOverride > 0 ? pityMinTierOverride : 5;
+        public int RollsUntilPity => Math.Max(0, PityThreshold - rollsSincePity);
+
+        public void SetPlayerLevel(int level) => playerLevel = Math.Max(1, Math.Min(20, level));
+        public void SetVeilEssence(int ve)
         {
-            int newPity = currentPityCount + 1;
+            veilEssence = ve;
+            OnVeilEssenceChanged?.Invoke(ve);
+        }
 
-            // Get rates for this player level
-            float[] rates = GetRatesArray(playerLevel);
+        public void SetMultiRollDiscount(int discount) => multiRollDiscount = discount;
 
-            // Check hard pity
-            bool isPity = false;
-            int rolledTier;
+        /// <summary>
+        /// Set pity override from Attunement Rite building.
+        /// Base pity: 50 rolls -> T5. Rite L4: 20 rolls -> T3+. Rite L5: 30 rolls -> T4+.
+        /// </summary>
+        public void SetPityOverride(int threshold, int minTier)
+        {
+            pityThresholdOverride = threshold;
+            pityMinTierOverride = minTier;
+        }
 
-            if (newPity >= _config.HardPityThreshold)
+        public void ClearPityOverride()
+        {
+            pityThresholdOverride = 0;
+            pityMinTierOverride = 0;
+        }
+
+        /// <summary>
+        /// Get tier weights for current player level as percentages [T1%, T2%, T3%, T4%, T5%].
+        /// </summary>
+        public int[] GetCurrentTierWeights()
+        {
+            return config.GetTierWeights(playerLevel);
+        }
+
+        /// <summary>
+        /// Format tier weights as a display string.
+        /// </summary>
+        public string FormatTierWeights()
+        {
+            var weights = GetCurrentTierWeights();
+            var parts = new List<string>();
+            for (int i = 0; i < weights.Length; i++)
             {
-                // Hard pity: force highest available tier
-                rolledTier = GetHighestAvailableTier(rates);
-                isPity = true;
-                newPity = 0;
+                if (weights[i] > 0)
+                    parts.Add($"T{i + 1}: {weights[i]}%");
             }
-            else
+            return string.Join(", ", parts);
+        }
+
+        // --- Rolling ---
+
+        /// <summary>
+        /// Roll a random tier based on weights for the current player level.
+        /// Returns tier 1-5.
+        /// </summary>
+        public int RollTier()
+        {
+            var weights = config.GetTierWeights(playerLevel);
+            double roll = rng.NextDouble() * 100.0;
+            double cumulative = 0;
+            for (int i = 0; i < weights.Length; i++)
             {
-                // Apply soft pity adjustment
-                float[] adjustedRates = ApplySoftPity(rates, newPity);
-
-                // Roll tier
-                rolledTier = RollTier(adjustedRates);
+                cumulative += weights[i];
+                if (roll < cumulative)
+                    return i + 1;
             }
+            return 1; // fallback
+        }
 
-            // Get unit pool for rolled tier
-            var pool = GetPoolForTier(rolledTier, unitsByTier1, unitsByTier2, unitsByTier3, unitsByTier4, unitsByTier5);
+        /// <summary>
+        /// Pick a random unit from the given tier.
+        /// Falls back to T1 if the tier has no units.
+        /// </summary>
+        public string PickRandomUnit(int tier)
+        {
+            if (unitsByTier.TryGetValue(tier, out var pool) && pool.Count > 0)
+            {
+                return pool[rng.Next(pool.Count)];
+            }
+            // Fallback to T1
+            if (unitsByTier.TryGetValue(1, out var fallback) && fallback.Count > 0)
+            {
+                return fallback[rng.Next(fallback.Count)];
+            }
+            return null;
+        }
 
-            // Fallback to T1 if pool is empty
-            if (pool == null || pool.Count == 0)
-                pool = unitsByTier1;
+        /// <summary>
+        /// Check and trigger pity. Returns minimum tier override (0 = no pity).
+        /// </summary>
+        private int CheckPity()
+        {
+            int threshold = PityThreshold;
+            int minTier = PityMinTier;
 
-            // Pick random unit
-            string unitId = pool[_rng.Next(pool.Count)];
+            if (rollsSincePity >= threshold)
+            {
+                rollsSincePity = 0;
+                return minTier;
+            }
+            return 0;
+        }
 
-            // Evolved copy mechanic: 15% chance if player owns evolved form
+        /// <summary>
+        /// Perform a single roll. Deducts VE, applies pity, adds to collection.
+        /// </summary>
+        public GachaPullResult DoSingleRoll()
+        {
+            if (veilEssence < config.SingleRollCost)
+                return new GachaPullResult { Success = false, Reason = "Not enough VE" };
+
+            veilEssence -= config.SingleRollCost;
+            OnVeilEssenceChanged?.Invoke(veilEssence);
+
+            rollsSincePity++;
+            totalRolls++;
+
+            int pityMinTier = CheckPity();
+            int tier = RollTier();
+
+            if (pityMinTier > 0 && tier < pityMinTier)
+                tier = pityMinTier;
+
+            string unitId = PickRandomUnit(tier);
+            if (unitId == null)
+                return new GachaPullResult { Success = false, Reason = "No units in pool" };
+
             bool isEvolvedCopy = false;
-            if (getEvolvedForm != null && ownsEvolvedForm != null)
+            // 15% chance to get evolved copy if player owns the evolved form
+            if (evolutionMap.TryGetValue(unitId, out string evolvedId) && collection.ContainsKey(evolvedId))
             {
-                string evolved = getEvolvedForm(unitId);
-                if (evolved != null && ownsEvolvedForm(evolved))
+                if (rng.NextDouble() < 0.15)
                 {
-                    if (_rng.NextDouble() < _config.EvolvedCopyChance)
-                    {
-                        unitId = evolved;
-                        isEvolvedCopy = true;
-                    }
+                    unitId = evolvedId;
+                    isEvolvedCopy = true;
                 }
             }
 
-            // Reset pity if we got a high-tier (T5 for base pity)
-            if (rolledTier >= 5 && !isPity)
-            {
-                newPity = 0;
-            }
+            bool isNew = !collection.ContainsKey(unitId);
+            AddToCollection(unitId);
 
             return new GachaPullResult
             {
+                Success = true,
                 UnitId = unitId,
-                Tier = rolledTier,
-                IsPity = isPity,
-                NewPityCount = newPity,
+                Tier = tier,
+                PityTriggered = pityMinTier > 0,
+                IsNew = isNew,
                 IsEvolvedCopy = isEvolvedCopy
             };
         }
 
-        public List<GachaPullResult> MultiPull(
-            int playerLevel,
-            int currentPityCount,
-            int count,
-            IReadOnlyList<string> unitsByTier1,
-            IReadOnlyList<string> unitsByTier2,
-            IReadOnlyList<string> unitsByTier3,
-            IReadOnlyList<string> unitsByTier4,
-            IReadOnlyList<string> unitsByTier5,
-            Func<string, string> getEvolvedForm = null,
-            Func<string, bool> ownsEvolvedForm = null)
+        /// <summary>
+        /// Perform a 10x multi-roll.
+        /// </summary>
+        public GachaMultiPullResult DoMultiRoll()
         {
-            var results = new List<GachaPullResult>(count);
-            int pity = currentPityCount;
+            int cost = MultiRollCost;
+            if (veilEssence < cost)
+                return new GachaMultiPullResult { Success = false, Reason = $"Not enough VE (need {cost})" };
 
-            for (int i = 0; i < count; i++)
+            veilEssence -= cost;
+            OnVeilEssenceChanged?.Invoke(veilEssence);
+
+            var results = new GachaPullResult[config.MultiRollCount];
+            for (int i = 0; i < config.MultiRollCount; i++)
             {
-                var result = Pull(playerLevel, pity, unitsByTier1, unitsByTier2,
-                    unitsByTier3, unitsByTier4, unitsByTier5,
-                    getEvolvedForm, ownsEvolvedForm);
-                pity = result.NewPityCount;
-                results.Add(result);
+                rollsSincePity++;
+                totalRolls++;
+
+                int pityMinTier = CheckPity();
+                int tier = RollTier();
+
+                if (pityMinTier > 0 && tier < pityMinTier)
+                    tier = pityMinTier;
+
+                string unitId = PickRandomUnit(tier);
+
+                bool isEvolvedCopy = false;
+                if (unitId != null && evolutionMap.TryGetValue(unitId, out string evolvedId) && collection.ContainsKey(evolvedId))
+                {
+                    if (rng.NextDouble() < 0.15)
+                    {
+                        unitId = evolvedId;
+                        isEvolvedCopy = true;
+                    }
+                }
+
+                bool isNew = unitId != null && !collection.ContainsKey(unitId);
+                if (unitId != null)
+                    AddToCollection(unitId);
+
+                results[i] = new GachaPullResult
+                {
+                    Success = unitId != null,
+                    UnitId = unitId,
+                    Tier = tier,
+                    PityTriggered = pityMinTier > 0,
+                    IsNew = isNew,
+                    IsEvolvedCopy = isEvolvedCopy
+                };
             }
 
-            return results;
-        }
-
-        public RateDisplay GetCurrentRates(int playerLevel, int currentPityCount)
-        {
-            float[] rates = GetRatesArray(playerLevel);
-            float[] adjusted = ApplySoftPity(rates, currentPityCount);
-
-            return new RateDisplay
+            return new GachaMultiPullResult
             {
-                T1Rate = adjusted[0],
-                T2Rate = adjusted[1],
-                T3Rate = adjusted[2],
-                T4Rate = adjusted[3],
-                T5Rate = adjusted[4]
+                Success = true,
+                Results = results,
+                TotalCost = cost
             };
         }
 
-        private float[] GetRatesArray(int playerLevel)
+        // --- Collection ---
+
+        private void AddToCollection(string unitId)
         {
-            var rates = new float[5];
-            for (int t = 1; t <= 5; t++)
-                rates[t - 1] = _config.GetTierRate(playerLevel, t);
-            return rates;
-        }
-
-        private float[] ApplySoftPity(float[] baseRates, int currentPityCount)
-        {
-            if (_config.SoftPityStartPull <= 0 || currentPityCount < _config.SoftPityStartPull)
-                return (float[])baseRates.Clone();
-
-            float[] adjusted = (float[])baseRates.Clone();
-
-            // Soft pity: increase highest available tier rate
-            int highestTier = GetHighestAvailableTier(baseRates) - 1; // 0-indexed
-            if (highestTier < 0) return adjusted;
-
-            float pullsPastSoftPity = currentPityCount - _config.SoftPityStartPull;
-            float bonusRate = pullsPastSoftPity * _config.SoftPityRateIncrease;
-
-            adjusted[highestTier] += bonusRate;
-
-            // Redistribute: steal proportionally from lower tiers
-            float totalLower = 0f;
-            for (int i = 0; i < highestTier; i++)
-                totalLower += adjusted[i];
-
-            if (totalLower > 0 && bonusRate > 0)
+            if (!collection.ContainsKey(unitId))
             {
-                float reduction = System.Math.Min(bonusRate, totalLower);
-                for (int i = 0; i < highestTier; i++)
-                {
-                    float proportion = adjusted[i] / totalLower;
-                    adjusted[i] -= reduction * proportion;
-                    if (adjusted[i] < 0) adjusted[i] = 0;
-                }
+                collection[unitId] = new OwnedUnit { UnitId = unitId, Stars = 1, Copies = 1 };
             }
-
-            return adjusted;
-        }
-
-        private int RollTier(float[] rates)
-        {
-            double roll = _rng.NextDouble() * 100.0;
-            double cumulative = 0;
-
-            for (int i = 0; i < rates.Length; i++)
+            else
             {
-                cumulative += rates[i];
-                if (roll < cumulative) return i + 1;
+                collection[unitId].Copies++;
             }
-
-            return 1; // fallback
+            OnUnitAdded?.Invoke(unitId, collection[unitId].Copies);
         }
 
-        private int GetHighestAvailableTier(float[] rates)
+        public bool OwnsUnit(string unitId) => collection.ContainsKey(unitId);
+
+        public OwnedUnit GetOwnedUnit(string unitId)
         {
-            for (int i = rates.Length - 1; i >= 0; i--)
-            {
-                if (rates[i] > 0) return i + 1;
-            }
-            return 1;
+            return collection.TryGetValue(unitId, out var unit) ? unit : null;
         }
 
-        private IReadOnlyList<string> GetPoolForTier(
-            int tier,
-            IReadOnlyList<string> t1,
-            IReadOnlyList<string> t2,
-            IReadOnlyList<string> t3,
-            IReadOnlyList<string> t4,
-            IReadOnlyList<string> t5)
-        {
-            switch (tier)
-            {
-                case 1: return t1;
-                case 2: return t2;
-                case 3: return t3;
-                case 4: return t4;
-                case 5: return t5;
-                default: return t1;
-            }
-        }
+        public Dictionary<string, OwnedUnit> GetCollection() => collection;
+
+        public bool CanAffordSingleRoll() => veilEssence >= config.SingleRollCost;
+        public bool CanAffordMultiRoll() => veilEssence >= MultiRollCost;
+    }
+
+    /// <summary>
+    /// Represents an owned unit in the player's collection.
+    /// </summary>
+    public class OwnedUnit
+    {
+        public string UnitId { get; set; }
+        public int Stars { get; set; } = 1;
+        public int Copies { get; set; } = 1;
     }
 }

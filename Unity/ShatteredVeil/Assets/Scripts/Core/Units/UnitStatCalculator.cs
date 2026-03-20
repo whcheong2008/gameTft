@@ -2,40 +2,25 @@ using System;
 
 namespace ShatteredVeil.Core.Units
 {
+    /// <summary>
+    /// Calculates unit stats at different star levels.
+    /// Star multipliers from GROUND-TRUTH.md section 4.
+    /// Pure C# — no Unity dependencies.
+    /// </summary>
     public static class UnitStatCalculator
     {
-        /// <summary>
-        /// Star multiplier: pow(1.8, stars - 1).
-        /// Only HP and ATK scale with stars.
-        /// </summary>
-        public static float GetStarMultiplier(int starLevel)
-        {
-            if (starLevel < 1) starLevel = 1;
-            return (float)Math.Pow(1.8, starLevel - 1);
-        }
+        // Star level multipliers (1-star = 1.0, 2-star = 1.4, 3-star = 1.8, etc.)
+        // From TierScaling: T1 base 1.0, evolved 1.34x
+        private static readonly double[] StarMultipliers = { 1.0, 1.4, 1.8, 2.3, 2.8, 3.2 };
 
         /// <summary>
-        /// Level bonus: 1 + (level - 1) * 0.02  (+2% per level above 1).
+        /// Get stat multiplier for a given star level (1-6).
+        /// Stars 1-5 are normal, star 6 is max evolved.
         /// </summary>
-        public static float GetLevelBonus(int level)
+        public static double GetStarMultiplier(int starLevel)
         {
-            if (level < 1) level = 1;
-            return 1f + (level - 1) * 0.02f;
-        }
-
-        /// <summary>
-        /// Ascension stat bonus (cumulative):
-        /// null=0, Awakened=0.10, Exalted=0.30, Transcendent=0.65
-        /// </summary>
-        public static float GetAscensionBonus(AscensionTier tier)
-        {
-            switch (tier)
-            {
-                case AscensionTier.Awakened: return 0.10f;
-                case AscensionTier.Exalted: return 0.30f;
-                case AscensionTier.Transcendent: return 0.65f;
-                default: return 0f;
-            }
+            int idx = Math.Max(0, Math.Min(StarMultipliers.Length - 1, starLevel - 1));
+            return StarMultipliers[idx];
         }
 
         public static int CalculateHP(IUnitData data, int starLevel)
@@ -48,30 +33,14 @@ namespace ShatteredVeil.Core.Units
             return (int)Math.Floor(data.BaseATK * GetStarMultiplier(starLevel));
         }
 
-        public static int CalculateHP(IUnitData data, int starLevel, int level, AscensionTier ascension)
+        public static int CalculateDEF(IUnitData data, int starLevel)
         {
-            float starMult = GetStarMultiplier(starLevel);
-            float levelBonus = GetLevelBonus(level);
-            float ascensionBonus = GetAscensionBonus(ascension);
-            return (int)Math.Floor(data.BaseHP * starMult * levelBonus * (1f + ascensionBonus));
+            return (int)Math.Floor(data.BaseDEF * GetStarMultiplier(starLevel));
         }
 
-        public static int CalculateATK(IUnitData data, int starLevel, int level, AscensionTier ascension)
+        public static int CalculateSPD(IUnitData data, int starLevel)
         {
-            float starMult = GetStarMultiplier(starLevel);
-            float levelBonus = GetLevelBonus(level);
-            float ascensionBonus = GetAscensionBonus(ascension);
-            return (int)Math.Floor(data.BaseATK * starMult * levelBonus * (1f + ascensionBonus));
-        }
-
-        /// <summary>
-        /// XP required to reach next level from current level.
-        /// Formula: floor(100 * pow(1.12, level - 1))
-        /// </summary>
-        public static int GetXPToNextLevel(int currentLevel)
-        {
-            if (currentLevel >= 30) return int.MaxValue;
-            return (int)Math.Floor(100 * Math.Pow(1.12, currentLevel - 1));
+            return (int)Math.Floor(data.BaseSPD * GetStarMultiplier(starLevel));
         }
     }
 }
