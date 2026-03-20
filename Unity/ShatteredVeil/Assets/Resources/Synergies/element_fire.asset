@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5b4c3d2f6a7b8c9d0e1f2a3b4c5d6e7, type: 3}
+  m_Name: element_fire
+  m_EditorClassIdentifier:
+  synergyType: element
+  synergyName: fire
+  tiers:
+  - threshold: 2
+    description: Attacks apply Burn (10 DPS, 3s)
+  - threshold: 4
+    description: Burn 20 DPS. On kill, enemy explodes for 15% max HP to adjacent
+  - threshold: 7
+    description: Burn 35 DPS, 5s. Fire abilities apply Burn. Fire units +20% ATK. Kill explosions chain
+  - threshold: 10
+    description: Prismatic: Enemies start burning. Ability mana cost -50%. Death explosions 200 AoE. Fire immune to Burn
