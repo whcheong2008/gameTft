@@ -35,6 +35,7 @@ namespace ShatteredVeil.Core.Combat
         public bool IsStunned;
         public bool IsFrozen;
         public bool IsTaunting;
+        public bool IsSilenced;
 
         // Damage reduction (from synergies, items, etc.)
         public float DamageReduction;

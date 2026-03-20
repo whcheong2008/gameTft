@@ -143,22 +143,51 @@ namespace ShatteredVeil.Core.Combat
                 }
             }
 
-            // Attack
-            var ctx = new DamageContext();
-            var dmgResult = DamageCalculator.Calculate(actor, target, ctx, _rng);
-
-            result.Damage = dmgResult.Damage;
-            result.IsCrit = dmgResult.IsCrit;
-            result.IsDodged = dmgResult.IsDodged;
-
-            // Mana gain on auto-attack
-            actor.Mana = Math.Min(actor.Mana + DamageCalculator.MANA_PER_AUTO, actor.MaxMana);
-
-            // Check if target died
-            if (!target.IsAlive)
+            // Check ability cast: mana full → cast ability → reset mana
+            var abilityData = AbilityCatalog.Get(actor.UnitId);
+            if (abilityData != null && ManaSystem.CanCastAbility(actor))
             {
-                result.TargetDied = true;
-                _grid.RemoveUnit(target);
+                // Cast ability
+                var abilityResult = AbilityExecutor.Execute(actor, abilityData, _state, _grid, _rng);
+                ManaSystem.ConsumeMana(actor);
+
+                result.UsedAbility = true;
+                result.AbilityResult = abilityResult;
+                result.Damage = abilityResult.TotalDamage;
+
+                // Check if any target died from the ability
+                foreach (var dmgInst in abilityResult.DamageInstances)
+                {
+                    if (dmgInst.Killed)
+                    {
+                        result.TargetDied = true;
+                        _grid.RemoveUnit(dmgInst.Target);
+                    }
+                }
+            }
+            else
+            {
+                // Auto-attack
+                var ctx = new DamageContext();
+                var dmgResult = DamageCalculator.Calculate(actor, target, ctx, _rng);
+
+                result.Damage = dmgResult.Damage;
+                result.IsCrit = dmgResult.IsCrit;
+                result.IsDodged = dmgResult.IsDodged;
+
+                // Mana gain on auto-attack
+                ManaSystem.GainManaOnAttack(actor);
+
+                // Mana gain on hit for target
+                if (target.IsAlive && dmgResult.Damage > 0)
+                    ManaSystem.GainManaOnHit(target, dmgResult.Damage);
+
+                // Check if target died
+                if (!target.IsAlive)
+                {
+                    result.TargetDied = true;
+                    _grid.RemoveUnit(target);
+                }
             }
 
             CheckWinCondition(result);

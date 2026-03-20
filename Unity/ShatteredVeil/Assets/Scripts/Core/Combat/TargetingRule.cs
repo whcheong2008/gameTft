@@ -6,6 +6,12 @@ namespace ShatteredVeil.Core.Combat
         LowestHP,
         HighestATK,
         Random,
-        Taunt
+        Taunt,
+        Self,
+        AllEnemies,
+        AllAllies,
+        Area,
+        FurthestEnemy,
+        LowestHPAlly
     }
 }
