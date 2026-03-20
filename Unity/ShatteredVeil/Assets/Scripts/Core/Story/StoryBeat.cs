@@ -83,7 +83,7 @@ namespace ShatteredVeil.Core.Story
             };
         }
 
-        public static StoryBeat Expression(string characterId, string expression)
+        public static StoryBeat SetExpression(string characterId, string expression)
         {
             return new StoryBeat
             {
