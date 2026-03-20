@@ -27,14 +27,16 @@ namespace ShatteredVeil.Mono.UI
 
         private void Start()
         {
-            var levels = new Dictionary<string, int>();
-            buildingSystem = new BuildingSystem(levels, 1, 500);
-
             EnsureEventSystem();
             CreateHubUI();
-            RefreshGrid();
 
-            buildingSystem.OnBuildingUpgraded += HandleBuildingUpgraded;
+            // If GameManager already initialized us via Initialize(), use that system.
+            // Otherwise wait for GameManager.OnSceneLoaded to call Initialize().
+            if (buildingSystem != null)
+            {
+                RefreshGrid();
+            }
+
             GameEventBus.OnGoldChanged += HandleVEChanged;
             GameEventBus.OnLevelUp += HandleLevelUp;
         }
@@ -54,7 +56,11 @@ namespace ShatteredVeil.Mono.UI
 
             buildingSystem = system;
             buildingSystem.OnBuildingUpgraded += HandleBuildingUpgraded;
-            RefreshGrid();
+
+            // OnSceneLoaded fires before Start(), so UI may not exist yet
+            if (hubCanvas != null)
+                RefreshGrid();
+            // else: Start() will call RefreshGrid() when it sees buildingSystem != null
         }
 
         /// <summary>

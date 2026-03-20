@@ -23,10 +23,7 @@ namespace ShatteredVeil.Mono.UI
         private void Start()
         {
             BuildUI();
-            // Set initial values
-            SetLevel(1);
-            SetCurrency(500);
-            SetXP(0, 100);
+            // GameManager will call SetLevel/SetCurrency/SetXP with real values
             SetBackButtonVisible(false);
         }
 

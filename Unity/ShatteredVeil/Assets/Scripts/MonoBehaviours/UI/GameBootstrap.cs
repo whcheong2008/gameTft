@@ -7,57 +7,74 @@ using UnityEngine.SceneManagement;
 namespace ShatteredVeil.Mono.UI
 {
     /// <summary>
-    /// Boot scene entry point. Initializes systems, attaches persistent UI
-    /// (TopBar + BottomNav) to SceneRouter, then transitions to Hub.
+    /// Boot scene entry point. Creates all persistent singletons,
+    /// loads save data, initializes GameManager, then transitions to Hub.
     /// </summary>
     public class GameBootstrap : MonoBehaviour
     {
         private void Start()
         {
-            // 1. GameEventBus is static, no init needed.
             GameEventBus.ClearAll();
 
-            // 2. Ensure SceneRouter exists
             if (SceneRouter.Instance == null)
             {
-                Debug.LogWarning("[GameBootstrap] SceneRouter not found. Ensure SceneRouter is in Boot scene.");
+                Debug.LogWarning("[GameBootstrap] SceneRouter not found.");
                 return;
             }
 
-            // 3. Attach persistent UI to SceneRouter (survives scene loads)
-            AttachPersistentUI();
+            // Create persistent systems on SceneRouter's GameObject
+            var routerGo = SceneRouter.Instance.gameObject;
 
-            // 4. Load Hub scene
-            StartCoroutine(LoadHubDirect());
-        }
-
-        private void AttachPersistentUI()
-        {
-            var router = SceneRouter.Instance;
-
-            // TopBar — persistent across all scenes
-            if (router.GetComponent<TopBarController>() == null)
+            // SaveManager
+            if (SaveManager.Instance == null)
             {
-                router.gameObject.AddComponent<TopBarController>();
-                Debug.Log("[GameBootstrap] TopBarController attached to SceneRouter");
+                routerGo.AddComponent<SaveManager>();
+                Debug.Log("[GameBootstrap] SaveManager created");
             }
 
-            // BottomNav — persistent across all scenes
-            if (router.GetComponent<BottomNavController>() == null)
+            // GameManager
+            if (GameManager.Instance == null)
             {
-                router.gameObject.AddComponent<BottomNavController>();
-                Debug.Log("[GameBootstrap] BottomNavController attached to SceneRouter");
+                routerGo.AddComponent<GameManager>();
+                Debug.Log("[GameBootstrap] GameManager created");
             }
 
-            // Ensure there's an EventSystem (it should exist in the scene, but just in case)
+            // TopBar
+            if (routerGo.GetComponent<TopBarController>() == null)
+            {
+                routerGo.AddComponent<TopBarController>();
+                Debug.Log("[GameBootstrap] TopBarController created");
+            }
+
+            // BottomNav
+            if (routerGo.GetComponent<BottomNavController>() == null)
+            {
+                routerGo.AddComponent<BottomNavController>();
+                Debug.Log("[GameBootstrap] BottomNavController created");
+            }
+
+            // ConfirmDialog
+            if (ConfirmDialogController.Instance == null)
+            {
+                routerGo.AddComponent<ConfirmDialogController>();
+                Debug.Log("[GameBootstrap] ConfirmDialogController created");
+            }
+
+            // Ensure EventSystem exists
             if (EventSystem.current == null)
             {
                 var esGo = new GameObject("EventSystem");
                 DontDestroyOnLoad(esGo);
                 esGo.AddComponent<EventSystem>();
                 esGo.AddComponent<InputSystemUIInputModule>();
-                Debug.Log("[GameBootstrap] Created persistent EventSystem");
             }
+
+            // Load save and initialize GameManager
+            var save = SaveManager.Instance.LoadOrCreateNew();
+            GameManager.Instance.InitializeFromSave(save);
+
+            // Load Hub
+            StartCoroutine(LoadHubDirect());
         }
 
         private IEnumerator LoadHubDirect()
@@ -65,7 +82,7 @@ namespace ShatteredVeil.Mono.UI
             var op = SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Additive);
             if (op == null)
             {
-                Debug.LogError("[GameBootstrap] Failed to start loading Hub scene");
+                Debug.LogError("[GameBootstrap] Failed to load Hub scene");
                 yield break;
             }
             yield return op;
