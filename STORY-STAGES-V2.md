@@ -534,223 +534,397 @@ Senna watches her go. Doesn't respond. Doesn't move.
 
 ### Stage 5-1: "The Wellspring" — STORY STAGE
 
-**Environment:** The group travels south through increasingly hostile terrain. The land is becoming unstable—trees twisted into crystal, rivers running with something that isn't water, the Veil presence constant.
+**Environment:** The group travels south and east through increasingly hostile terrain. The land becomes unstable—trees twisted into crystal, rivers running with something that isn't water, the Veil presence constant. The sky shows the Sovereign's slow creep eastward—a stain spreading across the horizon.
 
-**Pre-mission:** Dialogue scene (full cutscene). Otho works through grief by researching. He gathers the group on the third morning. "The Wellspring. The convergence point. From the Barracks archive—pre-Shattering records. A fixed location where the Veil is thinnest." He lays out his theory: if the Wellspring is real—where the Veil is at its absolute thinnest—then a concentrated burst of Veilborn energy at that location could seal the barrier from this side. Like cauterizing a wound at its weakest point. The Veilborn who channeled the seal would lose their powers permanently. No longer Veilborn. But they'd live. The Echoes would be gone. The Sovereign, cut off from its source, would weaken and die. No one had to die. "I'm maybe sixty percent sure it will work." Senna: "Lose my powers. Stop being the thing that draws the darkness. I've made worse bargains." Mira (quietly): "We're still going east?" Otho: "East. Beyond the Proving Grounds. Based on the ancient maps... roughly where the Sovereign is heading. Of course it is."
+**Pre-mission:** Dialogue scene (full cutscene). Otho works through grief by researching. He gathers the group on the third morning after Lyric's death. "The Wellspring. The convergence point. From the Barracks archive—pre-Shattering records. A fixed location where the Veil is thinnest." He lays out his theory: if the Wellspring is real—where the Veil is at its absolute thinnest—then a concentrated burst of Veilborn energy at that location could seal the barrier from this side. Like cauterizing a wound at its weakest point. The Veilborn who channeled the seal would lose their powers permanently. No longer Veilborn. But they'd live. The Echoes would be gone. The Sovereign, cut off from its source, would weaken and die. "I'm maybe sixty percent sure it will work." Senna: "Lose my powers. Stop being the thing that draws the darkness. I've made worse bargains." Otho: "Three of us is the minimum for the seal. But every Veilborn who travels with us thins the Veil along the route. A convoy of Veilborn would leave a trail of tears—Voidspawn surges at every settlement. We go fast, we go light, and we don't stop."
 
 **Combat:** Light Voidspawn skirmishes during travel. No story weight.
 
-**Post-mission:** The group moves east. Three Veilborn is a risk—every Veilborn who travels thins the Veil along the route, leaving a trail of tears, drawing Voidspawn. But three is the minimum for the seal.
+**Post-mission:** The group moves east. The daily Voidspawn patrols begin—smaller engagements as the Sovereign's attention focuses elsewhere. The path to the Wellspring is set. No one fully understands what they're walking toward.
 
 ---
 
 ### Stage 5-2: "Maren Returns" — CHARACTER STAGE
 
-**Environment:** The road, four days after the group's departure from the observatory.
+**Environment:** Open road, four days after leaving the observatory. Grassland giving way to increasingly hostile terrain. The Veil feels thinner here.
 
-**Pre-mission:** Dialogue scene. Maren comes from the west alone, moving fast. Dark circles, unwashed, the hunted look of someone who hasn't stopped moving. She sees the group and stops twenty meters away, unsure she'll be welcome. Senna walks to her. Doesn't speak. Opens her arms. Maren collapses into them and cries—great, ugly, shaking sobs. "I walked away. I walked away and the dying didn't stop. It just meant I couldn't see it. And that was worse."
+**Pre-mission:** Dialogue scene. Maren comes from the west alone, moving fast. Dark circles, unwashed, the hunted look of someone who hasn't stopped moving in days. She sees the group and stops twenty meters away, unsure of her welcome. Senna walks to her. Doesn't speak. Opens her arms. Maren collapses into them and cries—great, ugly, shaking sobs. "I walked away. I walked away and the dying didn't stop. It just meant I couldn't see it. And that was worse. That was so much worse."
 
 **Combat:** None.
 
-**Post-mission:** That night, Senna finds Maren sitting apart. "How are you handling it?" Maren: "Every village I've been near, I was drawing the darkness toward it. Every person I thought I was protecting, I was endangering. Every moment I've been alive has been making things worse." Senna: "That's not who you are." "It's what I am. Those are different things." Maren looks at Senna. "And I don't know how to separate them anymore." Senna doesn't have an answer, but she reaches over and squeezes Maren's hand. They sit in silence as the camp settles.
+**Post-mission:** That night, Senna finds Maren sitting apart from camp. "How are you handling it?" Maren: "Every village I've ever been near, I was drawing the darkness toward it. Every person I thought I was protecting, I was endangering. Every moment I've been alive has been making things worse." Senna: "That's not who you are." "It's what I am. Those are different things." Maren finally looks at Senna. "And I don't know how to separate them anymore." Senna doesn't have an answer, but she reaches over and squeezes Maren's hand. They sit in silence as the camp settles around them.
 
 ---
 
 ### Stage 5-3: "Sera Rejoins" — CHARACTER STAGE
 
-**Environment:** Eastern settlements, twelve days after Maren's return.
+**Environment:** Eastern settlements, twelve days after Maren's return. The landscape is becoming increasingly unstable—the Veil's presence growing stronger.
 
-**Pre-mission:** Dialogue scene. Sera arrives alone. She looks terrible. After leaving the group, she'd joined a local militia coordination effort—trying to organize Veilborn relocations. Methodical. Practical. It hadn't worked. Moving Veilborn out of one area reduced attacks there but surged in the areas they relocated to. The problem was global. She stands in front of Kael. Doesn't apologize. Just: "Your plan. The seal. Tell me what you need."
+**Pre-mission:** Dialogue scene. Sera arrives alone from the east. She looks terrible—exhausted, frustrated. After leaving the group, she'd joined a local militia coordination effort—trying to organize Veilborn relocations using non-Resonant volunteers. Methodical. Practical. It hadn't worked. She'd moved Veilborn out of three population centers and the attacks dropped there, but surged in the areas they relocated to. The problem was global. Bailing a sinking ship with a cup. She stands in front of Kael and doesn't apologize for leaving. She just says: "Your plan. The seal. Tell me what you need."
 
 **Combat:** None.
 
-**Post-mission:** The group is four Resonants again. Not five. Not Lyric. But stronger than two. Later, Mira works on Sera's attunement adjustment. Sera watches. "When did you get good at this?" Mira, without looking up: "While you were gone." No heat. Just fact. Sera pauses. Fair enough.
+**Post-mission:** The group is four Resonants again. Not five. Not Lyric. But stronger than two. Later that day, after Sera has rested and eaten, she needs an attunement adjustment. Mira performs the work carefully, smoothing out corruption residue. Sera watches the girl's touch—precise, professional, no wasted motion. "When did you get good at this?" Mira, without looking up: "While you were gone." No heat in it. Just fact. Sera pauses, then: "Fair enough."
 
 ---
 
-### Stage 5-4: "The Ferryman's Village" — STORY STAGE
+### Stage 5-4: "Mira's Attunement Training" — CHARACTER STAGE
 
-**Environment:** A river crossing. On one side, a small village nestled in trees. The ferryman's flat-bottomed boat. Peaceful.
+**Environment:** Camp during eastward travel through increasingly unstable terrain. Senna sits cross-legged, Mira facing her, Otho's notebook nearby for observations.
 
-**Pre-mission:** Dialogue scene. The ferryman is old, sun-weathered. He grins when he sees Senna. "The kind lady! I know you—you healed my daughter's fever three years ago. She nearly died and you stayed three days until it broke." He pulls out a small wooden charm—a bird, roughly carved, sanded smooth. "She made this for 'the kind lady.'" Senna takes it. Holds it in both hands. "Tell her it's beautiful." The ferryman takes them across, talking about his daughter, the fish, the weather. Normal things. The normalcy is almost painful. He drops them at the crossing point and waves them off. The group walks the road through trees. When they clear the forest and crest the hill above the ferryman's village, they see the smoke. Hit overnight. Voidspawn—a surge, sharp and focused. The group moves through ruins in silence. Houses burned. Possessions scattered. A child's toy half-buried in ash. Kael finds the wooden charm's twin in the rubble—another bird, matching, still on a workbench that the fire hadn't reached. The daughter who'd carved them had been practicing. Getting better. Behind them, beyond the tree line and across the river, the ferryman is rowing back to his side. He won't know until he makes the trip home.
-
-**Combat:** Clearing Voidspawn from the ruins. Heavy emotional weight.
-
-**Combat dialogue:** Minimal—focus is environmental storytelling.
-
-**Post-mission:** Senna holds the charm in her closed fist. She says nothing. Mira walks beside Kael in silence afterward. Eventually: "Do you think Lyric was right?" Kael doesn't answer immediately. A month ago, he would have said no. "I think he was right about the problem. I think he was wrong about the solution." "What if your solution doesn't work either?" Kael has nothing. Mira nods—a small, quiet nod. She opens her notebook and writes something. Kael doesn't ask what.
-
----
-
-### Stage 5-5: "The Crucible Begins" — GAMEPLAY STAGE
-
-**Environment:** The terrain becomes increasingly unstable. The Veil is so thin that the landscape can't decide which world it belongs to. One step on solid earth. The next on crystal. Sky shifts—blue to violet to something with no name. Wild Echoes drift through transitions. The air tastes of ozone and something sweeter, alien.
-
-**Pre-mission:** Brief card: "The group enters the Elemental Crucible—where the Veil is thinnest and reality itself is uncertain."
-
-**Combat:** Daily skirmishes with high-tier Voidspawn. The environment is hazardous. Terrain changes mid-combat. Senna strains maintaining bonds. Mira assists more. The engagements are harder but manageable—the Sovereign's attention is focused elsewhere, drawing the bulk of Voidspawn toward its advance.
-
-**Combat dialogue:** "Terrain shift—reposition!" (Kael) | "Elements are wild—adapt!" (Sera) | "Bonds holding—push harder!" (Senna)
-
-**Post-mission:** Mira's nosebleeds start. The Sovereign's proximity makes the Veil hum at a frequency that interferes with Veilborn sensitivity. She doesn't complain. She wipes blood on her sleeve and keeps working.
-
----
-
-### Stage 5-6: "Attunement Training & Growth" — CHARACTER STAGE
-
-**Environment:** Camp in the Crucible.
-
-**Pre-mission:** Senna begins training Mira formally. With the group smaller, every contribution is critical. Mira is a fast learner. Where Senna's attunement is steady and warm, Mira's is precise and light—individual notes plucked cleanly. During a routine session, Mira adjusts Kael's Echo bond. It's minor, but Kael feels the difference. "That felt... different." Mira tenses. "Bad different?" "Not wrong. Cleaner, maybe." Mira opens her notebook and writes it down. *Kael's bond. Lighter touch = cleaner resonance. Why?* She starts keeping detailed observations—study journal and diary combined. Messy handwriting and observations alongside Otho's neat theory. Doodles in margins.
+**Pre-mission:** Dialogue scene. Senna begins training Mira in attunement formally. With the group smaller and every person's contribution more critical, Mira needs to be more than a passenger. She's a fast learner—Senna had said as much since the Barracks. But now, with focused instruction, her talent becomes obvious. Where Senna's attunement is steady and warm—like a held chord, resonant and full—Mira's is different. Precise. Light. Like individual notes plucked cleanly. During a routine session, Mira adjusts Kael's Echo bond. It's minor—a slight recalibration—but Kael feels the difference. "That felt... different." Mira tenses. "Bad different?" "Not wrong. Cleaner, maybe." Mira doesn't beam. She opens Otho's notebook and writes it down: *Kael's bond. Lighter touch = cleaner resonance. Why?* She starts keeping detailed observations—study journal and diary combined. Half study, half doodles.
 
 **Combat:** None (training scene).
 
-**Post-mission:** Senna nods at Mira during a later combat. Just once. But it means everything.
+**Post-mission:** As the group continues east, Senna delegates more attunement maintenance to Mira. She handles the minor corrections without stepping in. The girl is getting faster at it. Better.
 
 ---
 
-### Stage 5-7: "The Elemental Chimera" — BOSS STAGE
+### Stage 5-5: "The Ferryman's Village" — STORY STAGE
 
-**Environment:** Terrain where elemental energy has gone wild. Fire and water exist in the same space. Steam erupts from crystal ground. Ice forms on burning rock. At the center: the Elemental Chimera—creature of pure chaos, born where Veil's instability creates elemental storms.
+**Environment:** A river crossing on the ninth day of travel. The ferryman's village beyond—peaceful, ordinary, nestled in trees. The contrast with the warping terrain makes the normalcy feel fragile.
 
-**Pre-mission:** Brief card: "The group encounters the Elemental Chimera—a guardian of the Crucible's deepest point."
+**Pre-mission:** Dialogue scene. The ferryman is old, sun-weathered, with the easy manner of someone who'd spent his life on water. When he sees Senna, his face splits into a grin. "The kind lady! I know you—you healed my daughter's fever three years ago. She nearly died and you stayed three days until it broke. Please, please—ride for free. Both ways." Senna smiles—a real smile, the first since the observatory. "How is she?" "Growing like a weed. Stubborn. Already smarter than me." He reaches into a pocket and pulls out a small wooden charm—a bird, roughly carved, sanded smooth. "She made this for 'the kind lady.' She told me if I ever saw you again..." Senna takes the charm, holds it in both hands. "Tell her it's beautiful." The ferryman takes them across, talking the entire way—about his daughter, about the fish, about the weather. Normal things. The normalcy is almost painful. He drops them at the crossing point and waves them off. The group walks the road through the trees. When they clear the forest and crest the hill above the ferryman's village, they see the smoke.
 
-**Combat:** Chimera shifts between elements without warning. Absorbs damage of current type. Deals massive area damage to other elements. The fight tests adaptability. When Chimera shifts to Fire, Water Echoes surge while Fire Echoes pull back. Reverse for Water. Kael calls switches. Sera exploits transitions. Ren absorbs misfires. Maren heals gaps. During a critical moment, Kael's Echo bond slips from elemental interference. Mira performs her first field attunement under pressure—quick, precise adjustment before the bond can break. Senna doesn't even need to intervene.
+**Combat:** Clearing Voidspawn from the village ruins. Heavy emotional weight.
 
-**Combat dialogue:** "It's shifting—switch elements!" (Kael) | "Healing incoming—hold formation!" (Maren) | Mira's attunement hum as she works
+**Combat dialogue:** Minimal—focus is environmental storytelling.
 
-**Post-mission:** Afterward, Senna catches Mira's eye. Nods. Just once. But it meant everything.
-
----
-
-### Stage 5-8: "Refugee Camp & The Children" — STORY STAGE
-
-**Environment:** A valley with a refugee camp sprawling across it. Hundreds of tents. Cook fires. Children running between shelters. People displaced from regions the Sovereign consumed.
-
-**Pre-mission:** Dialogue scene. The group passes through. Kael decides against camping—every Veilborn in the area is a beacon drawing Voidspawn closer. They'll resupply and move on. Mira spots siblings: a boy (maybe twelve), a girl (maybe nine). They sit outside a tent too big for them. The boy cooks carefully. The girl hasn't spoken in weeks. Their parents were Veilborn researchers at a sanctuary the group had passed through during the Synergy Trials. The sanctuary fell. The parents didn't make it. The children didn't know why—just that their parents were gone. Maren crouches near the girl—not invading space, but present. She's a healer. She can read pain. The girl doesn't respond, doesn't look, doesn't acknowledge. But Maren stays, wanting to help, finding that help doesn't exist. The boy speaks: "She stopped after we got here. Won't eat much." Maren understands. There are people right in front of you who need help, and the help doesn't exist. Senna's voice: "We need to leave. Soon." They leave at dawn. The older boy cooking breakfast again. The younger girl still silent.
-
-**Combat:** Light skirmish while leaving.
-
-**Post-mission:** After they leave, Mira walks beside Kael in silence for an hour. "Do you think Lyric was right?" Kael doesn't answer immediately. "I think he was right about the problem. I think he was wrong about the solution." "What if your solution doesn't work either?" Kael has nothing.
+**Post-mission:** The village has been hit overnight. Voidspawn surge, sharp and focused. Houses burned. Possessions scattered. A child's toy half-buried in ash. Kael finds the wooden charm's twin in the rubble—another bird, matching, still on a workbench that the fire hadn't reached. The daughter had been practicing. Getting better. Behind them, beyond the tree line and across the river, the ferryman is rowing back to his side. He won't know until he makes the trip home. Senna holds the charm in her closed fist. She says nothing.
 
 ---
 
-### Stage 5-9: "Sera's Attunement & Pragmatic Alliance" — CHARACTER STAGE
+### Stage 5-6: "Hardening East" — GAMEPLAY STAGE
 
-**Environment:** Camp in the Crucible.
+**Environment:** The days after the ferryman's village are the hardest marching they've done. The terrain grows increasingly unstable as they push east—the Veil's influence creeping into the landscape. Trees grow at wrong angles. Streams run with water that's too clear, too still, reflecting a sky that isn't quite the one overhead.
 
-**Pre-mission:** Dialogue scene. After a fight, Sera watches Voss move through warm-up exercises (Voss has joined from the Proving Grounds). She's been observing him for days. The man favors his right side—using it for every heavy strike. His left bond is degraded. She waits until his attunement is fresh. "Your left bond is degraded." Voss pauses. "I know." "I'll compensate. We'll make it work." Voss nods. "Good." Two pragmatists understanding each other immediately.
+**Pre-mission:** Brief card: "The group pushes through destabilizing terrain. Voidspawn patrols hit them daily, sometimes twice."
+
+**Combat:** Multiple Voidspawn encounters across unstable terrain. Kael and Ren handle the front. Sera covers flanks. Maren keeps everyone standing. Mira performs field attunement more frequently now—small adjustments between engagements, stabilizing bonds that the ambient Veil noise keeps rattling loose.
+
+**Combat dialogue:** "Hold formation through the shifts!" (Kael) | "Attunement adjusting—stay steady!" (Mira) | "Healing incoming—push!" (Maren)
+
+**Post-mission:** Mira is getting faster at field attunement. Senna lets her handle the minor corrections without stepping in. The group pushes deeper east.
+
+---
+
+### Stage 5-7: "Attunement Breakthrough" — CHARACTER STAGE
+
+**Environment:** Camp during travel through unstable terrain. The Veil here is confused—fire and water existing in the same space, steam erupting from crystal ground.
+
+**Pre-mission:** Dialogue scene. On the fifth day after the river, the group enters a stretch of terrain where the elemental energy has gone wild. Senna and Mira perform bond maintenance during the violent environmental shifts. Mira's technique has improved dramatically—her lighter touch is perfectly suited to the constant micro-adjustments the unstable environment demands. After a particularly difficult adjustment on Sera's bonds, Sera nods at her. Professional acknowledgment. Later, Senna finds Mira alone with her notebook. Mira is documenting bond adjustments—what works, what doesn't, why the lighter touch matters in unstable Veil zones. Senna watches her work. She nods. Just once. But it means everything.
+
+**Combat:** None (training/preparation scene).
+
+**Post-mission:** The group camps. Tomorrow they'll reach the center of the disturbance. Whatever is creating this elemental chaos, the group will have to go through it.
+
+---
+
+### Stage 5-8: "The Elemental Chimera" — BOSS STAGE
+
+**Environment:** Terrain where elemental energy has gone wild. Fire and water exist in the same space. Steam erupts from crystal ground. Ice forms on burning rock. The Veil here isn't just thin. It's confused. At the center: the Elemental Chimera—creature of pure chaos, born where the Veil's instability creates elemental energy storms.
+
+**Pre-mission:** Brief card: "The group encounters the Elemental Chimera—guardian of the Crucible's deepest point."
+
+**Combat:** The Chimera is a creature of pure chaos—shifting between elements without warning, absorbing damage of its current type and dealing massive area damage to everything else. The fight is a test of adaptability. When the Chimera shifts to Fire, the Water Echoes have to surge forward while the Fire Echoes pull back. When it shifts to Water, the reverse. Kael calls the switches. Sera's burst damage punishes every transition. Ren absorbs the misfires. Maren heals the gaps. During a critical moment when the Chimera shifts mid-attack and Kael's Echo bond slips from the sudden elemental interference—Mira performs her first field attunement under pressure. A quick, precise adjustment that stabilizes Kael's bond before it can break. Senna doesn't even need to intervene.
+
+**Combat dialogue:** "It's shifting—switch elements!" (Kael, calling switches) | "Healing incoming—hold formation!" (Maren) | Mira's attunement hum as she works under pressure
+
+**Post-mission:** The Chimera falls. Elemental chaos subsides. Senna catches Mira's eye across the battlefield. She nods. Just once. But it meant everything. The girl has proven herself in the pressure that matters most—when lives depend on her skill.
+
+---
+
+### Stage 5-9: "Connector March" — GAMEPLAY STAGE
+
+**Environment:** The path forward from the Chimera encounter. The terrain becomes even more unstable—the corrupted landscape shifting in rhythm with the Sovereign's advance. Trees twisted, rivers alien, sky wrong.
+
+**Pre-mission:** Brief card: "The group marches toward the Elemental Crucible proper, pushing through daily Voidspawn assaults."
+
+**Combat:** Escalating Voidspawn encounters—the creatures growing more coordinated, the attacks more relentless. The group fights through daily skirmishes as they push east toward the Crucible.
+
+**Combat dialogue:** "Hold the line!" (Kael) | "Bonds holding steady!" (Senna) | "Move, move, move!" (Sera)
+
+**Post-mission:** The group reaches the edge of the Crucible. The terrain beyond is unrecognizable—the Veil's presence so thick that reality itself seems negotiable. The Sovereign is visible constantly now—a pillar of darkness against a wrongly-colored sky. They've entered the final region before the Proving Grounds.
+
+---
+
+### Stage 5-10: "The Seal Plan Refined" — CHARACTER STAGE
+
+**Environment:** Camp at the edge of the Crucible. The air smells of ozone and something sweeter, alien, not unpleasant. Crystal formations jut from the ground at unnatural angles.
+
+**Pre-mission:** Dialogue scene. Otho refines the seal theory as they travel. He works obsessively, filling pages, crossing things out, starting over. On the fourth day in the Crucible region, he shares an update: "The seal will require all three Veilborn channeling simultaneously. More Veilborn means a cleaner seal, more energy distributed, less strain on each person. With three of us—Senna, Mira, and myself—it'll work. But..." Kael: "But what?" Otho: "There's a risk of feedback. The Veil has been open at the Wellspring for centuries. The tears there have calcified—become features of the barrier, not just holes in it. Clean severance should handle the newer tears. But the oldest ones..." He hesitates. "Clean severance may not generate enough force. There's a harder way—burning the connection instead of severing it. Far more energy, but it's... not survivable." Senna: "Define 'not survivable.'" "Exactly what it sounds like. Burning is a last resort. I'm designing the seal so it won't be necessary. Three Veilborn channeling together should produce enough force for a clean close." He rubs his eyes. "Should." Senna holds his gaze for a moment. Then she nods. "Then make sure your math is right." She says nothing about it in front of Mira.
 
 **Combat:** None.
 
-**Post-mission:** The dynamic shifts. Sera and Voss work together seamlessly—no philosophy, no moral weight, just two competent people establishing working terms.
+**Post-mission:** The group rests. Tomorrow they enter the Elemental Crucible proper. After that: the Proving Grounds. After that: the Wellspring. After that: everything changes.
 
 ---
 
-### Stage 5-10: "The Crucible's Sentinel" — BOSS STAGE
+## REGION 6: THE ELEMENTAL CRUCIBLE (10 stages)
 
-**Environment:** The passage out of the Crucible. Crystalline entity stands guard—the Prismatic Sentinel, refracted Veil energy through its body like a living prism.
+### Stage 6-1: "The Crucible Opens" — GAMEPLAY STAGE
 
-**Pre-mission:** Dialogue scene. Kael: "We can't do this alone. We need more fighters for the approach. There may be others." He's been hearing reports on the eastern comm channels: a solo Resonant operating without Veilborn support. Running for months. Sera: "The people who left. Maren's contacts. There may be others." Kael: "There's one other possibility. A solo Resonant, operating without Veilborn support for months. He's been running." Senna: "That shouldn't be possible."
+**Environment:** The group enters the Elemental Crucible. The Veil is so thin here that the landscape can't decide which world it belongs to. One step on solid earth. The next on crystal that rings like glass underfoot. The sky shifts—blue to violet to something with no name—and back again, sometimes mid-breath. Wild Echoes drift through transitions. The air tastes of ozone and something sweeter, alien, not unpleasant.
 
-**Combat:** Sentinel cycles through elemental immunities, becoming impervious to one element while vulnerable to another. Fight demands all elements on the team contributing. Kael calls rotations. Sera exploits vulnerability windows with precision bursts. Mira maintains secondary attunements, keeping bonds stable.
+**Pre-mission:** Brief card: "The group enters the Elemental Crucible—where the Veil is thinnest and reality itself is uncertain."
 
-**Combat dialogue:** "It's immune to Fire—pull your Fire Echoes back! Vulnerability shifting to Lightning—push in!" (Kael) | "Healing tight—spread!" (Maren)
+**Combat:** Daily skirmishes with high-tier Voidspawn. The environment is hazardous. Terrain changes mid-combat. Senna strains maintaining bonds in the noise. Mira assists more and more—her lighter touch better suited to the constant micro-adjustments the unstable environment demands.
 
-**Post-mission:** When Sentinel falls, the crystal body shatters into prismatic shards catching light. Beautiful. The last beautiful thing they'll see for a while. Kael looks east. The Sovereign is visible constantly now—a pillar of darkness against the sky. Beyond it: the Proving Grounds. Beyond that: the Wellspring.
+**Combat dialogue:** "Terrain shift—reposition!" (Kael) | "Elements are wild—adapt!" (Sera) | "Bonds holding—push harder!" (Senna)
 
----
-
-## REGION 6: THE PROVING GROUNDS (10 stages)
-
-### Stage 6-1: "Voss Joins" — CHARACTER STAGE
-
-**Environment:** A canyon where reality stutters like a skipping record.
-
-**Pre-mission:** Dialogue scene. The group finds Voss fighting a Voidspawn patrol alone. He's good—moves with the economy of someone fighting without support for months. His Echoes are degrading though—bonds visible as flickering light. Kael's group intervenes. Ren crashes the flank. Sera vaporizes the largest creature. The patrol scatters. Voss stands, breathing hard. He counts the group. Assesses. His eyes land on Senna and Mira and stay there. "Veilborn." Kael: "Two of them. Three, counting Otho." Voss: "I need attunement. My bonds are degrading. I'll be combat-ineffective in two weeks. I heard about your seal plan on the eastern channels. I came to find you." "Why?" "Because you have Veilborn and I need them. And because you're heading to the Wellspring and you need another fighter. Simple math."
-
-**Combat:** None (Voss joins after patrol dispersal).
-
-**Post-mission:** Senna refreshes his attunement. It takes longer than usual—severe degradation. "How long have you been running without a Veilborn?" "Four months." She stops. Looks at him. "That shouldn't be possible." "I'm stubborn." She returns to work in silence. "Your bonds are badly corroded. It'll take a few days of regular sessions." "Fine." No gratitude. No need for it. Transaction is clear.
+**Post-mission:** The Sovereign is visible from any high ground—not on the horizon. Above it. It has grown upward—a towering column of corruption that bends light around it and casts a shadow that changes the terrain beneath it. Mira has started getting nosebleeds. She doesn't complain. She wipes the blood on her sleeve and keeps working.
 
 ---
 
-### Stage 6-2: "Integration & Pragmatism" — CHARACTER STAGE
+### Stage 6-2: "Veil Instability Effects" — GAMEPLAY STAGE
 
-**Environment:** Camp in the Proving Grounds approach.
+**Environment:** Multiple zones within the Crucible. Each has different elemental concentrations. The Veil is visibly thin—sky flickers, terrain changes, reality feels negotiable.
 
-**Pre-mission:** Dialogue scene. Voss integrates quickly because he doesn't try. Doesn't seek friendship, doesn't contribute to conversation, doesn't ask about history or feelings. What he does is treat the Veilborn like professionals. When he needs attunement, he asks Mira: "Your secondary bonds are pulling. Can you tighten them?" She does. He thanks her. Moves on. No guilt. No avoidance. Just competent person asking another competent person for service. Mira has spent months being looked at with complicated emotions—pity, guilt, avoidance. Voss looks at her and sees someone useful. Essential. The infrastructure that keeps him fighting. She starts sitting closer to the group at meals.
+**Pre-mission:** Brief card: "The group fights through the Elemental Crucible—each engagement harder than the last as the Veil destabilizes."
 
-**Combat:** Light skirmishes during integration period.
+**Combat:** The engagements in the Crucible are among the hardest they've faced. The Veil's instability makes combat unpredictable—elements shifted mid-fight, terrain changes underfoot, Echoes are harder to control. Senna strains to maintain bonds in the noise. Mira assists more and more.
 
-**Post-mission:** Dynamic of the group shifts. Voss and Sera understand each other immediately—pragmatists establishing working terms.
+**Combat dialogue:** "Hold through the shifts!" (Kael) | "I've got you, bonds are stable!" (Senna) | "Formation tight—move!" (Sera)
 
----
-
-### Stage 6-3: "Ren's Tactical Input" — CHARACTER STAGE
-
-**Environment:** Proving Grounds canyon, fourth day of travel.
-
-**Pre-mission:** Dialogue scene. During a coordinated assault on a Voidspawn stronghold, Kael orders the team to push through a chokepoint—narrow canyon where terrain funnels enemies. It makes sense tactically. More concentrated enemies mean higher burst efficiency. But Ren looks at the position. Then at Kael. Then speaks. First tactical comment in months. "Hold position. Let them come to us." Kael starts to push forward. Stops. Considers. Ren is right. Holding position lets Voidspawn cluster more densely while advancing through canyon—less time to exploit high-ground advantage. Higher casualty rate for creatures, lower risk for Veilborn. "Shift defensive stance. Let them come." The group repositions. Voidspawn advance into prepared line. Ren becomes wall of steel. Sera bursts. Maren heals. Fight is over in minutes.
-
-**Combat:** Stronghold assault with positioning strategy.
-
-**Combat dialogue:** "Hold position. Let them come to us." (Ren, rare tactical input) | "Shift defensive stance!" (Kael, adapting)
-
-**Post-mission:** After, Kael nods at Ren. Smallest acknowledgment. But Ren sees it. His silence is choice, not submission. When he speaks, Kael listens.
+**Post-mission:** Sera's magic is devastating in the Crucible. The raw elemental energy in the air amplifies her casting—she can pull power from the environment in ways that aren't possible in stable terrain. But it comes with a cost: the Sovereign's corruption is in that energy, and channeling it leaves a residue that makes her Echoes sluggish afterward. She doesn't mention it. Kael notices.
 
 ---
 
-### Stage 6-4: "The Arbiter of Trials — Synergy Test" — BOSS STAGE
+### Stage 6-3: "Will I Stop Being Veilborn?" — CHARACTER STAGE
 
-**Environment:** A warzone arena. The Sovereign's forces are concentrated here. Gravity shifts for seconds. Sky flickers between worlds. Voidspawn materialize mid-step.
+**Environment:** Camp during harsh travel through the Crucible. The landscape here is beautiful and terrible—crystal formations, wild Echoes, wrong colors in the sky.
 
-**Pre-mission:** Dialogue scene. Kael addresses the full group. Eight people: five Resonants (Kael, Ren, Sera, Maren, Voss), three Veilborn (Senna, Mira, Otho). "The Arbiter is a test. It'll suppress our synergies, divide the battlefield, force us to function independently and together simultaneously." Senna: "We're doing this willingly. No one is executing us. We're choosing." The group is quiet. Sera looks at Veilborn. Maren looks at ground. Ren stands where he always stands—behind Kael, ready. Voss: "When do we move?" "Tomorrow."
+**Pre-mission:** Dialogue scene. After a particularly brutal fight near a ravine where the Veil is almost absent—where the group can see the Otherside as clearly as the mortal world, two realities overlapping like double-exposed photographs—Mira asks Otho a question. "Will I stop being Veilborn after we seal the Nexus?" Otho looks at her. His expression is careful—the expression of someone who understands that the wrong answer could shatter something. "Yes," he says. "If the seal works as I believe it will, your connection to the Veil will be severed. Permanently. You'll be..." He searches for the right word. "Normal." Mira is quiet for a long time.
 
-**Combat:** Three-phase boss fight. Phase 1: Synergy suppression—stripped elemental advantages, archetype power only. Kael spreads output. Voss's neutral damage becomes anchor. Phase 2: Battlefield split—rift of energy dividing arena, team fights on two fronts. Sera's copy is most dangerous. Kael calls focus fire. Phase 3: Countdown—twenty-five seconds to interrupt devastating attack or wipe. Massive damage requirement on split battlefield. Voss throws everything forward. Sera channels Crucible technique despite corruption cost. Ren absorbs counterattacks. Maren keeps everyone alive. Kael lands killing blow.
+**Combat:** None.
 
-**Combat dialogue:** "Both sides—push the damage!" (Kael) | "Interrupt the charge!" (Lyric's role, now Voss takes it) | "Burst now!" (Sera) | "Healing is down to reserves—finish this!" (Maren)
-
-**Post-mission:** The Arbiter dissolves. Proving Grounds go quiet. "Together. Whatever happens." Kael says. Voss, after pause: "Together."
+**Post-mission:** Mira: "Good." That single word carries everything—relief, acceptance, resignation, hope, all tangled together. Later, Senna finds Mira sitting alone, her notebook open to a new section she's started: *Attunement after severance—can the lessons carry forward? Can technique survive disconnection?* Senna sits beside her without ceremony. They don't speak. The silence is enough.
 
 ---
 
-### Stage 6-5-6: "Proving Grounds Warzone" — GAMEPLAY STAGES (Two stages)
+### Stage 6-4: "Refugee Camp & The Children" — STORY STAGE
 
-**Environment:** Multiple zones of the Proving Grounds. Terrain warps constantly. Gravity shifts. Sky strobes. Voidspawn materialize from tears.
+**Environment:** A valley with a refugee camp sprawling across it. Hundreds of tents. Cook fires. Children running between shelters. People displaced from regions the Sovereign's advance has consumed.
 
-**Pre-mission:** Brief cards: "The group fights through the Proving Grounds—each mile east earned in blood and Veil Essence."
+**Pre-mission:** Dialogue scene. The group passes through on their way east. Kael has decided against camping here—every Veilborn in the area is a beacon drawing Voidspawn closer to these vulnerable people. They'll resupply and move on. Mira spots the siblings first. Two children: a boy, maybe twelve. A girl, maybe nine. They sit outside a tent that's too big for them and too ragged for the weather. The boy is cooking something over a camp fire—doing it carefully, with the practiced motions of someone who'd taught himself. The girl sits beside him, not playing, not talking. Just sitting. She hasn't spoken in weeks. Their parents had been Veilborn researchers at a sanctuary—a sanctuary the group had passed through during the Synergy Trials. After the group passed through, a Voidspawn surge had followed their trail—drawn by three traveling Veilborn—and exploited the thinned defenses. The sanctuary fell. The parents didn't make it out. The children don't know why it happened. They just know their parents are gone.
 
-**Combat:** Two major encounters with escalating difficulty. Relentless combat. Every mile is earned.
+**Combat:** Light skirmish while passing through the refugee areas.
 
-**Combat dialogue:** Multiple tactical callouts, settlement-specific.
+**Combat dialogue:** Minimal.
 
-**Post-mission:** The group moves east. Behind them: the Proving Grounds, now quiet. Ahead: the Sovereign, filling the sky.
-
----
-
-### Stage 6-7-8: "Final Approach Montage" — GAMEPLAY STAGES (Two stages)
-
-**Environment:** The terrain between Proving Grounds and Abyss Gate. The land becomes increasingly alien. The Veil presence is overwhelming.
-
-**Pre-mission:** Brief cards tracking the approach.
-
-**Combat:** Two major Voidspawn assaults as the group gets closer to the Wellspring.
-
-**Combat dialogue:** Escalating tension. Callouts become desperate.
-
-**Post-mission:** The group reaches the edge of the Nexus zone. They can see it ahead. The Sovereign. The sky split open.
+**Post-mission:** Maren crouches down near the girl's side—not too close, not invading her space, but present. She's a healer, and healers can read pain in ways others couldn't. The girl doesn't respond, doesn't look at her, doesn't acknowledge her presence. But Maren stays there for a moment, her healer's instinct wanting to stay, wanting to find the right words or the right touch that would unlock whatever has sealed itself inside this child. The older boy speaks up: "She stopped after we got here. Hasn't said anything. Won't eat much." Maren: "Is she hurt? Did she get injured when—" "No. She's just... gone somewhere inside. I don't know how to bring her back." Maren understands. Not the specific loss, but the feeling—that there are people right in front of you who need help, and the help doesn't exist. Senna's voice comes from behind: "We need to leave. Soon." Maren stands, her healer's instincts still reaching toward the child, toward the boy trying so hard to hold it together, toward the problem she couldn't solve. "Yes," she says quietly. "I know." They leave at dawn. The older boy is cooking breakfast again. The younger girl is sitting beside him, still silent. Neither looks up as the group passes.
 
 ---
 
-### Stage 6-9-10: "Final Preparations" — CHARACTER STAGE (Two stages)
+### Stage 6-5: "Do You Think Lyric Was Right?" — CHARACTER STAGE
 
-**Environment:** Edge of the Nexus zone. The ground is crystal, seamless and faintly luminous. The air smells of ozone and something else that doesn't belong.
+**Environment:** The road after leaving the refugee camp. Mira walking beside Kael in silence for a long time.
 
-**Pre-mission:** Dialogue scenes. Otho refines the seal theory: "The seal will require all three Veilborn channeling simultaneously. With three of us, it'll work. But there's a risk of feedback. The oldest tears... may require burning instead of clean severance. Not survivable." Senna: "Define 'not survivable.'" "Exactly what it sounds like." Senna holds his gaze. "Then make sure your math is right." The group makes camp. Mira sits apart with her notebook, documenting the Veil patterns. The energy moves in spirals, folding back on itself. She writes quickly. Kael calls them to move out. Mira closes her notebook. *The patterns here are different. Spirals, not waves. The energy folds back on itself as if the Veil is trying to* — and then nothing. Someone called her name. She'd put down her pen.
+**Pre-mission:** Dialogue scene. After they left the camp, Mira walked beside Kael in silence for an hour before she spoke. "Do you think Lyric was right?" Kael didn't answer immediately. A month ago, he would have said no without hesitating. But a month ago, Lyric was alive. A month ago, the path felt clear. Now: "I think he was right about the problem. I think he was wrong about the solution." "What if your solution doesn't work either?" Kael had nothing. No argument. No reassurance. No principle that applied.
 
-**Combat:** Final light skirmishes approaching the gate.
+**Combat:** None.
 
-**Post-mission:** The group makes final camp. Tomorrow: the Wellspring. Tomorrow: the seal. Tomorrow: the end.
+**Post-mission:** Mira didn't push. She nodded—a small, quiet nod, like the silence had confirmed something she'd already suspected. She opened her notebook and wrote something. Kael didn't ask what. They continued east.
+
+---
+
+### Stage 6-6: "Sera's Sacrifice" — CHARACTER STAGE
+
+**Environment:** Camp in the deep Crucible. The elemental energy here is almost overwhelming—wild and uncontrolled.
+
+**Pre-mission:** Dialogue scene. After a particularly devastating engagement where Sera channeled ambient Veil energy in her burst casting, pulling raw power from the corrupted terrain itself, Kael finds her sitting apart, breathing hard. "Your bond just destabilized for multiple seconds." Sera doesn't look at him. Kael watches her recover. He knows what she's thinking—that the power is worth the cost, that every burst she pulls from the environment gets them closer to victory. But her bonds are degrading. Senna will have to spend more time on maintenance. She's burning herself down. Sera: "We won faster." "And if your bond had snapped entirely?" "Then I would have fixed it. I've handled worse." But the Veil here is too thin, the corruption too thick, and her bonds too fragile for sustained overchanneling. She knows it. Kael knows it. Neither will say it aloud.
+
+**Combat:** None.
+
+**Post-mission:** That night, Senna spends extra time on Sera's attunement, smoothing out the corruption residue, repairing the damage from overchanneling. Sera sits quietly, letting the work happen. Neither speaks. The transaction is clear—burn yourself on my behalf, and I'll spend the power to keep you standing. That's the bargain they're all making.
+
+---
+
+### Stage 6-7: "Senna's Weight" — CHARACTER STAGE
+
+**Environment:** Camp during the Crucible. Night. The Veil's presence is oppressive—the air feels thick, wrong.
+
+**Pre-mission:** Dialogue scene. Late at night, Senna finds a moment alone—rare in the careful logistics of keeping three Veilborn and four Resonants functional in an unstable Veil zone. She sits apart from camp, holding the wooden charm from the ferryman's daughter. Mira finds her there. She doesn't speak. She just sits beside her. Senna holds the charm in both hands. "I've spent twenty years not questioning what I am. I heal people. I attune Echoes. I pull them from the Veil and keep them steady. That's what a Veilborn is." She looks at the charm. "I'm going to lose that. All of it. No more bonds. No more attunement. No more purpose." Mira: "You'll still be you." "Will I?" Senna doesn't sound angry. Just tired. "I don't know who I am without this." Mira doesn't have an answer. She just sits with her, the two of them understanding something about identity and burden that the others can't quite reach.
+
+**Combat:** None.
+
+**Post-mission:** Eventually they return to camp. Senna sleeps uneasily. Tomorrow brings more of the Crucible. Tomorrow brings them closer to the Wellspring. Tomorrow brings the end closer.
+
+---
+
+### Stage 6-8: "The Prismatic Sentinel" — BOSS STAGE
+
+**Environment:** The passage out of the Crucible. A crystalline entity stands guard—refracted Veil energy through its body like a living prism. The sky flickers. Elements shift. Reality feels negotiable.
+
+**Pre-mission:** Dialogue scene. The group pushes toward the passage out of the Crucible. Kael: "We need more fighters for the final approach. The Sovereign's forces are concentrated around the Wellspring." Sera: "There may be others—people who left, maren's contacts." Kael: "I've been hearing reports on the eastern comm channels. A solo Resonant, operating without Veilborn support. He's been running for months." Senna, frowning: "That shouldn't be possible."
+
+**Combat:** The Prismatic Sentinel cycles through elemental immunities, becoming impervious to one element while becoming vulnerable to another. A fight that demands all four elements on the team contributing, no single strategy sufficient. Kael calls the rotations: "It's immune to Fire—pull your Fire Echoes back! Vulnerability shifting to Lightning—push in!" Sera exploits each vulnerability window with precision bursts. Mira maintains secondary attunements alongside Senna, keeping the bonds stable as the Sentinel's energy emissions scramble them.
+
+**Combat dialogue:** "It's immune to Fire—pull back!" (Kael) | "Vulnerability window—burst now!" (Sera) | "Bonds holding—keep pushing!" (Senna) | "Healing incoming—maintain formation!" (Maren)
+
+**Post-mission:** When the Sentinel falls, the crystal body shatters into a thousand prismatic shards that catch the Crucible's shifting light and scatter rainbows across the corrupted landscape. Beautiful. The last beautiful thing they'll see for a while. Kael looks east toward the Proving Grounds. The Sovereign is visible constantly now—a pillar of darkness against the sky. "We can't do this alone," he says. Senna: "We're not alone. There are four Resonants and three Veilborn." Kael nods. But the weight of what comes next is settling on everyone now. The Proving Grounds. The Wellspring. The seal. The end.
+
+---
+
+### Stage 6-9: "Toward the Proving Grounds" — GAMEPLAY STAGE
+
+**Environment:** The transition zone between the Crucible and the Proving Grounds. The terrain becomes more warzone-like—signs of heavy combat, destroyed equipment, wreckage.
+
+**Pre-mission:** Brief card: "The group leaves the Crucible behind and enters the warzone of the Proving Grounds."
+
+**Combat:** Escalating Voidspawn encounters as they approach the Proving Grounds proper. The creatures become more coordinated, more dangerous. The environment itself is hostile—terrain shifts, gravity fluctuates.
+
+**Combat dialogue:** "Hold position!" (Kael) | "Bonds steady—push!" (Senna) | "Keep moving!" (Sera)
+
+**Post-mission:** The Proving Grounds lie ahead. The Veil is so thin here that the landscape warps constantly. Gravity shifts for seconds at a time. The sky flickers between worlds so rapidly that it strobes. Voidspawn materialize from the ground mid-step, emerging from tears that open and close in heartbeats.
+
+---
+
+### Stage 6-10: "Rest Before the Final Push" — CHARACTER STAGE
+
+**Environment:** Camp at the entrance to the Proving Grounds proper. The ground is becoming crystalline. The air smells of ozone and corruption.
+
+**Pre-mission:** Dialogue scene. The group makes camp. Otho refines calculations. Senna performs final attunement checks on everyone. Kael reviews routes. Mira sits with her notebook, writing observations about the Veil patterns—spirals, not waves, folding back on itself. The others give them space. Tomorrow begins the final push. Tomorrow they enter the Proving Grounds proper. Tomorrow they fight for the Wellspring.
+
+**Combat:** None.
+
+**Post-mission:** That night, the group sits around a small fire. Nobody speaks much. There's nothing left to say. Maren double-checks supplies. Ren cleans weapons. Sera sits quietly, her degraded bonds humming softly as Senna works on them one final time before tomorrow. Kael stares east, toward the Sovereign, toward the Wellspring, toward whatever comes next. Otho mutters calculations. Mira writes. And Senna—Senna holds the wooden charm from the ferryman's daughter, still clutching it after all these days. Tomorrow, it all ends. Tonight, they rest.
+
+---
+
+## REGION 7: THE PROVING GROUNDS (10 stages)
+
+### Stage 7-1: "Voss Found" — CHARACTER STAGE
+
+**Environment:** A canyon where reality stutters like a skipping record. The Veil here is so thin that the mortal world and Otherside exist simultaneously, overlapping.
+
+**Pre-mission:** Dialogue scene. The group finds Voss fighting a Voidspawn patrol alone in the canyon. He is good—even Kael can see that immediately. The man moves with the economy of someone who's been fighting without support for so long that every motion is optimized for efficiency. No wasted energy. No hesitation. No fear, not because he's brave, but because fear is a luxury he's trimmed away months ago. His Echoes are the problem. The bonds are degrading—visible even from a distance. The spirits flicker, their forms incomplete, their attacks landing at half-power. A Resonant's attunement decays without a Veilborn to maintain it, and this man has been running without one for a long time.
+
+**Combat:** Kael's group intervenes. Ren crashes into the Voidspawn flank. Sera vaporizes the largest creature with a burst of concentrated magic. The patrol scatters and dissolves. Voss stands in the aftermath, breathing hard. He looks at the group. Counts them. Assesses. His eyes land on Senna and Mira and stay there.
+
+**Combat dialogue:** "Go!" (Kael, coordinating intervention) | "Formation tight!" (Sera) | Voss's quiet, efficient combat calls
+
+**Post-mission:** Voss: "Veilborn." Kael: "Two of them. Three, counting Otho." Voss: "I need attunement. My bonds are degrading. I'll be combat-ineffective in two weeks." He says it without emotion—a status report. "I heard about your seal plan on the eastern channels. I came to find you." "Why?" "Because you have Veilborn and I need them. And because you're heading to the Wellspring and you need another fighter." He shrugs. "Simple math."
+
+---
+
+### Stage 7-2: "Senna Refreshes Voss" — CHARACTER STAGE
+
+**Environment:** Camp, evening of the day Voss joins. The canyon around them is stabilizing—the overlapping realities settling slightly now that the Voidspawn patrol is dispersed.
+
+**Pre-mission:** Dialogue scene. Senna refreshes Voss's attunement that evening. It takes longer than usual—the degradation is severe. She works through the corroded bonds, trying to restore what months of disuse and no proper maintenance have damaged. "How long have you been running without a Veilborn?" she asks, her fingers working through the bonds. "Four months." She stops. Looks at him. "That shouldn't be possible." "I'm stubborn." She returns to the attunement. She works in silence for a while. "Where's your attunist?" "Left. After the truth spread. She couldn't handle knowing what she was." A pause. "I don't blame her. But I needed to keep fighting." Senna returns to work. "Your bonds are badly corroded. I can restore them, but it'll take a few days of regular sessions." "Fine." He doesn't thank her. He doesn't need to. The transaction is clear.
+
+**Combat:** None.
+
+**Post-mission:** Over the next few days, Senna maintains Voss's bonds repeatedly, slowly restoring them to functional. Each session gets a little better. Voss shows up, gets worked on, moves on. No philosophy. No weight. Just a transaction between professionals.
+
+---
+
+### Stage 7-3: "Voss Integration" — CHARACTER STAGE
+
+**Environment:** Camp during Voss's first week with the group. The Proving Grounds around them are stabilizing slightly—or they're getting used to the instability.
+
+**Pre-mission:** Dialogue scene. Voss integrates quickly because he doesn't try to integrate at all. He doesn't seek friendship, doesn't contribute to camp conversation, doesn't ask about the group's history or their feelings about the mission. He trains, he fights, he eats, he sleeps. What he does do—and this matters—is treat the Veilborn like professionals. When he needs an attunement adjustment, he asks Mira: "Your secondary bonds are pulling. Can you tighten them?" She does. He thanks her. He moves on. No guilt in the interaction. No avoidance. No philosophical weight. Just a competent person asking another competent person for a service.
+
+**Combat:** Light skirmishes during integration period. Voss fights smoothly alongside the group—no awkward positioning, no team-building needed. He knows his job.
+
+**Post-mission:** Mira has spent months being looked at with complicated emotions—pity from Maren, guilt from Kael, careful avoidance from Sera's returned squad members. Voss looks at her and sees someone useful. Essential, even. The infrastructure that keeps him fighting. She starts sitting closer to the group at meals. Not because the tension is gone—the others still carry their baggage around the Veilborn—but because Voss's blunt practicality reminds her that she has value beyond being a problem to solve.
+
+---
+
+### Stage 7-4: "Sera and Voss Understand" — CHARACTER STAGE
+
+**Environment:** Camp during post-combat preparations. Voss moves through warm-up exercises. Sera watches.
+
+**Pre-mission:** Dialogue scene. Later that same day, as they're regrouping and Senna adjusts bonds, Sera watches Voss move through his warm-up exercises. She's been watching him fight for days now. The man has precision, but he's favoring his right side—using it for every heavy strike, every quick parry. His left side is mechanical. Slower. She waits until his attunement is fresh, then speaks. "You favor your right side. Your left bond is degraded." Voss pauses. Looks at her. "I know." "I'll compensate," Sera says. It isn't a question, isn't offering sympathy. Just stating a fact. She's good. She could adjust her positioning and her burst angles to cover his weak side, force his opponents into range where his degraded left bond won't matter. "We'll make it work." Voss nods. "Good." Two pragmatists sizing each other up. They understand each other immediately in a way the others don't—no philosophy, no moral weight, just two competent people establishing working terms. That's all it takes.
+
+**Combat:** None.
+
+**Post-mission:** The dynamic shifts. Sera and Voss work together seamlessly in subsequent fights—no discussion, no explanation, just two people who understand each other's capabilities and limitations and can compensate accordingly.
+
+---
+
+### Stage 7-5: "Ren's Tactical Input" — CHARACTER STAGE
+
+**Environment:** The Proving Grounds warzone. Fourth day of travel through hostile terrain. A Voidspawn stronghold blocks the path forward.
+
+**Pre-mission:** Dialogue scene. During a coordinated assault on a Voidspawn stronghold, Kael orders the team to push through a chokepoint—a narrow canyon where the terrain funnels the Voidspawn into a concentrated area. It makes sense tactically. More concentrated enemies mean higher burst damage efficiency. But something is wrong with the angle. The enemies hitting from above the canyon rim are getting clean shots down on Maren and Mira. The position is good for offense but weak defensively. Ren looks at Kael, then at the canyon again. Then he speaks. The first tactical comment anyone has heard from him in months. "Hold position. Let them come to us." Kael starts to push forward. Stops. Considers. Ren is right. A holding position would let the Voidspawn cluster more densely while advancing through the canyon—less time for them to exploit the high-ground advantage. Higher casualty rate for the creatures, lower risk for the Veilborn. "Shift defensive stance. Let them come," Kael calls. The group repositions.
+
+**Combat:** Stronghold assault with positioning strategy. The Voidspawn advance into the prepared line. Ren becomes a wall of steel. Sera's burst damage devastates the tightly packed creatures. Maren heals from safety. The fight is over in minutes.
+
+**Combat dialogue:** "Hold position. Let them come to us." (Ren, rare tactical input) | "Shift defensive stance!" (Kael, adapting) | "Formation tight—they're advancing!" (Sera)
+
+**Post-mission:** After, Kael nods at Ren. The smallest acknowledgment. But Ren sees it. His silence is choice, not submission. When he does speak, Kael listens. Something has shifted in their dynamic—Ren is no longer a supporter following orders. He's a tactical equal, and Kael recognizes it.
+
+---
+
+### Stage 7-6: "Final Approach Warzone" — GAMEPLAY STAGE
+
+**Environment:** The Proving Grounds are a warzone. The Sovereign's forces are concentrated here—as if the entity, on some instinctive level, senses that the group is heading for the Wellspring and is trying to block their path. The terrain warps constantly. Gravity shifts for seconds at a time. The sky flickers between worlds so rapidly that it strobes. Voidspawn materialize from the ground mid-step, emerging from tears that open and close in heartbeats.
+
+**Pre-mission:** Brief card: "The group fights through the Proving Grounds—a concentrated Voidspawn warzone."
+
+**Combat:** The group fights through it day after day. Five Resonants now—Kael, Ren, Sera, Maren, and Voss. Three Veilborn sustaining them. The combat is relentless. Every mile east is earned in blood and Veil Essence.
+
+**Combat dialogue:** "Hold the line!" (Kael) | "Spread formation—they're everywhere!" (Sera) | "Healing incoming—stay mobile!" (Maren) | "Bonds holding—push!" (Senna)
+
+**Post-mission:** The group pushes deeper into the Proving Grounds. The Sovereign looms larger with each day. The end is approaching.
+
+---
+
+### Stage 7-7: "Otho's Final Calculations" — CHARACTER STAGE
+
+**Environment:** Camp in the deep Proving Grounds. Otho works through calculations obsessively. Papers cover a makeshift table. The group surrounds him—exhausted, waiting.
+
+**Pre-mission:** Dialogue scene. On the seventh day in the Proving Grounds, Kael addresses the full group. All eight of them—five Resonants (Kael, Ren, Sera, Maren, Voss), three Veilborn (Senna, Mira, Otho)—gathered in a cave that is, for the moment, stable. He explains Otho's theory. The Wellspring. The seal. The plan. "The Veilborn channel their energy into the Veil at the convergence point. The barrier closes. The Echoes are lost—permanently. The Voidspawn stop spawning. The Sovereign, cut off from its source, weakens and dies." He looks at each person in turn. "The Veilborn lose their powers. They become normal. But they live. Everyone else is saved."
+
+**Combat:** None.
+
+**Post-mission:** Senna speaks next. "And we do this willingly. No one is executing us. We're choosing." The group is quiet. Sera looks at the Veilborn. Maren looks at the ground. Ren stands where he always stands—behind Kael, ready. Voss is the last to speak. "When do we move?" Kael: "Tomorrow." Voss nods. "Good." There's nothing else to say. Tomorrow they move toward the Wellspring. Tomorrow they seal the barrier. Tomorrow everything ends.
+
+---
+
+### Stage 7-8: "Final Camp Preparations" — CHARACTER STAGE
+
+**Environment:** The final camp before the assault on the Wellspring. The ground here is crystal, seamless and faintly luminous. The air smells of ozone and something else that doesn't belong.
+
+**Pre-mission:** Dialogue scene. The group makes camp. Otho finishes his calculations—the math is as right as he can make it. Senna performs final attunement checks on everyone, making sure all bonds are as clean and stable as possible for what comes next. Kael reviews the approach routes one last time. Mira sits apart with her notebook, writing final observations about the Veil patterns. The energy moves in spirals, folding back on itself. She writes quickly, documenting everything she's learned about attunement, about the Veil, about herself. Someone calls her name eventually. She puts down her pen.
+
+**Combat:** None.
+
+**Post-mission:** That night, nobody sleeps much. Maren double-checks supplies obsessively—something to do with her hands. Ren cleans weapons he's already cleaned multiple times. Sera sits quietly, her degraded bonds humming softly as Senna works on them one final time. Voss stares into the fire without expression, calculating odds that probably don't exist. Kael walks the perimeter, checking sight lines, planning escape routes for a group that probably won't need them. And Senna—Senna holds the wooden charm from the ferryman's daughter one last time, understanding that after tomorrow, she won't be able to hold anything from the Veil anymore.
+
+---
+
+### Stage 7-9: "The Arbiter of Trials" — BOSS STAGE
+
+**Environment:** A warzone arena deep in the Proving Grounds. The Sovereign is visible constantly—a pillar of darkness against a wrongly-colored sky. The arena itself is corrupted—terrain warping, gravity shifting, reality itself unstable.
+
+**Pre-mission:** Dialogue scene. The group approaches a structure of corrupted stone—the Arbiter of Trials stands at its center. An ancient Voidspawn that has absorbed enough of the Veil's energy to develop something like intelligence. It doesn't just fight. It tests. Kael: "This thing is a guardian. It won't let us pass without proving ourselves." The group approaches. The Arbiter roars—a sound that echoes wrong, hitting multiple frequencies at once. Senna: "We're doing this willingly. No one is executing us. We're choosing." The group nods. Voss: "Together." Kael: "Together."
+
+**Combat:** Three-phase boss fight.
+
+*Phase 1 - Synergy Suppression:* The Arbiter suppresses all element synergy bonuses, stripping the team's elemental advantages and forcing them to fight on archetype power and raw stats alone. Kael feels the loss like a missing limb. The team's damage drops by a third. "Archetype synergies only!" Kael calls. "Tight formation. Ren, hold center. Sera, burst when you have openings."
+
+*Phase 2 - Battlefield Split:* The battlefield splits—a rift of energy bisecting the arena. The team is forced to fight on two fronts simultaneously. A VIP healer appears on one side, sustaining the Arbiter's health. Sera's side has the damage to kill it. Maren's side has the healing to survive without it. The division is almost perfectly designed to test whether the team can function as two independent halves.
+
+*Phase 3 - Countdown DPS Race:* The Arbiter begins charging a devastating attack—twenty-five seconds to deal enough damage to interrupt it, or wipe. A pure DPS race on a split battlefield with suppressed synergies. Voss is magnificent. He throws himself at the Arbiter with everything he has—no conservation, no holding back. Sera matches him, channeling the Crucible's ambient energy despite the corruption cost. Ren absorbs the Arbiter's counterattacks without flinching. Maren keeps everyone alive through sheer force of will. The countdown reaches three seconds. Kael lands the killing blow.
+
+**Combat dialogue:** "Both sides—push the damage!" (Kael, coordinating split battlefield) | "Interrupt the charge!" (Voss, rare leadership moment) | "Burst now!" (Sera, devastating burst) | "Healing is down to reserves—finish this!" (Maren, pushing through exhaustion)
+
+**Post-mission:** The Arbiter dissolves. The Proving Grounds go quiet—the warping, the flickering, the stuttering reality all calming as the entity's influence fades. Behind them: the path to the Wellspring is clear. Ahead: the Sovereign, filling the sky. Kael looks at his group—five Resonants and three Veilborn, standing together after everything they've endured. "Together," Kael says. "Whatever happens." Voss, after a long pause: "Together."
+
+---
+
+### Stage 7-10: "The Wellspring Awaits" — CHARACTER STAGE
+
+**Environment:** The final approach to the Wellspring. The ground is crystal, perfectly smooth. The air is thick with Veil energy. The Sovereign looms overhead—visible constantly, a pillar of darkness casting a shadow that changes everything beneath it.
+
+**Pre-mission:** Dialogue scene. The group reaches the edge of the Wellspring zone. They can see it ahead—the convergence point, where the Veil is at its thinnest. Where reality becomes negotiable. Where three Veilborn will channel the seal and lose everything they are. Kael gathers them one final time. "Tomorrow morning. We seal the Wellspring. We close the Veil. We end the Sovereign's influence. And we all go home." He says it like he believes it. Maybe he does. Senna, Mira, and Otho stand together—the three who will channel the seal. They don't speak. They don't need to. They've known from the beginning what this costs them. Maren finds Senna's hand and squeezes it. Sera nods at the Veilborn. Ren stands ready. Voss checks weapons one final time. And Kael—Kael stands looking toward the Wellspring, toward the Sovereign, toward the end of everything.
+
+**Combat:** None (final preparation).
+
+**Post-mission:** That night, the group camps one final time before the assault. Nobody sleeps. They sit together—all eight of them—watching the Sovereign's light paint the sky wrong colors. Tomorrow: the seal. Tomorrow: the end. Tomorrow: the world changes. But tonight, they're still all here. Still all together. And that's enough.
 
 ---
 

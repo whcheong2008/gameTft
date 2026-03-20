@@ -66,7 +66,7 @@ namespace ShatteredVeil.Tests.EditMode.UI
             Assert.DoesNotThrow(() => GameEventBus.FireLevelUp(5));
             Assert.DoesNotThrow(() => GameEventBus.FireUnitRolled("test_unit"));
             Assert.DoesNotThrow(() => GameEventBus.FireUnitStarredUp("test_unit", 3));
-            Assert.DoesNotThrow(() => GameEventBus.FireTeamChanged(0));
+            Assert.DoesNotThrow(() => GameEventBus.FireTeamChanged());
             Assert.DoesNotThrow(() => GameEventBus.FireItemEquipped("unit1", "item1"));
             Assert.DoesNotThrow(() => GameEventBus.FireCombatStarted());
             Assert.DoesNotThrow(() => GameEventBus.FireCombatTurnCompleted(1));

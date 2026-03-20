@@ -19,8 +19,13 @@ namespace ShatteredVeil.Mono.UI
         public static event Action<string, int> OnUnitStarredUp; // unitId, newStars
 
         // Team
-        public static event Action<int> OnTeamChanged;
-        public static event Action<string, string> OnItemEquipped;
+        public static event Action<int> OnTeamIndexChanged;       // teamIndex (from hub)
+        public static event Action OnTeamChanged;                  // generic team changed
+        public static event Action<string, string> OnItemEquipped; // unitId, itemId
+        public static event Action<string, int, int> OnUnitPlaced; // unitId, col, row
+        public static event Action<string> OnUnitRemoved;          // unitId
+        public static event Action<string, string> OnHeroAssigned; // unitId, heroId
+        public static event Action<string> OnHeroUnassigned;       // unitId
 
         // Combat
         public static event Action OnCombatStarted;
@@ -41,16 +46,19 @@ namespace ShatteredVeil.Mono.UI
         public static void FireLevelUp(int newLevel) => OnLevelUp?.Invoke(newLevel);
         public static void FireUnitRolled(string unitId) => OnUnitRolled?.Invoke(unitId);
         public static void FireUnitStarredUp(string unitId, int newStars) => OnUnitStarredUp?.Invoke(unitId, newStars);
-        public static void FireTeamChanged(int teamIndex) => OnTeamChanged?.Invoke(teamIndex);
+        public static void FireTeamIndexChanged(int teamIndex) => OnTeamIndexChanged?.Invoke(teamIndex);
+        public static void FireTeamChanged() => OnTeamChanged?.Invoke();
         public static void FireItemEquipped(string unitId, string itemId) => OnItemEquipped?.Invoke(unitId, itemId);
+        public static void FireUnitPlaced(string unitId, int col, int row) => OnUnitPlaced?.Invoke(unitId, col, row);
+        public static void FireUnitRemoved(string unitId) => OnUnitRemoved?.Invoke(unitId);
+        public static void FireHeroAssigned(string unitId, string heroId) => OnHeroAssigned?.Invoke(unitId, heroId);
+        public static void FireHeroUnassigned(string unitId) => OnHeroUnassigned?.Invoke(unitId);
         public static void FireCombatStarted() => OnCombatStarted?.Invoke();
         public static void FireCombatTurnCompleted(int turnNumber) => OnCombatTurnCompleted?.Invoke(turnNumber);
         public static void FireCombatEnded(bool victory, int stars) => OnCombatEnded?.Invoke(victory, stars);
         public static void FireBuildingUpgraded(string buildingId, int newLevel) => OnBuildingUpgraded?.Invoke(buildingId, newLevel);
         public static void FireSaveCompleted() => OnSaveCompleted?.Invoke();
         public static void FireToastRequested(string message) => OnToastRequested?.Invoke(message);
-
-        // Alias from theirs branch
         public static void FireToast(string message) => OnToastRequested?.Invoke(message);
 
         /// <summary>
@@ -63,8 +71,13 @@ namespace ShatteredVeil.Mono.UI
             OnLevelUp = null;
             OnUnitRolled = null;
             OnUnitStarredUp = null;
+            OnTeamIndexChanged = null;
             OnTeamChanged = null;
             OnItemEquipped = null;
+            OnUnitPlaced = null;
+            OnUnitRemoved = null;
+            OnHeroAssigned = null;
+            OnHeroUnassigned = null;
             OnCombatStarted = null;
             OnCombatTurnCompleted = null;
             OnCombatEnded = null;
