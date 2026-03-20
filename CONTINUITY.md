@@ -504,16 +504,75 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 - Visual/audio polish (sprites, VFX, music)
 - Many hero skill node combat effects (placeholder `function(unit, hero) {}`)
 
-**Known issues before testing:**
+**Known issues (HTML prototype):**
 - Some UI may still reference "gold" instead of "Veil Essence"
 - Fragment stub in heroes.js (harmless)
-- Phase 2 never smoke-tested
-- Boss reconciliation between prompt 15 and MISSIONS-DESIGN.md may cause issues
+- 3 critical bugs found and fixed (BUGS.md): hero emoji crash, unitHasArchetype missing, enemy stasis loop
+- 6 design issues with template assignments (Gale Dancer, Pulse Mender, Gust Sentinel, Fortress, Golem, Leviathan, Phoenix) — flagged, not blocking
 
-### Next Steps
+**Ability system rework (post-prototype):**
+- v1: 25 shared templates → units felt like clones (66 units collapsed to 19 functions)
+- v2 (CURRENT): 132 per-unit unique ability functions. Template = classification tag only. See TEMPLATE-V2-HANDOFF.md.
+- Healer auto-heal fixed: healers target lowest-HP ally, +10 mana per heal, fire onHeal not onHit. See HEALER-FIX-HANDOFF.md.
+- 131 stat adjustments applied by tester session (tier scaling, healer buffs, specific nerfs/buffs). Values baked into units-templates.js.
 
-1. **Playtest the HTML prototype** — smoke test all systems, log bugs in BUGS.md
-2. **Fix game-breaking bugs** — anything that prevents progression or crashes
-3. **Unity planning session** — engine decisions, porting strategy, story integration architecture
-4. **Hard mode design** (KIV — keep in view, not blocking)
-5. **Balance pass** — after playtesting reveals feel issues
+---
+
+## Unity Port — Current State
+
+**Project**: `Unity/ShatteredVeil/` — Unity 6 LTS, 2D URP, MCP connected.
+**Architecture**: See `UNITY-ARCHITECTURE.md` for full reference.
+**Golden rule**: `Scripts/Core/` = pure C# (no UnityEngine). Enforced by `GameCore.asmdef` with `noEngineReferences: true`.
+
+### Track A: Core Logic Port
+
+| Prompt | System | Status | Files |
+|--------|--------|--------|-------|
+| 34 | Project setup (folders, packages, assembly defs) | Done | ~10 |
+| 35 | Ground truth extraction | Done | GROUND-TRUTH.md (1010 lines) |
+| 36 | Combat core (grid, damage, targeting, turns) | Done | 16 source + 6 tests |
+| 37 | Abilities + mana (old per-unit catalog) | Done → **Being replaced by Prompt 45** | 7 source + 4 tests |
+| 38 | Status effects (DoT, CC, DR, shields) | Done | 5 source + 3 tests |
+| 39 | Passives + bosses (8 bosses, phases) | Done → **Passives simplified by Prompt 45** | 12 source + tests |
+| 40 | Unit data (132 ScriptableObjects, synergies) | Done (may need stat refresh from v2 changes) | 5 source + 132 assets + 3 tests |
+| 41 | Gacha + economy | Done | 6 source + 2 tests |
+| 42 | Items (equipment, enhancement, gems) | **PENDING — needs re-run** | — |
+| 43 | Heroes (6 heroes, skill trees, availability) | Done | 10 source + 5 tests |
+| 44 | Save system | **PENDING — after items** | — |
+| 45 | Ability v2 (per-unit unique, healer fix) | Done | 25 templates, scaling, healer fix |
+
+**Totals so far**: ~46 C# source files, ~20 test files, 132 unit ScriptableObjects, 15 synergy assets.
+
+### Remaining Work
+
+**Immediate (finish Track A):**
+1. ~~Prompt 45 completes → ability v2 with healer fix~~ ✓ Done
+2. Prompt 42 re-run → items system ← **NEXT**
+3. Prompt 44 → save system (after items merge)
+4. Verify Prompt 40 ScriptableObjects match post-v2 stat adjustments
+
+**After Track A completes:**
+- **Track B: Scenes + UI** — Camp/Hub scene, Combat scene, Team Builder, Gacha, Mission Select
+- **Track C: Story** — Dialogue system, 74 stages of narrative from STORY-STAGES-V2.md (3-5 sessions)
+- **Track D: Graphics** — Art direction, 132 unit sprites, VFX, audio (separate session/LLM)
+- **Track E: Mobile** — iOS/Android build modules installed, UI/input rework (future)
+
+### Key Reference Documents
+
+| Doc | Purpose |
+|-----|---------|
+| `UNITY-ARCHITECTURE.md` | **NEW** — Full architecture reference, folder map, system graph, how-to guide |
+| `UNITY-MIGRATION-PLAN.md` | Migration phases, parallel tracks, recommendations |
+| `GROUND-TRUTH.md` | Every testable value and formula (updated for ability v2) |
+| `TEMPLATE-V2-HANDOFF.md` | Ability system v2 architecture (per-unit unique abilities) |
+| `HEALER-FIX-HANDOFF.md` | Healer auto-heal rules and combat engine fix |
+| `SETUP-UNITY-STEP-BY-STEP.md` | Unity + MCP installation steps |
+| `testing/testing-architecture-strategy.md` | 4-layer testing pyramid |
+
+### Orchestration Model
+
+**Cowork session** = orchestrator (writes prompts, reviews output, maintains context, plans)
+**Claude Code sessions** = workers (read a prompt, implement on feature branch, commit)
+
+Prompts live in `prompts/` folder. Unity prompts start at 34. Current: up to 45 (45 done, 42 next).
+Git SOP: branch → commit → push → merge (see "Prompt Git SOP" section above).
