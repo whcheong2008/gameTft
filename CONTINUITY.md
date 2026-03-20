@@ -558,8 +558,8 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 
 | Prompt | Scene | Status |
 |--------|-------|--------|
-| 47 | UI Foundation — SceneRouter, EventBus, PlaceholderFactory, TopBar, Toast, Dialogs | PENDING |
-| 48 | Hub / Camp — building grid, upgrade flow, building panels, bottom nav | PENDING |
+| 47 | UI Foundation — SceneRouter, EventBus, PlaceholderFactory, TopBar, Toast, Dialogs | Done |
+| 48 | Hub / Camp — building grid, upgrade flow, building panels, bottom nav | PENDING ← **NEXT** |
 | 49 | Gacha + Roster — rolling UI, rates, pity, roster grid, star-up, sell, evolve | PENDING |
 | 50 | Team Builder — 4×2 grid, unit placement, equipment, synergy preview, hero assign | PENDING |
 | 51 | Mission Select — region map (8 regions), stage list (74 stages), lock system | PENDING |

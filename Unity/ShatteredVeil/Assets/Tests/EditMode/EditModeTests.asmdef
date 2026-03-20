@@ -1,7 +1,7 @@
 {
     "name": "EditModeTests",
     "rootNamespace": "ShatteredVeil.Tests.EditMode",
-    "references": ["GameCore", "GameData", "UnityEngine.TestRunner", "UnityEditor.TestRunner"],
+    "references": ["GameCore", "GameData", "GameMono", "UnityEngine.TestRunner", "UnityEditor.TestRunner"],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
