@@ -150,20 +150,24 @@ function Build-LaunchPrompt($promptDef) {
     $docsList = ""
     $i = 1
     foreach ($doc in ($promptDef.Docs -split ";")) {
-        $docsList += "${i}. ``$doc```n"
+        $docsList += "${i}. $doc`n"
         $i++
     }
 
+    $file = $promptDef.File
+    $branch = $promptDef.Branch
+    $commitMsg = $promptDef.CommitMsg
+
     return @"
-Read the file ``prompts/$($promptDef.File)`` in full. This is your implementation prompt.
+Read the file prompts/$file in full. This is your implementation prompt.
 
 Before coding, also read these reference docs (in order):
 $docsList
 Then implement everything the prompt specifies:
-- Branch: ``$($promptDef.Branch)``
+- Branch: $branch
 - Create branch from main, implement, run tests, commit, push.
-- Use ``keys/github.txt`` for the GitHub PAT when pushing (trim whitespace). Format: ``https://whcheong2008:<TOKEN>@github.com/whcheong2008/gameTft.git``
-- Commit message format: "$($promptDef.CommitMsg)"
+- Use keys/github.txt for the GitHub PAT when pushing (trim whitespace). Format: https://whcheong2008:<TOKEN>@github.com/whcheong2008/gameTft.git
+- Commit message format: $commitMsg
 
 When done, report: files created, tests passed/failed, any issues.
 "@
@@ -226,11 +230,15 @@ for ($num = $Start; $num -le $End; $num++) {
     "[$timestamp] Starting Prompt $num" | Out-File $logFile
 
     try {
-        $output = claude -p $launch `
-            --allowedTools "Bash Edit Write Read Glob Grep" `
+        # Write launch prompt to temp file to avoid PowerShell escaping issues
+        $tempPromptFile = Join-Path $LogDir "prompt-${num}-input.txt"
+        $launch | Out-File -FilePath $tempPromptFile -Encoding UTF8
+
+        $output = Get-Content $tempPromptFile -Raw | claude -p `
+            --allowedTools "Bash" "Edit" "Write" "Read" "Glob" "Grep" `
             --dangerously-skip-permissions `
             --model opus `
-            --max-budget-usd 5 2>&1
+            --max-budget-usd 10 2>&1
 
         $output | Out-File $logFile -Append
         Write-OK "Claude Code session completed"
@@ -243,7 +251,9 @@ for ($num = $Start; $num -le $End; $num++) {
     }
 
     # Verify
-    Start-Sleep -Seconds 2  # Give git a moment
+    # Fetch remote branches so we can see new commits
+    git fetch --all 2>$null | Out-Null
+    Start-Sleep -Seconds 2
     if (Test-PromptDone $num) {
         # Get commit info
         $commitLine = git log --all --oneline 2>$null | Select-String -Pattern "(?i)prompt ${num}:" | Select-Object -First 1
