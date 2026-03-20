@@ -575,4 +575,38 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 **Claude Code sessions** = workers (read a prompt, implement on feature branch, commit)
 
 Prompts live in `prompts/` folder. Unity prompts start at 34. Current: up to 45 (45 done, 42 next).
-Git SOP: branch → commit → push → merge (see "Prompt Git SOP" section above).
+
+### Git Auth & Push
+
+GitHub PAT is stored in `keys/github.txt`. To push from the VM or Claude Code:
+
+```bash
+TOKEN=$(cat keys/github.txt)
+git remote set-url origin https://whcheong2008:${TOKEN}@github.com/whcheong2008/gameTft.git
+git push --set-upstream origin <branch-name>
+# Reset URL after push to avoid storing token in config:
+git remote set-url origin https://github.com/whcheong2008/gameTft.git
+```
+
+**Do NOT ask the user for credentials.** They are already in `keys/github.txt`.
+
+### Standard Launch Prompt (for Claude Code sessions)
+
+When launching a prompt in Claude Code, the Cowork orchestrator generates a copy-paste launch prompt in this format:
+
+```
+Read the file `prompts/<NN>-<name>.md` in full. This is your implementation prompt.
+
+Before coding, also read these reference docs (in order):
+1. <list of docs the prompt says to read first>
+
+Then implement everything the prompt specifies:
+- Branch: `feature/<branch-name>`
+- Create branch from main, implement, run tests, commit, push.
+- Use `keys/github.txt` for the GitHub PAT when pushing.
+- Commit message format: "Prompt <NN>: <short description>"
+
+When done, report: files created, tests passed/failed, any issues.
+```
+
+This saves the user from having to explain context each time. The orchestrator (Cowork) always generates this ready to copy-paste.
