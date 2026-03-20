@@ -19,6 +19,7 @@ namespace ShatteredVeil.Core.Units
         int BaseMana { get; }
         float BaseCritRate { get; }
         float BaseCritDmg { get; }
+        bool IsEvolved { get; }
     }
 
     /// <summary>
@@ -39,5 +40,6 @@ namespace ShatteredVeil.Core.Units
         public int BaseMana { get; set; }
         public float BaseCritRate { get; set; }
         public float BaseCritDmg { get; set; }
+        public bool IsEvolved { get; set; }
     }
 }
