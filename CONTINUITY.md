@@ -567,10 +567,27 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 
 **Track B COMPLETE.** All scenes built with placeholder graphics.
 
-**Next tracks (need design discussion):**
-- **Track C: Story** — Dialogue system, 74 stages of narrative from STORY-STAGES-V2.md (3-5 sessions)
-- **Track D: Graphics** — Art direction, 132 unit sprites, VFX, audio (separate session/LLM)
-- **Track E: Mobile** — iOS/Android build modules installed, UI/input rework (future)
+**Track C: Story** (Prompts 54-56):
+
+| Prompt | System | Status |
+|--------|--------|--------|
+| 54 | Dialogue engine — StoryBeat model, DialogueBox, NarrationBox, BriefCard, CombatDialogue, StoryDirector | Done |
+| 55 | Story content R1-R4 — 36 stage scripts (9+9+9+9) | Done |
+| 56 | Story content R5-R8 — 38 stage scripts (10+10+10+8), Lyric death, Mira intro, Abyss Gate | Done |
+
+**Track C COMPLETE.** 74 stages of story content registered. Needs merge to main.
+
+**Track D: Asset Pipeline** (Prompt 57):
+
+| Prompt | System | Status |
+|--------|--------|--------|
+| 57 | Asset manifest (258+ assets), folder structure, AssetLoader with placeholder fallback, editor progress window | Done |
+
+**Track D foundation COMPLETE.** Drop PNGs into Art/ folders and they auto-replace placeholders. Needs merge to main.
+
+**Remaining:**
+- **Merge Prompts 54-57** to main (like Prompt 53)
+- **Track E: Mobile** — iOS/Android build modules, touch input, UI scaling (future)
 
 ### Key Reference Documents
 
@@ -589,7 +606,7 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 **Cowork session** = orchestrator (writes prompts, reviews output, maintains context, plans)
 **Claude Code sessions** = workers (read a prompt, implement on feature branch, commit)
 
-Prompts live in `prompts/` folder. Unity prompts start at 34. Current: up to 52 (46 done, 47-52 are Track B — pending). Start with Prompt 47.
+Prompts live in `prompts/` folder. Unity prompts start at 34. Current: up to 57. Tracks A+B+C+D done on feature branches. Prompts 54-57 need merge to main.
 
 ### Git Auth & Push
 
