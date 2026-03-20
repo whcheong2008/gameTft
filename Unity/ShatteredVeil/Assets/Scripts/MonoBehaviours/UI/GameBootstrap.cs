@@ -1,4 +1,6 @@
+using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace ShatteredVeil.Mono.UI
 {
@@ -10,22 +12,32 @@ namespace ShatteredVeil.Mono.UI
     {
         private void Start()
         {
-            // 1. Initialize SaveManager (load or create save)
-            // SaveManager is initialized on its own (Prompt 44 — pending).
-            // For now, just ensure it exists if present.
-
-            // 2. GameEventBus is static, no init needed.
+            // 1. GameEventBus is static, no init needed.
             GameEventBus.ClearAll();
 
-            // 3. Transition to Hub scene
-            if (SceneRouter.Instance != null)
-            {
-                SceneRouter.Instance.LoadScene("Hub");
-            }
-            else
+            // 2. Ensure SceneRouter exists (it initializes itself in Awake)
+            if (SceneRouter.Instance == null)
             {
                 Debug.LogWarning("[GameBootstrap] SceneRouter not found. Ensure SceneRouter is in Boot scene.");
+                return;
             }
+
+            // 3. Load Hub scene directly (no fade needed on initial boot)
+            StartCoroutine(LoadHubDirect());
+        }
+
+        private IEnumerator LoadHubDirect()
+        {
+            var op = SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Additive);
+            if (op == null)
+            {
+                Debug.LogError("[GameBootstrap] Failed to start loading Hub scene");
+                yield break;
+            }
+            yield return op;
+
+            // Tell SceneRouter what the current scene is so future transitions work
+            SceneRouter.Instance.SetCurrentScene("Hub");
         }
     }
 }

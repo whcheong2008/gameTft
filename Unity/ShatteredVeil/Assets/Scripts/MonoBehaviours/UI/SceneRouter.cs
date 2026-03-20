@@ -62,6 +62,14 @@ namespace ShatteredVeil.Mono.UI
 
         public string CurrentScene => currentScene;
 
+        /// <summary>
+        /// Set the current scene name (used by GameBootstrap for the initial direct load).
+        /// </summary>
+        public void SetCurrentScene(string sceneName)
+        {
+            currentScene = sceneName;
+        }
+
         public void LoadScene(string sceneName)
         {
             if (isTransitioning) return;
