@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2406db87c2a716c46845b49e71737100, type: 3}
+  m_Name: EconomyConfig
+  m_EditorClassIdentifier: GameData::ShatteredVeil.Data.EconomyConfig
+  pullCostVE: 50
+  xpPerLevel: 6801000068010000860100008601000086010000580200005802000058020000480300004803000048030000f2040000f3040000f3040000c4090000c4090000b20c0000b20c000000190000
+  levelCapPerRegion: 0400000004000000070000000a0000000d00000010000000120000001400000014000000
+  teamSizeBreakpoints:
+  - minLevel: 1
+    teamSize: 3
+  - minLevel: 4
+    teamSize: 4
+  - minLevel: 8
+    teamSize: 5
+  - minLevel: 12
+    teamSize: 6
+  - minLevel: 16
+    teamSize: 7
+  - minLevel: 17
+    teamSize: 8
+  starUpCopyCost: 030000000400000005000000080000000a000000
+  starUpVECost: 64000000c80000009001000020030000dc050000
+  evolutionVECost: f4010000ee020000e8030000dc050000d0070000
+  practices:
+  - practiceId: attunement_rite
+    displayName: Attunement Rite
+    maxLevel: 5
+    upgradeCostVE: 
+  - practiceId: essence_reservoir
+    displayName: Essence Reservoir
+    maxLevel: 5
+    upgradeCostVE: 
+  - practiceId: deep_resonance
+    displayName: Deep Resonance
+    maxLevel: 3
+    upgradeCostVE: 
+  - practiceId: echo_shaping
+    displayName: Echo Shaping
+    maxLevel: 5
+    upgradeCostVE: 
+  - practiceId: sustained_bonds
+    displayName: Sustained Bonds
+    maxLevel: 1
+    upgradeCostVE: 
+  - practiceId: prism_focus
+    displayName: Prism Focus
+    maxLevel: 5
+    upgradeCostVE: 
+  - practiceId: veil_wellspring
+    displayName: Veil Wellspring
+    maxLevel: 5
+    upgradeCostVE: 
+  - practiceId: kindred_circle
+    displayName: Kindred Circle
+    maxLevel: 5
+    upgradeCostVE: 
