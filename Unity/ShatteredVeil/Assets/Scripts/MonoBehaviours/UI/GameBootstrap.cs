@@ -1,12 +1,14 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 
 namespace ShatteredVeil.Mono.UI
 {
     /// <summary>
-    /// Boot scene entry point. Initializes systems and transitions to Hub.
-    /// Attach to a GameObject in Boot.unity.
+    /// Boot scene entry point. Initializes systems, attaches persistent UI
+    /// (TopBar + BottomNav) to SceneRouter, then transitions to Hub.
     /// </summary>
     public class GameBootstrap : MonoBehaviour
     {
@@ -15,15 +17,47 @@ namespace ShatteredVeil.Mono.UI
             // 1. GameEventBus is static, no init needed.
             GameEventBus.ClearAll();
 
-            // 2. Ensure SceneRouter exists (it initializes itself in Awake)
+            // 2. Ensure SceneRouter exists
             if (SceneRouter.Instance == null)
             {
                 Debug.LogWarning("[GameBootstrap] SceneRouter not found. Ensure SceneRouter is in Boot scene.");
                 return;
             }
 
-            // 3. Load Hub scene directly (no fade needed on initial boot)
+            // 3. Attach persistent UI to SceneRouter (survives scene loads)
+            AttachPersistentUI();
+
+            // 4. Load Hub scene
             StartCoroutine(LoadHubDirect());
+        }
+
+        private void AttachPersistentUI()
+        {
+            var router = SceneRouter.Instance;
+
+            // TopBar — persistent across all scenes
+            if (router.GetComponent<TopBarController>() == null)
+            {
+                router.gameObject.AddComponent<TopBarController>();
+                Debug.Log("[GameBootstrap] TopBarController attached to SceneRouter");
+            }
+
+            // BottomNav — persistent across all scenes
+            if (router.GetComponent<BottomNavController>() == null)
+            {
+                router.gameObject.AddComponent<BottomNavController>();
+                Debug.Log("[GameBootstrap] BottomNavController attached to SceneRouter");
+            }
+
+            // Ensure there's an EventSystem (it should exist in the scene, but just in case)
+            if (EventSystem.current == null)
+            {
+                var esGo = new GameObject("EventSystem");
+                DontDestroyOnLoad(esGo);
+                esGo.AddComponent<EventSystem>();
+                esGo.AddComponent<InputSystemUIInputModule>();
+                Debug.Log("[GameBootstrap] Created persistent EventSystem");
+            }
         }
 
         private IEnumerator LoadHubDirect()
@@ -36,9 +70,6 @@ namespace ShatteredVeil.Mono.UI
             }
             yield return op;
 
-            // Tell SceneRouter what the current scene is so future transitions work.
-            // Then ask SceneRouter to unload Boot — we can't do it ourselves because
-            // this MonoBehaviour lives in Boot and would be destroyed mid-coroutine.
             SceneRouter.Instance.SetCurrentScene("Hub");
             SceneRouter.Instance.UnloadScene("Boot");
         }

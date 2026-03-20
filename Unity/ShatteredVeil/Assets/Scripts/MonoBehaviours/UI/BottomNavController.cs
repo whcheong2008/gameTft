@@ -43,7 +43,7 @@ namespace ShatteredVeil.Mono.UI
             navCanvas.sortingOrder = 200;
             var scaler = canvasGo.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1080, 1920);
+            scaler.referenceResolution = new Vector2(1280, 720);
             scaler.matchWidthOrHeight = 0.5f;
             canvasGo.AddComponent<GraphicRaycaster>();
 
@@ -57,7 +57,7 @@ namespace ShatteredVeil.Mono.UI
             barRt.anchorMax = new Vector2(1, 0);
             barRt.pivot = new Vector2(0.5f, 0);
             barRt.anchoredPosition = Vector2.zero;
-            barRt.sizeDelta = new Vector2(0, 140);
+            barRt.sizeDelta = new Vector2(0, 60);
 
             // Horizontal layout
             var hlg = barGo.AddComponent<HorizontalLayoutGroup>();

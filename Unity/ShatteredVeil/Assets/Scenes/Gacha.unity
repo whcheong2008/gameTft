@@ -209,7 +209,7 @@ GameObject:
   - component: {fileID: 727644009}
   - component: {fileID: 727644008}
   m_Layer: 0
-  m_Name: HubController
+  m_Name: GachaController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -224,9 +224,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 727644007}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0f685da04f8a34e4991406aed3ceb737, type: 3}
+  m_Script: {fileID: 11500000, guid: d7b2edc951ecba54a905b5f0d1ae5693, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GameMono::ShatteredVeil.Mono.UI.HubSceneController
+  m_EditorClassIdentifier: GameMono::ShatteredVeil.Mono.UI.GachaSceneController
 --- !u!4 &727644009
 Transform:
   m_ObjectHideFlags: 0

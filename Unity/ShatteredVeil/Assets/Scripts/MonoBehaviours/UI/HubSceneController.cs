@@ -99,23 +99,17 @@ namespace ShatteredVeil.Mono.UI
             titleRt.anchorMin = new Vector2(0, 1);
             titleRt.anchorMax = new Vector2(1, 1);
             titleRt.pivot = new Vector2(0.5f, 1);
-            titleRt.anchoredPosition = new Vector2(0, -5);
-            titleRt.sizeDelta = new Vector2(0, 40);
+            titleRt.anchoredPosition = new Vector2(0, -55); // Below persistent TopBar
+            titleRt.sizeDelta = new Vector2(0, 35);
 
-            // Standard Unity ScrollView structure:
-            // ScrollView (ScrollRect + Image)
-            //   └─ Viewport (Mask + Image)
-            //        └─ Content (RectTransform)
-            //             └─ cards...
-
-            // ScrollView container
+            // ScrollView — leave room for TopBar (top ~50px) and BottomNav (bottom ~60px)
             var scrollGo = new GameObject("ScrollView");
             scrollGo.transform.SetParent(canvasGo.transform, false);
             var scrollBg = scrollGo.AddComponent<Image>();
             scrollBg.color = new Color(0.05f, 0.05f, 0.1f, 1f);
             var scrollRt = scrollBg.rectTransform;
-            scrollRt.anchorMin = new Vector2(0.02f, 0.02f);
-            scrollRt.anchorMax = new Vector2(0.98f, 0.92f);
+            scrollRt.anchorMin = new Vector2(0.02f, 0.10f);  // Above BottomNav
+            scrollRt.anchorMax = new Vector2(0.98f, 0.86f);  // Below title
             scrollRt.offsetMin = Vector2.zero;
             scrollRt.offsetMax = Vector2.zero;
 
