@@ -540,8 +540,9 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 | 43 | Heroes (6 heroes, skill trees, availability) | Done | 10 source + 5 tests |
 | 44 | Save system | Done | SaveData, SaveSerializer, SaveManager, JsonHelper, migrator + 3 test files |
 | 45 | Ability v2 (per-unit unique, healer fix) | Done | 25 templates, scaling, healer fix |
+| 46 | SO verification & v2 alignment | Done | UnitTemplate v2 fields, 132 assets regenerated, 15 synergy assets, UnitAbilityCatalog, 14 tests |
 
-**Totals so far**: ~46 C# source files, ~20 test files, 132 unit ScriptableObjects, 15 synergy assets.
+**Totals so far**: ~50+ C# source files, ~24 test files, 132 unit ScriptableObjects, 15 synergy assets.
 
 ### Remaining Work
 
@@ -549,10 +550,24 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 1. ~~Prompt 45 completes → ability v2 with healer fix~~ ✓ Done
 2. ~~Prompt 42 re-run → items system~~ ✓ Done
 3. ~~Prompt 44 → save system~~ ✓ Done
-4. Verify Prompt 40 ScriptableObjects match post-v2 stat adjustments ← **NEXT**
+4. ~~Verify Prompt 40 ScriptableObjects match post-v2 stat adjustments~~ ✓ Done (Prompt 46)
 
-**After Track A completes:**
-- **Track B: Scenes + UI** — Camp/Hub scene, Combat scene, Team Builder, Gacha, Mission Select
+**Track A COMPLETE.** All core logic ported to Unity C#.
+
+**Track B: Scenes + UI** (Prompts 47-52, all with placeholder graphics):
+
+| Prompt | Scene | Status |
+|--------|-------|--------|
+| 47 | UI Foundation — SceneRouter, EventBus, PlaceholderFactory, TopBar, Toast, Dialogs | PENDING |
+| 48 | Hub / Camp — building grid, upgrade flow, building panels, bottom nav | PENDING |
+| 49 | Gacha + Roster — rolling UI, rates, pity, roster grid, star-up, sell, evolve | PENDING |
+| 50 | Team Builder — 4×2 grid, unit placement, equipment, synergy preview, hero assign | PENDING |
+| 51 | Mission Select — region map (8 regions), stage list (74 stages), lock system | PENDING |
+| 52 | Combat — grid renderer, unit animations, damage numbers, playback, speed controls, results | PENDING |
+
+**Execution order**: 47 first (foundation), then 48-51 in any order, then 52 last (depends on all others).
+
+**Other tracks:**
 - **Track C: Story** — Dialogue system, 74 stages of narrative from STORY-STAGES-V2.md (3-5 sessions)
 - **Track D: Graphics** — Art direction, 132 unit sprites, VFX, audio (separate session/LLM)
 - **Track E: Mobile** — iOS/Android build modules installed, UI/input rework (future)
@@ -574,7 +589,7 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 **Cowork session** = orchestrator (writes prompts, reviews output, maintains context, plans)
 **Claude Code sessions** = workers (read a prompt, implement on feature branch, commit)
 
-Prompts live in `prompts/` folder. Unity prompts start at 34. Current: up to 45 (all Track A prompts done except Prompt 40 SO verification).
+Prompts live in `prompts/` folder. Unity prompts start at 34. Current: up to 52 (46 done, 47-52 are Track B — pending). Start with Prompt 47.
 
 ### Git Auth & Push
 

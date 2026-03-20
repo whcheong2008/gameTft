@@ -1,64 +1,57 @@
 using UnityEngine;
-using ShatteredVeil.Core.Combat;
-using ShatteredVeil.Core.Units;
 
 namespace ShatteredVeil.Data
 {
+    /// <summary>
+    /// ScriptableObject holding all static data for a single unit (base or evolved).
+    /// v2-aligned: no abilityId/passiveId fields. Abilities dispatch via
+    /// UnitAbilityCatalog.Get(unitId), not through a template key.
+    /// </summary>
     [CreateAssetMenu(fileName = "NewUnit", menuName = "ShatteredVeil/Unit Template")]
-    public class UnitTemplate : ScriptableObject, IUnitData
+    public class UnitTemplate : ScriptableObject
     {
         [Header("Identity")]
+        [Tooltip("Unique key matching JS source, e.g. 'flame_warrior'")]
         public string unitId;
-        public string displayName;
-        public Element element;
-        public Archetype archetype;
-        public Archetype secondaryArchetype;
-        public bool hasSecondaryArchetype;
-        public int tier;
-        public string evolvedFromId;
-        public string evolvesIntoId;
-        public bool isEvolved;
 
-        [Header("Base Stats (Star 1)")]
+        [Tooltip("Display name, e.g. 'Flame Warrior'")]
+        public string displayName;
+
+        [Header("Classification")]
+        [Tooltip("fire, water, earth, wind, lightning, force")]
+        public string element;
+
+        [Tooltip("warrior, tank, archer, mage, assassin, healer")]
+        public string unitType;
+
+        [Tooltip("Primary archetype: guardian, warden, vanguard, duelist, predator, ranger, sorcerer, mystic, sage")]
+        public string archetype;
+
+        [Tooltip("Secondary archetype (unlocked at Awakened ascension)")]
+        public string secondaryArchetype;
+
+        [Tooltip("Playstyle classification tag, e.g. 'execute_striker'. For UI/balance only, does NOT dispatch abilities.")]
+        public string abilityTemplate;
+
+        [Header("Stats")]
+        [Tooltip("Cost tier 1-5")]
+        public int tier;
+
         public int baseHP;
         public int baseATK;
-        public int baseDEF;
-        public int baseSPD;
-        public float baseAttackSpeed;
-        public float baseCritChance;
-        public float baseCritDamage = 1.5f;
+        public float attackSpeed;
+        public float attackRange;
+        public float moveSpeed;
         public int maxMana;
 
-        [Header("Combat")]
-        public int attackRange;
-        public float moveSpeed;
-        public TargetingRule defaultTargeting;
+        [Header("Evolution")]
+        [Tooltip("Unit ID of the evolved form (base units only)")]
+        public string evolvedFormId;
 
-        [Header("References")]
-        public string abilityId;
-        public string passiveId;
+        [Tooltip("True if this is an evolved form")]
+        public bool isEvolved;
 
-        // IUnitData implementation
-        string IUnitData.UnitId => unitId;
-        string IUnitData.DisplayName => displayName;
-        Element IUnitData.Element => element;
-        Archetype IUnitData.Archetype => archetype;
-        Archetype? IUnitData.SecondaryArchetype => hasSecondaryArchetype ? secondaryArchetype : (Archetype?)null;
-        int IUnitData.Tier => tier;
-        int IUnitData.BaseHP => baseHP;
-        int IUnitData.BaseATK => baseATK;
-        int IUnitData.BaseDEF => baseDEF;
-        int IUnitData.BaseSPD => baseSPD;
-        float IUnitData.BaseAttackSpeed => baseAttackSpeed;
-        float IUnitData.BaseCritChance => baseCritChance;
-        float IUnitData.BaseCritDamage => baseCritDamage;
-        int IUnitData.MaxMana => maxMana;
-        int IUnitData.AttackRange => attackRange;
-        float IUnitData.MoveSpeed => moveSpeed;
-        string IUnitData.AbilityId => abilityId;
-        string IUnitData.PassiveId => passiveId;
-        string IUnitData.EvolvedFromId => evolvedFromId;
-        string IUnitData.EvolvesIntoId => evolvesIntoId;
-        bool IUnitData.IsEvolved => isEvolved;
+        [Tooltip("Unit ID of the base form (evolved units only)")]
+        public string baseFormId;
     }
 }
