@@ -554,8 +554,20 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 
 **Track A COMPLETE.** All core logic ported to Unity C#.
 
-**Next tracks:**
-- **Track B: Scenes + UI** — Camp/Hub scene, Combat scene, Team Builder, Gacha, Mission Select
+**Track B: Scenes + UI** (Prompts 47-52, all with placeholder graphics):
+
+| Prompt | Scene | Status |
+|--------|-------|--------|
+| 47 | UI Foundation — SceneRouter, EventBus, PlaceholderFactory, TopBar, Toast, Dialogs | PENDING |
+| 48 | Hub / Camp — building grid, upgrade flow, building panels, bottom nav | PENDING |
+| 49 | Gacha + Roster — rolling UI, rates, pity, roster grid, star-up, sell, evolve | PENDING |
+| 50 | Team Builder — 4×2 grid, unit placement, equipment, synergy preview, hero assign | PENDING |
+| 51 | Mission Select — region map (8 regions), stage list (74 stages), lock system | PENDING |
+| 52 | Combat — grid renderer, unit animations, damage numbers, playback, speed controls, results | PENDING |
+
+**Execution order**: 47 first (foundation), then 48-51 in any order, then 52 last (depends on all others).
+
+**Other tracks:**
 - **Track C: Story** — Dialogue system, 74 stages of narrative from STORY-STAGES-V2.md (3-5 sessions)
 - **Track D: Graphics** — Art direction, 132 unit sprites, VFX, audio (separate session/LLM)
 - **Track E: Mobile** — iOS/Android build modules installed, UI/input rework (future)
@@ -577,7 +589,7 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 **Cowork session** = orchestrator (writes prompts, reviews output, maintains context, plans)
 **Claude Code sessions** = workers (read a prompt, implement on feature branch, commit)
 
-Prompts live in `prompts/` folder. Unity prompts start at 34. Current: up to 46. **Track A complete.** Next: Track B (Scenes + UI).
+Prompts live in `prompts/` folder. Unity prompts start at 34. Current: up to 52 (46 done, 47-52 are Track B — pending). Start with Prompt 47.
 
 ### Git Auth & Push
 
