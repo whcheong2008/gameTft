@@ -1,6 +1,8 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -26,10 +28,8 @@ public static class SceneSetup
     [MenuItem("Tools/Setup Scenes/Boot Only")]
     public static void SetupBootScene()
     {
-        // Create or open Boot scene
         var scene = EditorSceneManager.OpenScene(BootPath, OpenSceneMode.Single);
 
-        // Clear existing objects
         foreach (var go in scene.GetRootGameObjects())
             Object.DestroyImmediate(go);
 
@@ -39,7 +39,7 @@ public static class SceneSetup
         camGo.tag = "MainCamera";
         var cam = camGo.AddComponent<Camera>();
         cam.clearFlags = CameraClearFlags.SolidColor;
-        cam.backgroundColor = new Color(0.05f, 0.05f, 0.1f, 1f); // Dark blue-black
+        cam.backgroundColor = new Color(0.05f, 0.05f, 0.1f, 1f);
         cam.orthographic = true;
         cam.orthographicSize = 5;
         cam.nearClipPlane = -1;
@@ -49,7 +49,7 @@ public static class SceneSetup
         // --- Canvas ---
         var canvasGo = CreateSceneCanvas("BootCanvas", scene);
 
-        // Loading text placeholder
+        // Loading text
         var loadingGo = new GameObject("LoadingText");
         loadingGo.transform.SetParent(canvasGo.transform, false);
         var loadingText = loadingGo.AddComponent<Text>();
@@ -64,6 +64,9 @@ public static class SceneSetup
         loadingRt.offsetMin = Vector2.zero;
         loadingRt.offsetMax = Vector2.zero;
 
+        // --- EventSystem ---
+        CreateEventSystem(scene);
+
         // --- SceneRouter ---
         var routerGo = new GameObject("SceneRouter");
         SceneManager.MoveGameObjectToScene(routerGo, scene);
@@ -75,13 +78,12 @@ public static class SceneSetup
         bootstrapGo.AddComponent(typeof(ShatteredVeil.Mono.UI.GameBootstrap));
 
         EditorSceneManager.SaveScene(scene, BootPath);
-        Debug.Log("[SceneSetup] Boot scene configured: Camera + Canvas + SceneRouter + GameBootstrap");
+        Debug.Log("[SceneSetup] Boot scene configured.");
     }
 
     [MenuItem("Tools/Setup Scenes/Hub Only")]
     public static void SetupHubScene()
     {
-        // Create Hub scene (doesn't exist yet)
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
         // --- Main Camera ---
@@ -95,22 +97,21 @@ public static class SceneSetup
         cam.orthographicSize = 5;
         cam.nearClipPlane = -1;
         cam.farClipPlane = 100;
-        camGo.AddComponent<AudioListener>(); // Boot scene is unloaded, so Hub needs its own
+        camGo.AddComponent<AudioListener>();
 
-        // No scene-level Canvas — HubSceneController creates all UI programmatically
-        // to avoid duplicate canvases and UI elements.
+        // --- EventSystem ---
+        CreateEventSystem(scene);
 
-        // --- HubSceneController ---
+        // --- HubSceneController (creates all UI programmatically) ---
         var controllerGo = new GameObject("HubController");
         SceneManager.MoveGameObjectToScene(controllerGo, scene);
         controllerGo.AddComponent(typeof(ShatteredVeil.Mono.UI.HubSceneController));
 
-        // Ensure Scenes folder exists
         if (!AssetDatabase.IsValidFolder(ScenesFolder))
             AssetDatabase.CreateFolder("Assets", "Scenes");
 
         EditorSceneManager.SaveScene(scene, HubPath);
-        Debug.Log("[SceneSetup] Hub scene configured: Camera + HubSceneController (UI created programmatically)");
+        Debug.Log("[SceneSetup] Hub scene configured.");
     }
 
     [MenuItem("Tools/Setup Scenes/Build Settings Only")]
@@ -125,6 +126,14 @@ public static class SceneSetup
         Debug.Log("[SceneSetup] Build settings updated: Boot (0), Hub (1)");
     }
 
+    private static void CreateEventSystem(Scene scene)
+    {
+        var esGo = new GameObject("EventSystem");
+        SceneManager.MoveGameObjectToScene(esGo, scene);
+        esGo.AddComponent<EventSystem>();
+        esGo.AddComponent<InputSystemUIInputModule>();
+    }
+
     private static GameObject CreateSceneCanvas(string name, Scene scene)
     {
         var canvasGo = new GameObject(name);
@@ -134,45 +143,10 @@ public static class SceneSetup
 
         var scaler = canvasGo.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1080, 1920);
+        scaler.referenceResolution = new Vector2(1280, 720);
         scaler.matchWidthOrHeight = 0.5f;
 
         canvasGo.AddComponent<GraphicRaycaster>();
         return canvasGo;
-    }
-
-    private static GameObject CreateUIPlaceholder(string name, Transform parent,
-        Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot,
-        Vector2 anchoredPosition, Vector2 sizeDelta)
-    {
-        var go = new GameObject(name);
-        go.transform.SetParent(parent, false);
-
-        // Background
-        var bg = go.AddComponent<Image>();
-        bg.color = new Color(0.1f, 0.1f, 0.15f, 0.9f);
-        var rt = bg.rectTransform;
-        rt.anchorMin = anchorMin;
-        rt.anchorMax = anchorMax;
-        rt.pivot = pivot;
-        rt.anchoredPosition = anchoredPosition;
-        rt.sizeDelta = sizeDelta;
-
-        // Label text
-        var textGo = new GameObject("Label");
-        textGo.transform.SetParent(go.transform, false);
-        var text = textGo.AddComponent<Text>();
-        text.text = name;
-        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        text.fontSize = 28;
-        text.color = new Color(0.886f, 0.718f, 0.078f); // Gold accent
-        text.alignment = TextAnchor.MiddleCenter;
-        var textRt = text.rectTransform;
-        textRt.anchorMin = Vector2.zero;
-        textRt.anchorMax = Vector2.one;
-        textRt.offsetMin = Vector2.zero;
-        textRt.offsetMax = Vector2.zero;
-
-        return go;
     }
 }

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using ShatteredVeil.Core.Economy;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace ShatteredVeil.Mono.UI
@@ -28,6 +30,7 @@ namespace ShatteredVeil.Mono.UI
             var levels = new Dictionary<string, int>();
             buildingSystem = new BuildingSystem(levels, 1, 500);
 
+            EnsureEventSystem();
             CreateHubUI();
             RefreshGrid();
 
@@ -54,9 +57,23 @@ namespace ShatteredVeil.Mono.UI
             RefreshGrid();
         }
 
+        /// <summary>
+        /// Unity UI requires an EventSystem to process any input.
+        /// Create one if none exists in the scene.
+        /// </summary>
+        private static void EnsureEventSystem()
+        {
+            if (EventSystem.current != null) return;
+
+            var esGo = new GameObject("EventSystem");
+            esGo.AddComponent<EventSystem>();
+            esGo.AddComponent<InputSystemUIInputModule>();
+            Debug.Log("[Hub] Created EventSystem (none found in scene)");
+        }
+
         private void CreateHubUI()
         {
-            // Canvas — use landscape reference resolution
+            // Canvas
             var canvasGo = new GameObject("HubCanvas");
             canvasGo.transform.SetParent(transform, false);
             hubCanvas = canvasGo.AddComponent<Canvas>();
@@ -68,7 +85,7 @@ namespace ShatteredVeil.Mono.UI
             scaler.matchWidthOrHeight = 0.5f;
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            // Title bar
+            // Title
             var titleGo = new GameObject("Title");
             titleGo.transform.SetParent(canvasGo.transform, false);
             var titleText = titleGo.AddComponent<Text>();
@@ -85,20 +102,38 @@ namespace ShatteredVeil.Mono.UI
             titleRt.anchoredPosition = new Vector2(0, -5);
             titleRt.sizeDelta = new Vector2(0, 40);
 
-            // Viewport — separate GO for the Mask (not on the ScrollRect)
+            // Standard Unity ScrollView structure:
+            // ScrollView (ScrollRect + Image)
+            //   └─ Viewport (Mask + Image)
+            //        └─ Content (RectTransform)
+            //             └─ cards...
+
+            // ScrollView container
+            var scrollGo = new GameObject("ScrollView");
+            scrollGo.transform.SetParent(canvasGo.transform, false);
+            var scrollBg = scrollGo.AddComponent<Image>();
+            scrollBg.color = new Color(0.05f, 0.05f, 0.1f, 1f);
+            var scrollRt = scrollBg.rectTransform;
+            scrollRt.anchorMin = new Vector2(0.02f, 0.02f);
+            scrollRt.anchorMax = new Vector2(0.98f, 0.92f);
+            scrollRt.offsetMin = Vector2.zero;
+            scrollRt.offsetMax = Vector2.zero;
+
+            // Viewport (child of ScrollView, handles masking)
             var viewportGo = new GameObject("Viewport");
-            viewportGo.transform.SetParent(canvasGo.transform, false);
+            viewportGo.transform.SetParent(scrollGo.transform, false);
             var vpImg = viewportGo.AddComponent<Image>();
-            vpImg.color = new Color(0, 0, 0, 1);
+            vpImg.color = new Color(1, 1, 1, 1); // White — mask uses alpha channel
+            vpImg.raycastTarget = true;
             var vpRt = vpImg.rectTransform;
-            vpRt.anchorMin = new Vector2(0.02f, 0.02f);
-            vpRt.anchorMax = new Vector2(0.98f, 0.92f);
+            vpRt.anchorMin = Vector2.zero;
+            vpRt.anchorMax = Vector2.one;
             vpRt.offsetMin = Vector2.zero;
             vpRt.offsetMax = Vector2.zero;
             var mask = viewportGo.AddComponent<Mask>();
             mask.showMaskGraphic = false;
 
-            // Content container (children laid out manually — no ContentSizeFitter)
+            // Content (child of Viewport)
             var contentGo = new GameObject("Content");
             contentGo.transform.SetParent(viewportGo.transform, false);
             contentRoot = contentGo.AddComponent<RectTransform>();
@@ -108,19 +143,7 @@ namespace ShatteredVeil.Mono.UI
             contentRoot.anchoredPosition = Vector2.zero;
             contentRoot.sizeDelta = new Vector2(0, 0);
 
-            // ScrollRect on a separate invisible GO parented to the canvas
-            var scrollGo = new GameObject("ScrollRect");
-            scrollGo.transform.SetParent(canvasGo.transform, false);
-            var scrollBg = scrollGo.AddComponent<Image>();
-            scrollBg.color = new Color(0, 0, 0, 0);
-            scrollBg.raycastTarget = true;
-            var scrollRt = scrollBg.rectTransform;
-            // Match the viewport area exactly
-            scrollRt.anchorMin = new Vector2(0.02f, 0.02f);
-            scrollRt.anchorMax = new Vector2(0.98f, 0.92f);
-            scrollRt.offsetMin = Vector2.zero;
-            scrollRt.offsetMax = Vector2.zero;
-
+            // ScrollRect component on the ScrollView GO (parent of Viewport)
             var scrollRect = scrollGo.AddComponent<ScrollRect>();
             scrollRect.horizontal = false;
             scrollRect.vertical = true;
@@ -140,7 +163,6 @@ namespace ShatteredVeil.Mono.UI
 
         public void RefreshGrid()
         {
-            // Clear existing cards
             foreach (var card in cards)
             {
                 if (card != null && card.gameObject != null)
@@ -148,7 +170,6 @@ namespace ShatteredVeil.Mono.UI
             }
             cards.Clear();
 
-            // Create a card for each building
             int count = BuildingData.All.Length;
             for (int i = 0; i < count; i++)
             {
@@ -156,7 +177,6 @@ namespace ShatteredVeil.Mono.UI
                 var cardGo = new GameObject("Card_" + def.Id);
                 cardGo.transform.SetParent(buildingGridContainer.transform, false);
 
-                // Position each card manually — no LayoutGroup needed
                 var cardRt = cardGo.AddComponent<RectTransform>();
                 cardRt.anchorMin = new Vector2(0, 1);
                 cardRt.anchorMax = new Vector2(1, 1);
@@ -170,7 +190,6 @@ namespace ShatteredVeil.Mono.UI
                 cards.Add(card);
             }
 
-            // Set content height so ScrollRect knows how far to scroll
             float totalHeight = CardPadding * 2 + count * CardHeight + (count - 1) * CardSpacing;
             contentRoot.sizeDelta = new Vector2(0, totalHeight);
         }

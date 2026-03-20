@@ -1,7 +1,7 @@
 {
     "name": "GameEditor",
     "rootNamespace": "ShatteredVeil.Editor",
-    "references": ["GameCore", "GameData", "GameMono"],
+    "references": ["GameCore", "GameData", "GameMono", "Unity.InputSystem"],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
