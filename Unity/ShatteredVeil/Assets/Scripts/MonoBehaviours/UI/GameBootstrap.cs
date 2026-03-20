@@ -38,6 +38,14 @@ namespace ShatteredVeil.Mono.UI
 
             // Tell SceneRouter what the current scene is so future transitions work
             SceneRouter.Instance.SetCurrentScene("Hub");
+
+            // Unload Boot scene — SceneRouter survives via DontDestroyOnLoad.
+            // This removes BootCanvas/LoadingText and the Boot camera.
+            var bootScene = SceneManager.GetSceneByName("Boot");
+            if (bootScene.isLoaded)
+            {
+                yield return SceneManager.UnloadSceneAsync(bootScene);
+            }
         }
     }
 }

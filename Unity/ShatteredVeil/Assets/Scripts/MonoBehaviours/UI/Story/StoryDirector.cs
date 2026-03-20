@@ -67,8 +67,7 @@ namespace ShatteredVeil.Mono.UI.Story
 
             if (!string.IsNullOrEmpty(envDesc) && _narrationBox != null)
             {
-                bool envDone = false;
-                _narrationBox.Show(envDesc, () => envDone = true);
+                _narrationBox.Show(envDesc, null);
                 yield return new WaitForSeconds(_environmentDisplayDuration);
                 _narrationBox.Hide();
             }

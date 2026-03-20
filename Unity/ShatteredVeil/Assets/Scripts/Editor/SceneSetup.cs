@@ -95,35 +95,10 @@ public static class SceneSetup
         cam.orthographicSize = 5;
         cam.nearClipPlane = -1;
         cam.farClipPlane = 100;
-        // No AudioListener — Boot scene's camera (persisted via SceneRouter) has one
+        camGo.AddComponent<AudioListener>(); // Boot scene is unloaded, so Hub needs its own
 
-        // --- Canvas ---
-        var canvasGo = CreateSceneCanvas("HubCanvas", scene);
-
-        // TopBar placeholder
-        var topBar = CreateUIPlaceholder("TopBar", canvasGo.transform,
-            new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1),
-            Vector2.zero, new Vector2(0, 120));
-        var topBarText = topBar.GetComponent<Text>();
-        if (topBarText != null) topBarText.text = "The Shattered Veil";
-
-        // BottomNav placeholder
-        var bottomNav = CreateUIPlaceholder("BottomNav", canvasGo.transform,
-            new Vector2(0, 0), new Vector2(1, 0), new Vector2(0.5f, 0),
-            Vector2.zero, new Vector2(0, 140));
-        var bottomNavText = bottomNav.GetComponent<Text>();
-        if (bottomNavText != null) bottomNavText.text = "Camp | Roster | Team | Gacha | Battle";
-
-        // BuildingGrid placeholder (center area)
-        var gridGo = new GameObject("BuildingGrid");
-        gridGo.transform.SetParent(canvasGo.transform, false);
-        var gridImg = gridGo.AddComponent<Image>();
-        gridImg.color = new Color(0, 0, 0, 0); // Transparent, just a layout container
-        var gridRt = gridImg.rectTransform;
-        gridRt.anchorMin = new Vector2(0.02f, 0.12f);
-        gridRt.anchorMax = new Vector2(0.98f, 0.88f);
-        gridRt.offsetMin = Vector2.zero;
-        gridRt.offsetMax = Vector2.zero;
+        // No scene-level Canvas — HubSceneController creates all UI programmatically
+        // to avoid duplicate canvases and UI elements.
 
         // --- HubSceneController ---
         var controllerGo = new GameObject("HubController");
@@ -135,7 +110,7 @@ public static class SceneSetup
             AssetDatabase.CreateFolder("Assets", "Scenes");
 
         EditorSceneManager.SaveScene(scene, HubPath);
-        Debug.Log("[SceneSetup] Hub scene configured: Camera + Canvas + HubSceneController + UI placeholders");
+        Debug.Log("[SceneSetup] Hub scene configured: Camera + HubSceneController (UI created programmatically)");
     }
 
     [MenuItem("Tools/Setup Scenes/Build Settings Only")]
