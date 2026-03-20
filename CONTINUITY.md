@@ -559,15 +559,15 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 | Prompt | Scene | Status |
 |--------|-------|--------|
 | 47 | UI Foundation — SceneRouter, EventBus, PlaceholderFactory, TopBar, Toast, Dialogs | Done |
-| 48 | Hub / Camp — building grid, upgrade flow, building panels, bottom nav | PENDING ← **NEXT** |
-| 49 | Gacha + Roster — rolling UI, rates, pity, roster grid, star-up, sell, evolve | PENDING |
-| 50 | Team Builder — 4×2 grid, unit placement, equipment, synergy preview, hero assign | PENDING |
-| 51 | Mission Select — region map (8 regions), stage list (74 stages), lock system | PENDING |
-| 52 | Combat — grid renderer, unit animations, damage numbers, playback, speed controls, results | PENDING |
+| 48 | Hub / Camp — building grid, upgrade flow, building panels, bottom nav | Done |
+| 49 | Gacha + Roster — rolling UI, rates, pity, roster grid, star-up, sell, evolve | Done |
+| 50 | Team Builder — 4×2 grid, unit placement, equipment, synergy preview, hero assign | Done |
+| 51 | Mission Select — region map (8 regions), stage list (74 stages), lock system | Done |
+| 52 | Combat — grid renderer, unit animations, damage numbers, playback, speed controls, results | Done |
 
-**Execution order**: 47 first (foundation), then 48-51 in any order, then 52 last (depends on all others).
+**Track B COMPLETE.** All scenes built with placeholder graphics.
 
-**Other tracks:**
+**Next tracks (need design discussion):**
 - **Track C: Story** — Dialogue system, 74 stages of narrative from STORY-STAGES-V2.md (3-5 sessions)
 - **Track D: Graphics** — Art direction, 132 unit sprites, VFX, audio (separate session/LLM)
 - **Track E: Mobile** — iOS/Android build modules installed, UI/input rework (future)
@@ -625,38 +625,3 @@ When done, report: files created, tests passed/failed, any issues.
 ```
 
 **Presentation rule:** Always present the launch prompt inside a fenced code block (``` ```) in chat so the user gets a one-click copy button. Do NOT create separate launch files — keep `prompts/` clean.
-
-### Automated Orchestrator
-
-For running multiple prompts without manual copy-paste, use the **PowerShell** orchestrator (Windows):
-
-```powershell
-# From the Game TFT directory in PowerShell:
-
-# Run a single prompt
-.\orchestrators\run-prompts.ps1 52
-
-# Run a range of prompts
-.\orchestrators\run-prompts.ps1 52 55
-
-# Run all defined prompts (skips already-completed ones)
-.\orchestrators\run-prompts.ps1
-```
-
-There is also a bash version (`run-prompts.sh`) for Linux/Mac, but **Wei's machine is Windows — use the .ps1 version**.
-
-The script:
-1. Checks if each prompt is already done (skips if so)
-2. Builds the launch prompt automatically from its definitions
-3. Runs `claude -p` in non-interactive mode with `--model opus --max-budget-usd 5`
-4. Verifies the commit exists after completion
-5. Logs output to `orchestrators/logs/prompt-<N>.log`
-6. Reports color-coded summary at the end (green/red/yellow)
-
-**To add new prompts**: Edit the `$Prompts` hashtable in the .ps1 script. Copy an existing entry and change the number, file, branch, commit message, and docs.
-
-**To retry a failed prompt**: `.\orchestrators\run-prompts.ps1 <N>`
-
-**When to use manual vs orchestrator**:
-- **Orchestrator**: Batch of prompts that are well-defined and don't need discussion
-- **Manual (Cowork)**: Prompts that need design decisions, review, or iteration
