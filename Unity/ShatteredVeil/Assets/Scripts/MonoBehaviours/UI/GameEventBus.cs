@@ -26,6 +26,9 @@ namespace ShatteredVeil.Mono.UI
         public static event Action<int> OnCombatTurnCompleted;
         public static event Action<bool, int> OnCombatEnded;
 
+        // Buildings
+        public static event Action<string, int> OnBuildingUpgraded;
+
         // System
         public static event Action OnSaveCompleted;
         public static event Action<string> OnToastRequested;
@@ -42,6 +45,7 @@ namespace ShatteredVeil.Mono.UI
         public static void FireCombatStarted() => OnCombatStarted?.Invoke();
         public static void FireCombatTurnCompleted(int turnNumber) => OnCombatTurnCompleted?.Invoke(turnNumber);
         public static void FireCombatEnded(bool victory, int stars) => OnCombatEnded?.Invoke(victory, stars);
+        public static void FireBuildingUpgraded(string buildingId, int newLevel) => OnBuildingUpgraded?.Invoke(buildingId, newLevel);
         public static void FireSaveCompleted() => OnSaveCompleted?.Invoke();
         public static void FireToastRequested(string message) => OnToastRequested?.Invoke(message);
 
@@ -60,6 +64,7 @@ namespace ShatteredVeil.Mono.UI
             OnCombatStarted = null;
             OnCombatTurnCompleted = null;
             OnCombatEnded = null;
+            OnBuildingUpgraded = null;
             OnSaveCompleted = null;
             OnToastRequested = null;
         }
