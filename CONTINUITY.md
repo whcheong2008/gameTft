@@ -538,7 +538,7 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 | 41 | Gacha + economy | Done | 6 source + 2 tests |
 | 42 | Items (equipment, enhancement, gems) | Done | ItemGenerator, Enhancement, Gems, EchoShaping, EquipmentStatCalc + tests |
 | 43 | Heroes (6 heroes, skill trees, availability) | Done | 10 source + 5 tests |
-| 44 | Save system | **PENDING — after items** | — |
+| 44 | Save system | Done | SaveData, SaveSerializer, SaveManager, JsonHelper, migrator + 3 test files |
 | 45 | Ability v2 (per-unit unique, healer fix) | Done | 25 templates, scaling, healer fix |
 
 **Totals so far**: ~46 C# source files, ~20 test files, 132 unit ScriptableObjects, 15 synergy assets.
@@ -548,8 +548,8 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 **Immediate (finish Track A):**
 1. ~~Prompt 45 completes → ability v2 with healer fix~~ ✓ Done
 2. ~~Prompt 42 re-run → items system~~ ✓ Done
-3. Prompt 44 → save system ← **NEXT**
-4. Verify Prompt 40 ScriptableObjects match post-v2 stat adjustments
+3. ~~Prompt 44 → save system~~ ✓ Done
+4. Verify Prompt 40 ScriptableObjects match post-v2 stat adjustments ← **NEXT**
 
 **After Track A completes:**
 - **Track B: Scenes + UI** — Camp/Hub scene, Combat scene, Team Builder, Gacha, Mission Select
@@ -574,7 +574,7 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 **Cowork session** = orchestrator (writes prompts, reviews output, maintains context, plans)
 **Claude Code sessions** = workers (read a prompt, implement on feature branch, commit)
 
-Prompts live in `prompts/` folder. Unity prompts start at 34. Current: up to 45 (45 done, 42 done, 44 next).
+Prompts live in `prompts/` folder. Unity prompts start at 34. Current: up to 45 (all Track A prompts done except Prompt 40 SO verification).
 
 ### Git Auth & Push
 
