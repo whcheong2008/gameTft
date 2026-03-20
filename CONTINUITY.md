@@ -504,16 +504,124 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 - Visual/audio polish (sprites, VFX, music)
 - Many hero skill node combat effects (placeholder `function(unit, hero) {}`)
 
-**Known issues before testing:**
+**Known issues (HTML prototype):**
 - Some UI may still reference "gold" instead of "Veil Essence"
 - Fragment stub in heroes.js (harmless)
-- Phase 2 never smoke-tested
-- Boss reconciliation between prompt 15 and MISSIONS-DESIGN.md may cause issues
+- 3 critical bugs found and fixed (BUGS.md): hero emoji crash, unitHasArchetype missing, enemy stasis loop
+- 6 design issues with template assignments (Gale Dancer, Pulse Mender, Gust Sentinel, Fortress, Golem, Leviathan, Phoenix) — flagged, not blocking
 
-### Next Steps
+**Ability system rework (post-prototype):**
+- v1: 25 shared templates → units felt like clones (66 units collapsed to 19 functions)
+- v2 (CURRENT): 132 per-unit unique ability functions. Template = classification tag only. See TEMPLATE-V2-HANDOFF.md.
+- Healer auto-heal fixed: healers target lowest-HP ally, +10 mana per heal, fire onHeal not onHit. See HEALER-FIX-HANDOFF.md.
+- 131 stat adjustments applied by tester session (tier scaling, healer buffs, specific nerfs/buffs). Values baked into units-templates.js.
 
-1. **Playtest the HTML prototype** — smoke test all systems, log bugs in BUGS.md
-2. **Fix game-breaking bugs** — anything that prevents progression or crashes
-3. **Unity planning session** — engine decisions, porting strategy, story integration architecture
-4. **Hard mode design** (KIV — keep in view, not blocking)
-5. **Balance pass** — after playtesting reveals feel issues
+---
+
+## Unity Port — Current State
+
+**Project**: `Unity/ShatteredVeil/` — Unity 6 LTS, 2D URP, MCP connected.
+**Architecture**: See `UNITY-ARCHITECTURE.md` for full reference.
+**Golden rule**: `Scripts/Core/` = pure C# (no UnityEngine). Enforced by `GameCore.asmdef` with `noEngineReferences: true`.
+
+### Track A: Core Logic Port
+
+| Prompt | System | Status | Files |
+|--------|--------|--------|-------|
+| 34 | Project setup (folders, packages, assembly defs) | Done | ~10 |
+| 35 | Ground truth extraction | Done | GROUND-TRUTH.md (1010 lines) |
+| 36 | Combat core (grid, damage, targeting, turns) | Done | 16 source + 6 tests |
+| 37 | Abilities + mana (old per-unit catalog) | Done → **Being replaced by Prompt 45** | 7 source + 4 tests |
+| 38 | Status effects (DoT, CC, DR, shields) | Done | 5 source + 3 tests |
+| 39 | Passives + bosses (8 bosses, phases) | Done → **Passives simplified by Prompt 45** | 12 source + tests |
+| 40 | Unit data (132 ScriptableObjects, synergies) | Done (may need stat refresh from v2 changes) | 5 source + 132 assets + 3 tests |
+| 41 | Gacha + economy | Done | 6 source + 2 tests |
+| 42 | Items (equipment, enhancement, gems) | Done | ItemGenerator, Enhancement, Gems, EchoShaping, EquipmentStatCalc + tests |
+| 43 | Heroes (6 heroes, skill trees, availability) | Done | 10 source + 5 tests |
+| 44 | Save system | Done | SaveData, SaveSerializer, SaveManager, JsonHelper, migrator + 3 test files |
+| 45 | Ability v2 (per-unit unique, healer fix) | Done | 25 templates, scaling, healer fix |
+| 46 | SO verification & v2 alignment | Done | UnitTemplate v2 fields, 132 assets regenerated, 15 synergy assets, UnitAbilityCatalog, 14 tests |
+
+**Totals so far**: ~50+ C# source files, ~24 test files, 132 unit ScriptableObjects, 15 synergy assets.
+
+### Remaining Work
+
+**Immediate (finish Track A):**
+1. ~~Prompt 45 completes → ability v2 with healer fix~~ ✓ Done
+2. ~~Prompt 42 re-run → items system~~ ✓ Done
+3. ~~Prompt 44 → save system~~ ✓ Done
+4. ~~Verify Prompt 40 ScriptableObjects match post-v2 stat adjustments~~ ✓ Done (Prompt 46)
+
+**Track A COMPLETE.** All core logic ported to Unity C#.
+
+**Track B: Scenes + UI** (Prompts 47-52, all with placeholder graphics):
+
+| Prompt | Scene | Status |
+|--------|-------|--------|
+| 47 | UI Foundation — SceneRouter, EventBus, PlaceholderFactory, TopBar, Toast, Dialogs | Done |
+| 48 | Hub / Camp — building grid, upgrade flow, building panels, bottom nav | Done |
+| 49 | Gacha + Roster — rolling UI, rates, pity, roster grid, star-up, sell, evolve | Done |
+| 50 | Team Builder — 4×2 grid, unit placement, equipment, synergy preview, hero assign | Done |
+| 51 | Mission Select — region map (8 regions), stage list (74 stages), lock system | Done |
+| 52 | Combat — grid renderer, unit animations, damage numbers, playback, speed controls, results | PENDING ← **NEXT (final)** |
+
+**Execution order**: 47 first (foundation), then 48-51 in any order, then 52 last (depends on all others).
+
+**Other tracks:**
+- **Track C: Story** — Dialogue system, 74 stages of narrative from STORY-STAGES-V2.md (3-5 sessions)
+- **Track D: Graphics** — Art direction, 132 unit sprites, VFX, audio (separate session/LLM)
+- **Track E: Mobile** — iOS/Android build modules installed, UI/input rework (future)
+
+### Key Reference Documents
+
+| Doc | Purpose |
+|-----|---------|
+| `UNITY-ARCHITECTURE.md` | **NEW** — Full architecture reference, folder map, system graph, how-to guide |
+| `UNITY-MIGRATION-PLAN.md` | Migration phases, parallel tracks, recommendations |
+| `GROUND-TRUTH.md` | Every testable value and formula (updated for ability v2) |
+| `TEMPLATE-V2-HANDOFF.md` | Ability system v2 architecture (per-unit unique abilities) |
+| `HEALER-FIX-HANDOFF.md` | Healer auto-heal rules and combat engine fix |
+| `SETUP-UNITY-STEP-BY-STEP.md` | Unity + MCP installation steps |
+| `testing/testing-architecture-strategy.md` | 4-layer testing pyramid |
+
+### Orchestration Model
+
+**Cowork session** = orchestrator (writes prompts, reviews output, maintains context, plans)
+**Claude Code sessions** = workers (read a prompt, implement on feature branch, commit)
+
+Prompts live in `prompts/` folder. Unity prompts start at 34. Current: up to 52 (46 done, 47-52 are Track B — pending). Start with Prompt 47.
+
+### Git Auth & Push
+
+GitHub PAT is stored in `keys/github.txt`. To push from the VM or Claude Code:
+
+```bash
+TOKEN=$(cat keys/github.txt)
+git remote set-url origin https://whcheong2008:${TOKEN}@github.com/whcheong2008/gameTft.git
+git push --set-upstream origin <branch-name>
+# Reset URL after push to avoid storing token in config:
+git remote set-url origin https://github.com/whcheong2008/gameTft.git
+```
+
+**Do NOT ask the user for credentials.** They are already in `keys/github.txt`.
+
+### Standard Launch Prompt (for Claude Code sessions)
+
+When launching a prompt in Claude Code, the Cowork orchestrator generates a copy-paste launch prompt in this format:
+
+```
+Read the file `prompts/<NN>-<name>.md` in full. This is your implementation prompt.
+
+Before coding, also read these reference docs (in order):
+1. <list of docs the prompt says to read first>
+
+Then implement everything the prompt specifies:
+- Branch: `feature/<branch-name>`
+- Create branch from main, implement, run tests, commit, push.
+- Use `keys/github.txt` for the GitHub PAT when pushing.
+- Commit message format: "Prompt <NN>: <short description>"
+
+When done, report: files created, tests passed/failed, any issues.
+```
+
+**Presentation rule:** Always present the launch prompt inside a fenced code block (``` ```) in chat so the user gets a one-click copy button. Do NOT create separate launch files — keep `prompts/` clean.
