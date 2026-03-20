@@ -236,9 +236,7 @@ for ($num = $Start; $num -le $End; $num++) {
 
         $output = Get-Content $tempPromptFile -Raw | claude -p `
             --allowedTools "Bash" "Edit" "Write" "Read" "Glob" "Grep" `
-            --dangerously-skip-permissions `
-            --model opus `
-            --max-budget-usd 10 2>&1
+            --dangerously-skip-permissions 2>&1
 
         $output | Out-File $logFile -Append
         Write-OK "Claude Code session completed"
