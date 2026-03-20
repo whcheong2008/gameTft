@@ -625,3 +625,32 @@ When done, report: files created, tests passed/failed, any issues.
 ```
 
 **Presentation rule:** Always present the launch prompt inside a fenced code block (``` ```) in chat so the user gets a one-click copy button. Do NOT create separate launch files — keep `prompts/` clean.
+
+### Automated Orchestrator
+
+For running multiple prompts without manual copy-paste, use `orchestrators/run-prompts.sh`:
+
+```bash
+# Run a single prompt
+./orchestrators/run-prompts.sh 52
+
+# Run a range of prompts
+./orchestrators/run-prompts.sh 52 55
+
+# Run all defined prompts (skips already-completed ones)
+./orchestrators/run-prompts.sh
+```
+
+The script:
+1. Checks if each prompt is already done (skips if so)
+2. Builds the launch prompt automatically from its definitions
+3. Runs `claude -p` in non-interactive mode
+4. Verifies the commit exists after completion
+5. Logs output to `/tmp/prompt-<N>-output.log`
+6. Reports summary at the end
+
+**To add new prompts**: Edit the `PROMPTS` associative array in the script. Format: `PROMPTS[NN]="file|branch|commit-msg|doc1;doc2;doc3"`
+
+**When to use manual vs orchestrator**:
+- **Orchestrator**: Batch of prompts that are well-defined and don't need discussion
+- **Manual (Cowork)**: Prompts that need design decisions, review, or iteration
