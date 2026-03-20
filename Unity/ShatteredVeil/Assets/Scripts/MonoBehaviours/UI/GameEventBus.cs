@@ -17,6 +17,13 @@ namespace ShatteredVeil.Mono.UI
         public static event Action<string> OnUnitRolled;
         public static event Action<string, int> OnUnitStarredUp; // unitId, newStars
 
+        // Team Builder
+        public static event Action OnTeamChanged;
+        public static event Action<string, int, int> OnUnitPlaced;   // unitId, col, row
+        public static event Action<string> OnUnitRemoved;             // unitId
+        public static event Action<string, string> OnHeroAssigned;    // unitId, heroId
+        public static event Action<string> OnHeroUnassigned;          // unitId
+
         // System
         public static event Action<string> OnToastRequested;
 
@@ -26,6 +33,11 @@ namespace ShatteredVeil.Mono.UI
         public static void FireUnitRolled(string unitId) => OnUnitRolled?.Invoke(unitId);
         public static void FireUnitStarredUp(string unitId, int stars) => OnUnitStarredUp?.Invoke(unitId, stars);
         public static void FireToast(string message) => OnToastRequested?.Invoke(message);
+        public static void FireTeamChanged() => OnTeamChanged?.Invoke();
+        public static void FireUnitPlaced(string unitId, int col, int row) => OnUnitPlaced?.Invoke(unitId, col, row);
+        public static void FireUnitRemoved(string unitId) => OnUnitRemoved?.Invoke(unitId);
+        public static void FireHeroAssigned(string unitId, string heroId) => OnHeroAssigned?.Invoke(unitId, heroId);
+        public static void FireHeroUnassigned(string unitId) => OnHeroUnassigned?.Invoke(unitId);
 
         public static void ClearAll()
         {
@@ -34,6 +46,11 @@ namespace ShatteredVeil.Mono.UI
             OnLevelUp = null;
             OnUnitRolled = null;
             OnUnitStarredUp = null;
+            OnTeamChanged = null;
+            OnUnitPlaced = null;
+            OnUnitRemoved = null;
+            OnHeroAssigned = null;
+            OnHeroUnassigned = null;
             OnToastRequested = null;
         }
     }
