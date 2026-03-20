@@ -92,6 +92,42 @@ namespace ShatteredVeil.Core.Story
                     AvailableExpressions = new[] { "neutral", "happy", "shocked" },
                     JoinsAtRegion = 1
                 },
+                ["ren"] = new CharacterInfo
+                {
+                    Id = "ren",
+                    DisplayName = "Ren",
+                    Element = "Earth",
+                    DefaultExpression = "neutral",
+                    AvailableExpressions = new[] { "neutral", "determined" },
+                    JoinsAtRegion = 2
+                },
+                ["sera"] = new CharacterInfo
+                {
+                    Id = "sera",
+                    DisplayName = "Sera",
+                    Element = "Lightning",
+                    DefaultExpression = "neutral",
+                    AvailableExpressions = StandardExpressions,
+                    JoinsAtRegion = 2
+                },
+                ["voss"] = new CharacterInfo
+                {
+                    Id = "voss",
+                    DisplayName = "Voss",
+                    Element = "Force",
+                    DefaultExpression = "neutral",
+                    AvailableExpressions = new[] { "neutral", "determined" },
+                    JoinsAtRegion = 7
+                },
+                ["harl"] = new CharacterInfo
+                {
+                    Id = "harl",
+                    DisplayName = "Harl",
+                    Element = "Earth",
+                    DefaultExpression = "neutral",
+                    AvailableExpressions = new[] { "neutral" },
+                    JoinsAtRegion = 3
+                },
                 ["narrator"] = new CharacterInfo
                 {
                     Id = "narrator",

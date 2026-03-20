@@ -8,7 +8,10 @@ namespace ShatteredVeil.Core.Story.Content
             Region2Stories.RegisterAll();
             Region3Stories.RegisterAll();
             Region4Stories.RegisterAll();
-            // Regions 5-8 added by Prompt 56
+            Region5Stories.RegisterAll();
+            Region6Stories.RegisterAll();
+            Region7Stories.RegisterAll();
+            Region8Stories.RegisterAll();
         }
     }
 }
