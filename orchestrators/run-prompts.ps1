@@ -73,11 +73,37 @@ $Prompts = @{
         CommitMsg = "Prompt 52: Combat scene — grid renderer, unit animations, damage numbers, battle playback, speed controls, wave transitions, results screen"
         Docs = "UNITY-ARCHITECTURE.md;js/ui-v2.js lines 2602-3500;GROUND-TRUTH.md section 1;js/combat-v2.js;COMBAT-DESIGN.md"
     }
+    # ── Track C: Story ──
+    54 = @{
+        File = "54-unity-dialogue-engine.md"
+        Branch = "feature/unity-dialogue-engine"
+        CommitMsg = "Prompt 54: Dialogue engine — StoryBeat data model, DialogueBox, NarrationBox, BriefCard, CombatDialogue, StoryDirector, screen effects"
+        Docs = "STORY-STAGES-V2.md first 50 lines;UNITY-ARCHITECTURE.md;js/ui-v2.js"
+    }
+    55 = @{
+        File = "55-unity-story-r1-r4.md"
+        Branch = "feature/unity-story-r1-r4"
+        CommitMsg = "Prompt 55: Story content R1-R4 — 36 stage scripts with dialogue, narration, combat lines, environment descriptions"
+        Docs = "STORY-STAGES-V2.md (Regions 1-4);Scripts/Core/Story/StoryBeat.cs;Scripts/Core/Story/CharacterData.cs"
+    }
+    56 = @{
+        File = "56-unity-story-r5-r8.md"
+        Branch = "feature/unity-story-r5-r8"
+        CommitMsg = "Prompt 56: Story content R5-R8 — 38 stage scripts, Lyric death, Mira intro, Abyss Gate climax, 74 total stages complete"
+        Docs = "STORY-STAGES-V2.md (Regions 5-8);Scripts/Core/Story/Content/Region1Stories.cs;Scripts/Core/Story/StoryBeat.cs;Scripts/Core/Story/CharacterData.cs"
+    }
+    # ── Track D: Asset Pipeline ──
+    57 = @{
+        File = "57-unity-asset-pipeline.md"
+        Branch = "feature/unity-asset-pipeline"
+        CommitMsg = "Prompt 57: Asset pipeline — manifest (258 assets), folder structure, AssetLoader with placeholder fallback, editor progress tracker"
+        Docs = "UNITY-ARCHITECTURE.md;Scripts/MonoBehaviours/UI/PlaceholderFactory.cs;Scripts/Data/UnitTemplate.cs"
+    }
     # ── Add new prompts here ──
-    # 53 = @{
-    #     File = "53-whatever.md"
+    # 58 = @{
+    #     File = "58-whatever.md"
     #     Branch = "feature/whatever"
-    #     CommitMsg = "Prompt 53: ..."
+    #     CommitMsg = "Prompt 58: ..."
     #     Docs = "doc1;doc2"
     # }
 }
