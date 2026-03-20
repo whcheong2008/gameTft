@@ -536,7 +536,7 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 | 39 | Passives + bosses (8 bosses, phases) | Done → **Passives simplified by Prompt 45** | 12 source + tests |
 | 40 | Unit data (132 ScriptableObjects, synergies) | Done (may need stat refresh from v2 changes) | 5 source + 132 assets + 3 tests |
 | 41 | Gacha + economy | Done | 6 source + 2 tests |
-| 42 | Items (equipment, enhancement, gems) | **PENDING — needs re-run** | — |
+| 42 | Items (equipment, enhancement, gems) | Done | ItemGenerator, Enhancement, Gems, EchoShaping, EquipmentStatCalc + tests |
 | 43 | Heroes (6 heroes, skill trees, availability) | Done | 10 source + 5 tests |
 | 44 | Save system | **PENDING — after items** | — |
 | 45 | Ability v2 (per-unit unique, healer fix) | Done | 25 templates, scaling, healer fix |
@@ -547,8 +547,8 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 
 **Immediate (finish Track A):**
 1. ~~Prompt 45 completes → ability v2 with healer fix~~ ✓ Done
-2. Prompt 42 re-run → items system ← **NEXT**
-3. Prompt 44 → save system (after items merge)
+2. ~~Prompt 42 re-run → items system~~ ✓ Done
+3. Prompt 44 → save system ← **NEXT**
 4. Verify Prompt 40 ScriptableObjects match post-v2 stat adjustments
 
 **After Track A completes:**
@@ -574,7 +574,7 @@ Fibery workspace: `whtrading.fibery.io` → **Game Dev** space
 **Cowork session** = orchestrator (writes prompts, reviews output, maintains context, plans)
 **Claude Code sessions** = workers (read a prompt, implement on feature branch, commit)
 
-Prompts live in `prompts/` folder. Unity prompts start at 34. Current: up to 45 (45 done, 42 next).
+Prompts live in `prompts/` folder. Unity prompts start at 34. Current: up to 45 (45 done, 42 done, 44 next).
 
 ### Git Auth & Push
 
@@ -609,4 +609,4 @@ Then implement everything the prompt specifies:
 When done, report: files created, tests passed/failed, any issues.
 ```
 
-This saves the user from having to explain context each time. The orchestrator (Cowork) always generates this ready to copy-paste.
+**Presentation rule:** Always present the launch prompt inside a fenced code block (``` ```) in chat so the user gets a one-click copy button. Do NOT create separate launch files — keep `prompts/` clean.
