@@ -37,6 +37,27 @@ function showToast(message) {
     }, 3000);
 }
 
+// ---- Confirm Dialog (non-blocking replacement for native confirm()) ----
+
+function showConfirmDialog(message, onConfirm, onCancel) {
+    var overlay = document.getElementById('confirm-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'confirm-overlay';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:2000;';
+        document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = '<div style="background:#1a1a2e; border:2px solid #e2b714; border-radius:10px; padding:20px; max-width:400px; text-align:center;">' +
+        '<div style="font-size:14px; margin-bottom:16px; white-space:pre-line;">' + message + '</div>' +
+        '<div style="display:flex; gap:10px; justify-content:center;">' +
+        '<button id="confirm-ok" class="btn-primary" style="padding:8px 20px;">OK</button>' +
+        '<button id="confirm-cancel" class="btn-secondary" style="padding:8px 20px;">Cancel</button>' +
+        '</div></div>';
+    overlay.style.display = 'flex';
+    document.getElementById('confirm-ok').onclick = function() { overlay.style.display = 'none'; onConfirm(); };
+    document.getElementById('confirm-cancel').onclick = function() { overlay.style.display = 'none'; if (onCancel) onCancel(); };
+}
+
 // ---- Top Bar ----
 
 function renderTopBar() {

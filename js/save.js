@@ -97,6 +97,15 @@ function createDefaultSaveData() {
         },
         // Achievements
         achievements: { earned: [], claimed: [] },
+        // Lore codex unlock tracking (Prompt 63). Derived/recomputed by syncLoreUnlocks() —
+        // regions/stages/units/heroes are written here; bonds mirror stats.bondsUsedSeen (read-only).
+        loreUnlocks: {
+            regions: {},
+            stages: {},
+            units: {},
+            heroes: {},
+            bonds: {}
+        },
         // Stats tracking
         stats: {
             totalMissionsCompleted: 0,
@@ -756,6 +765,15 @@ function migrateSave(data) {
     if (typeof data.stats.uniqueBondsUsed === 'undefined') data.stats.uniqueBondsUsed = 0;
     if (!data.stats.bondsUsedSeen) data.stats.bondsUsedSeen = [];
     if (typeof data.stats.totalGachaPulls === 'undefined') data.stats.totalGachaPulls = 0;
+
+    // Prompt 63: lore codex unlock tracking (version-agnostic backfill)
+    if (!data.loreUnlocks) data.loreUnlocks = {};
+    if (!data.loreUnlocks.regions) data.loreUnlocks.regions = {};
+    if (!data.loreUnlocks.stages) data.loreUnlocks.stages = {};
+    if (!data.loreUnlocks.units) data.loreUnlocks.units = {};
+    if (!data.loreUnlocks.heroes) data.loreUnlocks.heroes = {};
+    if (!data.loreUnlocks.bonds) data.loreUnlocks.bonds = {};
+
     return data;
 }
 
@@ -880,8 +898,69 @@ function validateSaveData(data) {
     if (!data.equipment.codex) data.equipment.codex = { discovered: {} };
     if (!data.equipment.slotFocus) data.equipment.slotFocus = { slot: null, remaining: 0 };
 
+    // Lore codex unlock tracking (Prompt 63)
+    if (!data.loreUnlocks) data.loreUnlocks = { regions: {}, stages: {}, units: {}, heroes: {}, bonds: {} };
+    if (!data.loreUnlocks.regions) data.loreUnlocks.regions = {};
+    if (!data.loreUnlocks.stages) data.loreUnlocks.stages = {};
+    if (!data.loreUnlocks.units) data.loreUnlocks.units = {};
+    if (!data.loreUnlocks.heroes) data.loreUnlocks.heroes = {};
+    if (!data.loreUnlocks.bonds) data.loreUnlocks.bonds = {};
+
     console.log('Validation complete. Valid entries:', Object.keys(data.collection).length);
     return data;
+}
+
+// ---- Lore Codex Unlock Sync (Prompt 63) ----
+// Recomputes loreUnlocks from other save fields. Idempotent — safe to call on every codex
+// render. Regions/stages/units/heroes are derived and written here; bonds only mirror the
+// existing stats.bondsUsedSeen array (owned/written by teams.js) and are never written back to it.
+function syncLoreUnlocks(saveData) {
+    if (!saveData.loreUnlocks) saveData.loreUnlocks = { regions: {}, stages: {}, units: {}, heroes: {}, bonds: {} };
+    var lu = saveData.loreUnlocks;
+    if (!lu.regions) lu.regions = {};
+    if (!lu.stages) lu.stages = {};
+    if (!lu.units) lu.units = {};
+    if (!lu.heroes) lu.heroes = {};
+    if (!lu.bonds) lu.bonds = {};
+
+    // Stages + regions: derived from missions.stageProgress (a stage clear unlocks its narration
+    // and unlocks its region's codex entry).
+    var stageProgress = (saveData.missions && saveData.missions.stageProgress) || {};
+    var stageIds = Object.keys(stageProgress);
+    for (var i = 0; i < stageIds.length; i++) {
+        var sid = stageIds[i];
+        if (stageProgress[sid] && stageProgress[sid].completed) {
+            lu.stages[sid] = true;
+            var regionMatch = /^r(\d+)_/.exec(sid);
+            if (regionMatch) lu.regions[regionMatch[1]] = true;
+        }
+    }
+
+    // Units: derived from collection (unlocked the moment a unit is first obtained). Evolved
+    // keys resolve back to their base key so the base unit's lore card unlocks too.
+    var collKeys = Object.keys(saveData.collection || {});
+    for (var c = 0; c < collKeys.length; c++) {
+        var ck = collKeys[c];
+        var baseKey = ck;
+        if (typeof EVOLVED_TEMPLATES !== 'undefined' && EVOLVED_TEMPLATES[ck] && EVOLVED_TEMPLATES[ck].baseKey) {
+            baseKey = EVOLVED_TEMPLATES[ck].baseKey;
+        }
+        lu.units[baseKey] = true;
+    }
+
+    // Heroes: derived from heroes.data — unlocked unless explicitly flagged _unlocked === false.
+    var heroData = (saveData.heroes && saveData.heroes.data) || {};
+    var heroKeys = Object.keys(heroData);
+    for (var h = 0; h < heroKeys.length; h++) {
+        var hk = heroKeys[h];
+        if (heroData[hk] && heroData[hk]._unlocked !== false) lu.heroes[hk] = true;
+    }
+
+    // Bonds: read-only mirror of stats.bondsUsedSeen — never written by us.
+    var seen = (saveData.stats && saveData.stats.bondsUsedSeen) || [];
+    for (var b = 0; b < seen.length; b++) lu.bonds[seen[b]] = true;
+
+    return lu;
 }
 
 // Tiered copies per star — depends on unit cost tier

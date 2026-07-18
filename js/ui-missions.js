@@ -181,6 +181,7 @@ function finalizeRegionRewardClaim(regionNum, choice) {
 
 function renderStageListScreen() {
     var sd = getSaveData();
+    if (typeof syncLoreUnlocks === 'function') syncLoreUnlocks(sd);
     var regionNum = selectedRegion;
     var region = REGIONS[regionNum];
     if (!region) { missionScreenMode = 'regions'; renderRegionMapScreen(); return; }
@@ -240,10 +241,17 @@ function renderStageListScreen() {
         var dropText = stage.rewards.unitDrops ? ' · ' + stage.rewards.unitDrops + ' drops' : '';
         var typeTag = stage.stageType ? '<span style="color:#888; font-size:10px; text-transform:uppercase; margin-left:6px;">' + stage.stageType + '</span>' : '';
 
+        // Stage narration flavor block: shown once the stage has been cleared (Prompt 63).
+        var loreUnlocked = !!(sd.loreUnlocks && sd.loreUnlocks.stages && sd.loreUnlocks.stages[stageId]);
+        var loreText = (typeof STAGE_LORE !== 'undefined' && STAGE_LORE[stageId]) ? STAGE_LORE[stageId] : '';
+        var loreHtml = (loreUnlocked && loreText) ?
+            '<div class="m-lore" style="font-size:11px; color:#b8a8e0; font-style:italic; margin-top:4px;">' + loreText + '</div>' : '';
+
         div.innerHTML =
             '<div>' +
                 '<div class="m-name">' + stage.name + (isBoss ? ' 👑' : '') + (!unlocked ? ' 🔒' : '') + typeTag + '</div>' +
                 '<div class="m-desc">' + stage.description + '</div>' +
+                loreHtml +
                 '<div class="m-reward">Reward: ' + veReward + ' VE · ' + xpReward + ' XP' + dropText + ' · ' + waveText + '</div>' +
                 lockText +
             '</div>' +
@@ -272,7 +280,7 @@ function uiStartStoryMission(index) {
     var sd = getSaveData();
     var team = getActiveTeam(sd);
     if (team.slots.length === 0) {
-        alert('Build a team first!');
+        showToast('Build a team first!');
         return;
     }
     var mission = STORY_MISSIONS[index];
@@ -286,7 +294,7 @@ function uiStartGrindMission() {
     var sd = getSaveData();
     var team = getActiveTeam(sd);
     if (team.slots.length === 0) {
-        alert('Build a team first!');
+        showToast('Build a team first!');
         return;
     }
     var mission = generateGrindMission(sd.player.level);

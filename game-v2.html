@@ -744,6 +744,9 @@ body {
                 <div class="hub-nav-btn" onclick="showScreen('heroes')">
                     <span class="nav-emoji">👑</span> Heroes
                 </div>
+                <div class="hub-nav-btn" onclick="showLoreCodex()">
+                    <span class="nav-emoji">📜</span> Codex
+                </div>
             </div>
 
             <!-- Equipment Inventory Overlay -->
@@ -887,6 +890,8 @@ body {
     <script src="js/hub.js"></script>
     <script src="js/items.js?v=2"></script>
     <script src="js/missions.js?v=2"></script>
+    <!-- lore-data.js: codex content (world/region/stage/unit/hero/bond text). Data-only, no deps (Prompt 63). -->
+    <script src="js/lore-data.js"></script>
     <!-- V2 uses simplified combat in these files, not V1 combat.js. Split from main-v2.js (Prompt 58). -->
     <!-- combat-events.js: minimal event bus for hero skill combat hooks (Prompt 60). Must load first. -->
     <script src="js/combat-events.js"></script>
@@ -899,6 +904,7 @@ body {
     <script src="js/combat-damage.js"></script>
     <!-- UI renderers. Split from ui-v2.js (Prompt 58); ui-shared.js loads first. -->
     <script src="js/ui-shared.js"></script>
+    <script src="js/ui-lore.js"></script>
     <script src="js/ui-hub.js"></script>
     <script src="js/ui-gacha.js"></script>
     <script src="js/ui-heroes.js"></script>
