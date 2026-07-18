@@ -247,5 +247,77 @@ module.exports = [
             const text = fs.readFileSync(pixiPath, 'utf8');
             assert.ok(/typeof\s+PIXI\s*!==?\s*['"]undefined['"]/.test(text), 'js/render-pixi.js should guard its registerRenderer(\'pixi\', ...) call behind typeof PIXI !== \'undefined\'');
         }
+    },
+
+    // ---------------------------------------------------------------
+    // Prompt 70 (Phase 3.4, Task 5) acceptance tests -- pixi becomes the
+    // default renderer, with an explicit `?renderer=dom` opt-out and an
+    // automatic runtime fallback when Pixi turns out to be unusable.
+    // ---------------------------------------------------------------
+    {
+        name: 'renderer boundary (Prompt 70): default resolution is pixi when a PIXI global is present at script-load time',
+        fn: function() {
+            const h = createHarness({ seed: 10 });
+            h.context.PIXI = {}; // stand-in stub, same convention as the Prompt 68 tests above
+            h.loadScripts();
+            h.freshSave();
+
+            assert.ok(h.context.RENDERERS.pixi, 'RENDERERS.pixi should be registered with the PIXI stub present');
+            // No `?renderer=` param on the harness's location stub -- default resolution should win.
+            assert.equal(h.context.getActiveRenderer(), h.context.RENDERERS.pixi, 'getActiveRenderer() should default to RENDERERS.pixi (Prompt 70 flips the default from dom to pixi)');
+        }
+    },
+
+    // ---------------------------------------------------------------
+    {
+        name: 'renderer boundary (Prompt 70): ?renderer=dom is still an explicit, working opt-out even when pixi is registered',
+        fn: function() {
+            const h = createHarness({ seed: 11 });
+            h.context.PIXI = {};
+            h.loadScripts();
+            h.freshSave();
+
+            h.context.location.search = '?renderer=dom';
+            assert.equal(h.context.getActiveRenderer(), h.context.RENDERERS.dom, 'getActiveRenderer() should resolve RENDERERS.dom when explicitly requested via ?renderer=dom, regardless of pixi being the default');
+        }
+    },
+
+    // ---------------------------------------------------------------
+    {
+        name: 'renderer boundary (Prompt 70): default resolution auto-falls-back to dom when PIXI never loaded',
+        fn: function() {
+            const h = createHarness({ seed: 12 });
+            h.loadScripts(); // no PIXI stub set -- js/render-pixi.js's registration guard skips it
+            h.freshSave();
+
+            assert.ok(!h.context.RENDERERS.pixi, 'RENDERERS.pixi should be absent (no PIXI global at script-load time)');
+            assert.equal(h.context.getActiveRenderer(), h.context.RENDERERS.dom, 'getActiveRenderer() should fall back to RENDERERS.dom when the default name (pixi) has nothing registered under it');
+        }
+    },
+
+    // ---------------------------------------------------------------
+    {
+        name: 'renderer boundary (Prompt 70): forceRendererDomFallback() permanently overrides the default to dom, but not an explicit ?renderer=pixi',
+        fn: function() {
+            const h = createHarness({ seed: 13 });
+            h.context.PIXI = {};
+            h.loadScripts();
+            h.freshSave();
+
+            // Before any failure: default resolves to pixi.
+            assert.equal(h.context.getActiveRenderer(), h.context.RENDERERS.pixi, 'sanity check: pixi should be the default before any fallback fires');
+
+            h.context.forceRendererDomFallback('unit test: simulated WebGL init failure');
+            assert.equal(h.context.getActiveRenderer(), h.context.RENDERERS.dom, 'getActiveRenderer() should resolve to dom once forceRendererDomFallback() has fired, even with no ?renderer= param');
+
+            // An explicit ?renderer=pixi should still win -- the fallback only
+            // overrides the DEFAULT resolution, not a developer asking for pixi
+            // by name (see the comment on RENDERER_DOM_FALLBACK_FORCED).
+            h.context.location.search = '?renderer=pixi';
+            assert.equal(h.context.getActiveRenderer(), h.context.RENDERERS.pixi, 'an explicit ?renderer=pixi should still resolve to pixi even after a fallback has fired');
+
+            // A second call is a no-op (idempotent), not an error.
+            assert.doesNotThrow(function() { h.context.forceRendererDomFallback('second call'); }, 'forceRendererDomFallback() should be safe to call more than once');
+        }
     }
 ];

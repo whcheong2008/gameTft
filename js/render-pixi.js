@@ -85,15 +85,63 @@ var PIXI_R = {
     app: null,          // PIXI.Application, created lazily once, reused across waves
     ready: false,        // true once app.init()'s promise has resolved
     boardEl: null,        // #combat-board DOM element the canvas is mounted into
+    platformLayer: null,  // PIXI.Container: Task 3 "platform frame" silhouette, painted BELOW gridLayer
     gridLayer: null,      // PIXI.Container: static tile background (rebuilt only on resize)
     markerLayer: null,    // PIXI.Container: death markers, added incrementally per wave
-    drawnMarkers: null,   // {row,col key -> true} for markerLayer, reset per wave
     unitLayer: null,      // PIXI.Container: per-unit tokens (sortable by row)
     fxLayer: null,        // PIXI.Container: ability-flash cell rects
     floatLayer: null,     // PIXI.Container: floating combat text, always topmost
+    drawnMarkers: null,   // {row,col key -> true} for markerLayer, reset per wave
     cellW: 0,
-    cellH: 0
+    cellH: 0,
+    clock: 0,             // Task 4: accumulated combat-speed-scaled seconds, drives idle bob phase
+    hoveredUnit: null      // Task 4: unit currently under the pointer (DOM tooltip + selection ring)
 };
+
+// ---- Task 2 (Prompt 70, Phase 3.4): angled TFT-style camera projection ----
+//
+// 2D-cheap perspective illusion: the board plane is squashed vertically (as
+// if viewed from a raised camera looking down at an angle) and unit tokens
+// are scaled by a linear per-row depth factor (far/enemy-back rows smaller,
+// near/player-front rows larger). boardToScreen() is the ONE function that
+// applies this transform -- tiles, unit tokens, death markers, floating
+// text, and ability-flash cells all route through it (or its bare
+// cellToPixel() call for pre-squash math) so the whole board reads as a
+// single consistent ground plane. Unlike grid.js's cellToPixel() (which
+// returns a cell's top-left bounding-box corner, the convention every other
+// renderer/caller of grid.js expects), boardToScreen() returns the cell's
+// CENTER in screen space post-squash -- every call site below was migrated
+// to that convention together, see the Prompt 70 report for the audit.
+var PIXI_CAM_Y_SQUASH = 0.72;      // TUNABLE: vertical squash of the whole board plane
+var PIXI_CAM_DEPTH_FAR = 0.92;     // TUNABLE: unit token scale on row 0 (enemy back row / farthest)
+var PIXI_CAM_DEPTH_NEAR = 1.06;    // TUNABLE: unit token scale on row 7 (player front row / nearest)
+
+// Linear interpolation of the depth-scale factor by row (0 = far, ROWS-1 = near).
+function pixiRowDepthScale(row) {
+    var t = PIXI_ROWS <= 1 ? 0 : row / (PIXI_ROWS - 1);
+    return PIXI_CAM_DEPTH_FAR + (PIXI_CAM_DEPTH_NEAR - PIXI_CAM_DEPTH_FAR) * t;
+}
+
+// Full unsquashed board pixel height (matches pixiSizeBoard()'s packed-hex
+// math) -- used to keep the squashed board vertically centered in its box
+// rather than collapsing toward the top.
+function pixiFullBoardHeight() {
+    return ((PIXI_ROWS - 1) * 0.75 + 1) * PIXI_R.cellH;
+}
+
+function boardToScreen(row, col) {
+    var p = cellToPixel(row, col, PIXI_R.cellW, PIXI_R.cellH);
+    var centerXRaw = p.x + PIXI_R.cellW / 2;
+    var centerYRaw = p.y + PIXI_R.cellH / 2;
+    var fullH = pixiFullBoardHeight();
+    var squashedH = fullH * PIXI_CAM_Y_SQUASH;
+    var yOffset = (fullH - squashedH) / 2;
+    return {
+        x: centerXRaw,
+        y: centerYRaw * PIXI_CAM_Y_SQUASH + yOffset,
+        depthScale: pixiRowDepthScale(row)
+    };
+}
 
 // ---- small helpers ----
 
@@ -145,6 +193,7 @@ function pixiMaybeRebuildGrid() {
     if (PIXI_R.cellW === pixiLastGridW && PIXI_R.cellH === pixiLastGridH) return;
     pixiLastGridW = PIXI_R.cellW;
     pixiLastGridH = PIXI_R.cellH;
+    pixiBuildPlatform();
     pixiBuildGrid();
 }
 
@@ -169,25 +218,92 @@ function pixiHexPoints(cx, cy, cellW, cellH) {
     ];
 }
 
+// Task 3: a "platform frame" beneath the whole tile group -- a single
+// darker, slightly larger silhouette the board visually sits ON, painted
+// into its own layer (PIXI_R.platformLayer) BELOW gridLayer in the stage's
+// child order (see pixiEnsureApp). Placeholder-art era: a soft rounded slab
+// rather than a true hex silhouette (still reads as "the board has a base"
+// without needing real platform art -- Phase 5 replaces this).
+function pixiBuildPlatform() {
+    if (!PIXI_R.platformLayer) return;
+    pixiDestroyAllChildren(PIXI_R.platformLayer);
+
+    // Bounding box of the four board corners in screen space (post-squash) --
+    // row 7 (bottom, odd) is shifted +cellW/2 in x by cellToPixel()'s odd-r
+    // offset, so the true corners (not just row/col extremes) must go through
+    // boardToScreen() rather than being assumed from PIXI_R.cellW/H alone.
+    var corners = [
+        boardToScreen(0, 0), boardToScreen(0, PIXI_COLS - 1),
+        boardToScreen(PIXI_ROWS - 1, 0), boardToScreen(PIXI_ROWS - 1, PIXI_COLS - 1)
+    ];
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (var i = 0; i < corners.length; i++) {
+        minX = Math.min(minX, corners[i].x);
+        maxX = Math.max(maxX, corners[i].x);
+        minY = Math.min(minY, corners[i].y);
+        maxY = Math.max(maxY, corners[i].y);
+    }
+    var marginX = PIXI_R.cellW * 0.55, marginY = PIXI_R.cellH * PIXI_CAM_Y_SQUASH * 0.5;
+    var plinthDepth = PIXI_R.cellH * PIXI_CAM_Y_SQUASH * 0.22; // TUNABLE: how "thick" the platform reads
+
+    var x0 = minX - marginX, x1 = maxX + marginX;
+    var y0 = minY - marginY, y1 = maxY + marginY;
+    var radius = Math.min(24, marginX);
+
+    var g = new PIXI.Graphics();
+    // Front/side "plinth" face (darker, extends below the top face) -- gives
+    // the platform apparent thickness/elevation.
+    g.roundRect(x0, y0 + plinthDepth, x1 - x0, (y1 - y0), radius)
+        .fill({ color: 0x060a12, alpha: 0.9 });
+    // Top face of the platform (lighter, where the board actually sits).
+    g.roundRect(x0, y0, x1 - x0, (y1 - y0), radius)
+        .fill({ color: 0x0f1a2c, alpha: 0.85 })
+        .stroke({ width: 1.5, color: 0x2a3a5e, alpha: 0.6 });
+    PIXI_R.platformLayer.addChild(g);
+}
+
 function pixiBuildGrid() {
     pixiDestroyAllChildren(PIXI_R.gridLayer);
     var g = new PIXI.Graphics();
+    var hexW = PIXI_R.cellW * 0.92;
+    var hexH = PIXI_R.cellH * PIXI_CAM_Y_SQUASH * 0.92; // Task 2: tile height squashed with the board plane
+    var lipDepth = PIXI_R.cellH * PIXI_CAM_Y_SQUASH * 0.16; // TUNABLE
+
+    // Pass 1: darker bottom-edge "lip" under every tile (Task 2 elevation
+    // illusion) -- drawn first so every real tile face (pass 2) paints over
+    // any lip poking up from the row below it.
+    for (var lr = 0; lr < PIXI_ROWS; lr++) {
+        for (var lc = 0; lc < PIXI_COLS; lc++) {
+            var lipCenter = boardToScreen(lr, lc);
+            var lhw = hexW / 2, lhh = hexH / 2;
+            var lipFill = lr <= 3 ? 0x0d0505 : 0x05080f;
+            g.poly([
+                lipCenter.x - lhw * 0.8, lipCenter.y + lhh * 0.55,
+                lipCenter.x + lhw * 0.8, lipCenter.y + lhh * 0.55,
+                lipCenter.x + lhw * 0.55, lipCenter.y + lhh * 0.55 + lipDepth,
+                lipCenter.x - lhw * 0.55, lipCenter.y + lhh * 0.55 + lipDepth
+            ]).fill({ color: lipFill, alpha: 0.8 });
+        }
+    }
+
+    // Pass 2: the tile faces themselves.
     for (var r = 0; r < PIXI_ROWS; r++) {
         for (var c = 0; c < PIXI_COLS; c++) {
-            var topLeft = cellToPixel(r, c, PIXI_R.cellW, PIXI_R.cellH);
-            var cx = topLeft.x + PIXI_R.cellW / 2;
-            var cy = topLeft.y + PIXI_R.cellH / 2;
+            var center = boardToScreen(r, c);
             var fill = r <= 3 ? 0x1a0a0a : 0x0a1628;
-            g.poly(pixiHexPoints(cx, cy, PIXI_R.cellW * 0.92, PIXI_R.cellH * 0.92))
+            g.poly(pixiHexPoints(center.x, center.y, hexW, hexH))
                 .fill({ color: fill, alpha: 0.6 })
                 .stroke({ width: 1, color: 0x333333, alpha: 0.5 });
         }
     }
     // Row 4 divider (enemy/player split), matching render-dom.js's border-top.
-    // Spans the full packed hex board width/height rather than the old
-    // square PIXI_COLS*cellW (odd rows extend cellW/2 further right).
-    var dividerY = cellToPixel(4, 0, PIXI_R.cellW, PIXI_R.cellH).y - 1;
-    g.rect(0, dividerY, PIXI_COLS * PIXI_R.cellW + PIXI_R.cellW / 2, 2).fill({ color: 0x555555, alpha: 0.8 });
+    // Positioned at the squashed midpoint between row 3 and row 4 (Task 2 --
+    // every board-plane element routes through boardToScreen()/the squash).
+    var dividerCenter3 = boardToScreen(3, 0), dividerCenter4 = boardToScreen(4, 0);
+    var dividerY = (dividerCenter3.y + dividerCenter4.y) / 2;
+    var dividerX0 = boardToScreen(0, 0).x - PIXI_R.cellW / 2;
+    var dividerW = PIXI_R.cellW * (PIXI_COLS + 0.5);
+    g.rect(dividerX0, dividerY - 1, dividerW, 2).fill({ color: 0x555555, alpha: 0.8 });
     PIXI_R.gridLayer.addChild(g);
 }
 
@@ -211,14 +327,83 @@ function pixiDrawDeathMarkers(combatState) {
         var t = new PIXI.Text({
             text: combatState.deathMarkers[key],
             anchor: 0.5,
-            style: { fontSize: Math.floor(PIXI_R.cellH * 0.5), fill: 0xffffff }
+            style: { fontSize: Math.floor(PIXI_R.cellH * PIXI_CAM_Y_SQUASH * 0.5), fill: 0xffffff }
         });
         t.alpha = 0.2;
-        var markerPos = cellToPixel(r, c, PIXI_R.cellW, PIXI_R.cellH);
-        t.x = markerPos.x + PIXI_R.cellW / 2;
-        t.y = markerPos.y + PIXI_R.cellH / 2;
+        var markerCenter = boardToScreen(r, c); // Task 2: route through the board-plane projection
+        t.x = markerCenter.x;
+        t.y = markerCenter.y;
         PIXI_R.markerLayer.addChild(t);
     }
+}
+
+// ---- Task 4: hover inspection tooltip (DOM, not Pixi -- reuses the format
+// js/render-dom.js's dead initCombatUnitTooltips() established: name, HP,
+// ATK, element, plus stars/mana/items/statuses per the Prompt 70 spec) ----
+
+function pixiTooltipEl() {
+    var el = document.getElementById('pixi-unit-tooltip');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'pixi-unit-tooltip';
+        el.style.cssText = 'position:fixed; background:#16213e; border:1px solid #444; ' +
+            'border-radius:6px; padding:8px; font-size:11px; z-index:100; pointer-events:none; ' +
+            'max-width:220px; line-height:1.4; display:none;';
+        document.body.appendChild(el);
+    }
+    return el;
+}
+
+function pixiUnitTooltipHtml(unit) {
+    var elemEmoji = pixiUnitEmoji(unit);
+    var starsStr = unit.stars ? new Array(unit.stars + 1).join('★') : '';
+    var manaStr = (unit.maxMana && unit.maxMana > 0) ?
+        ('MP: ' + Math.floor(unit.currentMana || 0) + ' / ' + unit.maxMana) : '';
+    var itemsStr = (unit.combatItems && unit.combatItems.length > 0) ? unit.combatItems.join(' ') : '';
+
+    var statusStr = '';
+    if (unit.statusEffects && unit.statusEffects.length > 0) {
+        var seen = [];
+        for (var i = 0; i < unit.statusEffects.length; i++) {
+            var sType = unit.statusEffects[i].type;
+            if (seen.indexOf(sType) < 0) seen.push(sType);
+        }
+        var iconParts = [];
+        for (var j = 0; j < seen.length; j++) {
+            iconParts.push((typeof STATUS_ICONS !== 'undefined' && STATUS_ICONS[seen[j]]) ? STATUS_ICONS[seen[j]] : seen[j]);
+        }
+        statusStr = iconParts.join(' ');
+    }
+
+    return '<div style="font-weight:bold;">' + elemEmoji + ' ' + (unit.name || 'Unit') +
+        (starsStr ? ' <span style="color:#e2b714;">' + starsStr + '</span>' : '') + '</div>' +
+        '<div>HP: ' + Math.max(0, Math.floor(unit.hp)) + ' / ' + unit.maxHp + '</div>' +
+        (manaStr ? '<div style="color:#4488ff;">' + manaStr + '</div>' : '') +
+        '<div>ATK: ' + unit.attack + '</div>' +
+        (itemsStr ? '<div>Items: ' + itemsStr + '</div>' : '') +
+        (statusStr ? '<div>Status: ' + statusStr + '</div>' : '<div style="color:#555;">No active statuses</div>');
+}
+
+function pixiShowUnitTooltip(unit, event) {
+    var el = pixiTooltipEl();
+    el.innerHTML = pixiUnitTooltipHtml(unit);
+    el.style.display = 'block';
+    if (event) pixiPositionUnitTooltip(event);
+}
+
+// `event` is a PixiJS FederatedPointerEvent -- .client is its browser
+// client-coordinate Point (distinct from .global, which is stage/canvas-
+// local coordinates), exactly what a `position: fixed` DOM tooltip needs.
+function pixiPositionUnitTooltip(event) {
+    if (!event || !event.client) return;
+    var el = pixiTooltipEl();
+    el.style.left = (event.client.x + 14) + 'px';
+    el.style.top = (event.client.y + 14) + 'px';
+}
+
+function pixiHideUnitTooltip() {
+    var el = document.getElementById('pixi-unit-tooltip');
+    if (el) el.style.display = 'none';
 }
 
 // ---- per-unit visual token ----
@@ -276,11 +461,31 @@ function pixiCreateVisual(unit) {
     });
     container.addChild(flagText);
 
+    // Task 4: element-colored selection ring, drawn under everything else
+    // added above -- addChildAt(0) so hover highlighting never occludes the
+    // token's own art/bars/text.
+    var ring = new PIXI.Graphics();
+    ring.visible = false;
+    container.addChildAt(ring, 0);
+
+    // Task 4: hover inspection -- Pixi pointer events drive a DOM tooltip
+    // (pixiShowUnitTooltip/pixiHideUnitTooltip below) and this same ring.
+    // hitArea is (re)sized every redraw in pixiRedrawToken (token size
+    // changes with depth scale/boss span), so it starts as a small
+    // placeholder rect here.
+    container.eventMode = 'static';
+    container.cursor = 'pointer';
+    container.hitArea = new PIXI.Rectangle(-10, -10, 20, 20);
+    container.on('pointerover', function(e) { PIXI_R.hoveredUnit = unit; pixiShowUnitTooltip(unit, e); });
+    container.on('pointermove', function(e) { if (PIXI_R.hoveredUnit === unit) pixiPositionUnitTooltip(e); });
+    container.on('pointerout', function() { if (PIXI_R.hoveredUnit === unit) { PIXI_R.hoveredUnit = null; pixiHideUnitTooltip(); } });
+
     PIXI_R.unitLayer.addChild(container);
 
     var vis = {
         container: container,
         base: base,
+        ring: ring,
         emojiText: emojiText,
         nameText: nameText,
         hpBack: hpBack,
@@ -298,7 +503,17 @@ function pixiCreateVisual(unit) {
         segDuration: 0, segElapsed: 0,
         dispHp: unit.maxHp > 0 ? (unit.hp / unit.maxHp) : 0,
         castFlashT: 0,
-        alive: true
+        alive: true,
+        // Task 4: idle bob phase is per-unit so a full team doesn't breathe
+        // in lockstep -- drawn from the LOCAL cosmetic PRNG (pixiRngNext),
+        // never Math.random()/the seeded logic stream (Prompt 67 rule).
+        idlePhase: pixiRngNext() * Math.PI * 2,
+        // Task 4: wave-start drop/fade-in. spawnDelay staggers tokens created
+        // in the same wave-init frame so the whole team doesn't pop in at
+        // once; also drawn from the local PRNG for the same reason.
+        spawnAge: 0,
+        spawnDelay: pixiRngNext() * 0.22,
+        spawnDuration: 0.32
     };
     // Attach directly to the unit object (same convention render-dom.js
     // uses for unit._uid) rather than a side Map -- keeps this file ES5-
@@ -355,8 +570,14 @@ function pixiUpdateMovement(vis, unit, dtMs) {
             // avoids that entirely. vis.row/vis.col are left at their
             // pre-segment (start) values during the transition; they only
             // matter as jump-distance inputs above, not for positioning.
-            var segP0 = cellToPixel(vis.segRow0, vis.segCol0, PIXI_R.cellW, PIXI_R.cellH);
-            var segPT = cellToPixel(vis.segRowT, vis.segColT, PIXI_R.cellW, PIXI_R.cellH);
+            //
+            // Prompt 70 (Task 2): lerp through boardToScreen(), not the bare
+            // cellToPixel(), so a mid-move token tracks the squashed board
+            // plane instead of drifting off it mid-transition. boardToScreen()
+            // returns cell CENTERS (not top-left corners), which is why
+            // pixiRedrawToken below no longer adds +cellW/2 to this result.
+            var segP0 = boardToScreen(vis.segRow0, vis.segCol0);
+            var segPT = boardToScreen(vis.segRowT, vis.segColT);
             vis._lerpPx = pixiLerp(segP0.x, segPT.x, t);
             vis._lerpPy = pixiLerp(segP0.y, segPT.y, t);
         }
@@ -377,40 +598,70 @@ function pixiRedrawToken(vis, unit, dtMs) {
     vis.container.visible = alive;
     if (!alive) return;
 
+    var depthScale;
     if (unit.isBoss) {
         // Center over the boss's 4 grid.js-canonical bossCells() (a hex
         // rhombus, not a square 2x2 block) by averaging their cell centers --
         // bosses don't move mid-combat in this engine (no dash/knockback
         // path targets isBoss units), so vis.row/vis.col are always the
-        // boss's exact anchor cell, no lerp needed here.
+        // boss's exact anchor cell, no lerp needed here. Prompt 70: routed
+        // through boardToScreen() (board-plane squash) like everything else.
         var bCells = bossCells(vis.row, vis.col);
-        var sumX = 0, sumY = 0;
+        var sumX = 0, sumY = 0, sumDepth = 0;
         for (var bci = 0; bci < bCells.length; bci++) {
-            var bp = cellToPixel(bCells[bci].row, bCells[bci].col, PIXI_R.cellW, PIXI_R.cellH);
-            sumX += bp.x + PIXI_R.cellW / 2;
-            sumY += bp.y + PIXI_R.cellH / 2;
+            var bp = boardToScreen(bCells[bci].row, bCells[bci].col);
+            sumX += bp.x;
+            sumY += bp.y;
+            sumDepth += bp.depthScale;
         }
         vis.container.x = sumX / bCells.length;
         vis.container.y = sumY / bCells.length;
+        depthScale = sumDepth / bCells.length;
     } else {
+        // boardToScreen()/the lerp above both return cell CENTERS already --
+        // no more "+cellW/2, +cellH/2" centering needed here (Prompt 70).
         var pos = (vis._lerpPx !== null && vis._lerpPx !== undefined) ?
-            { x: vis._lerpPx, y: vis._lerpPy } : cellToPixel(vis.row, vis.col, PIXI_R.cellW, PIXI_R.cellH);
-        vis.container.x = pos.x + PIXI_R.cellW / 2;
-        vis.container.y = pos.y + PIXI_R.cellH / 2;
+            { x: vis._lerpPx, y: vis._lerpPy } : boardToScreen(vis.row, vis.col);
+        vis.container.x = pos.x;
+        vis.container.y = pos.y;
+        depthScale = pixiRowDepthScale(vis.row);
     }
     // Painter's order tie-break: per the Prompt 68 spec, lower rows draw
     // above higher rows -- larger zIndex wins in Pixi's sortableChildren.
     vis.container.zIndex = 1000 - unit.gridRow;
 
-    // Death fade-out.
-    if (unit.deathAnimating) {
-        var deathPct = Math.max(0, (unit.deathTimer || 0) / 0.5);
-        vis.container.alpha = deathPct;
-        vis.container.scale.set(0.5 + deathPct * 0.5);
-    } else {
-        vis.container.alpha = 1;
-        vis.container.scale.set(1);
+    // Task 4: idle bob/breath (scale-y only, ~2%) -- a per-unit phase from
+    // the local cosmetic PRNG (vis.idlePhase, set once at token creation)
+    // keeps a full team from breathing in lockstep. Suppressed while dying
+    // or still playing the wave-start drop-in (both have their own scale).
+    var bobScaleY = 1;
+    var dying = !!unit.deathAnimating;
+    var speedForAnim = pixiGetCombatSpeed();
+    if (!dying) {
+        bobScaleY = 1 + Math.sin(PIXI_R.clock * 3.2 + vis.idlePhase) * 0.02; // TUNABLE: 2% bob, ~3.2 rad/s
     }
+
+    // Death fade-out (unchanged math, now composed with depth scale below).
+    var deathScale = 1, alpha = 1;
+    if (dying) {
+        var deathPct = Math.max(0, (unit.deathTimer || 0) / 0.5);
+        alpha = deathPct;
+        deathScale = 0.5 + deathPct * 0.5;
+    } else {
+        // Task 4: wave-start drop/fade-in -- plays once per token (spawnAge
+        // only advances while alive/not-dying, so a unit that spawns mid-
+        // death-animation edge case can't replay it).
+        vis.spawnAge += (dtMs / 1000) * speedForAnim;
+        if (vis.spawnAge < vis.spawnDelay) {
+            alpha = 0;
+        } else if (vis.spawnAge < vis.spawnDelay + vis.spawnDuration) {
+            var sp = (vis.spawnAge - vis.spawnDelay) / vis.spawnDuration;
+            alpha = sp;
+            vis.container.y -= 16 * (1 - sp); // TUNABLE: drop-in distance (px)
+        }
+    }
+    vis.container.alpha = alpha;
+    vis.container.scale.set(depthScale * deathScale, depthScale * deathScale * bobScaleY);
 
     vis.base.clear();
     vis.base.roundRect(-w / 2, -h / 2, w, h, 4).fill({ color: tint, alpha: 0.85 });
@@ -500,6 +751,29 @@ function pixiRedrawToken(vis, unit, dtMs) {
     }
     vis.flagText.text = flag;
     vis.flagText.y = -h / 2 - 12;
+
+    // Task 4: hit area sized to this frame's token box (w/h change with
+    // boss span; depth/bob are container.scale, which PIXI.Rectangle hit
+    // testing already accounts for via the container's transform).
+    pixiUpdateHitArea(vis, w, h);
+
+    // Task 4: element-colored selection ring, shown only for the hovered unit.
+    vis.ring.clear();
+    if (PIXI_R.hoveredUnit === unit) {
+        vis.ring.visible = true;
+        var ringColor = pixiUnitElementColor(unit);
+        vis.ring.roundRect(-w / 2 - 4, -h / 2 - 4, w + 8, h + 8, 6).stroke({ width: 2, color: ringColor, alpha: 0.9 });
+        pixiShowUnitTooltip(unit);
+    } else {
+        vis.ring.visible = false;
+    }
+}
+
+function pixiUpdateHitArea(vis, w, h) {
+    vis.container.hitArea.x = -w / 2;
+    vis.container.hitArea.y = -h / 2;
+    vis.container.hitArea.width = w;
+    vis.container.hitArea.height = h;
 }
 
 // ---- combatEvents-driven cosmetic effects ----
@@ -513,9 +787,9 @@ function pixiSpawnFloatingText(payload) {
         anchor: 0.5,
         style: { fontSize: big ? 16 : 12, fill: color, fontWeight: 'bold', stroke: { color: 0x000000, width: 2 } }
     });
-    var floatPos = cellToPixel(payload.row, payload.col, PIXI_R.cellW, PIXI_R.cellH);
-    t.x = floatPos.x + PIXI_R.cellW / 2 + (pixiRngNext() - 0.5) * PIXI_R.cellW * 0.4;
-    t.y = floatPos.y + PIXI_R.cellH / 2;
+    var floatCenter = boardToScreen(payload.row, payload.col); // Task 2: board-plane projection
+    t.x = floatCenter.x + (pixiRngNext() - 0.5) * PIXI_R.cellW * 0.4;
+    t.y = floatCenter.y;
     t._pixiFloatAge = 0;
     PIXI_R.floatLayer.addChild(t);
 }
@@ -544,9 +818,8 @@ function pixiFlashCells(payload) {
     var g = new PIXI.Graphics();
     for (var i = 0; i < payload.cells.length; i++) {
         var cell = payload.cells[i];
-        var flashTopLeft = cellToPixel(cell.row, cell.col, PIXI_R.cellW, PIXI_R.cellH);
-        var fcx = flashTopLeft.x + PIXI_R.cellW / 2, fcy = flashTopLeft.y + PIXI_R.cellH / 2;
-        g.poly(pixiHexPoints(fcx, fcy, PIXI_R.cellW * 0.9, PIXI_R.cellH * 0.9))
+        var flashCenter = boardToScreen(cell.row, cell.col); // Task 2: board-plane projection
+        g.poly(pixiHexPoints(flashCenter.x, flashCenter.y, PIXI_R.cellW * 0.9, PIXI_R.cellH * PIXI_CAM_Y_SQUASH * 0.9))
             .fill({ color: pixiColorStringToHex(payload.color), alpha: 0.35 });
     }
     PIXI_R.fxLayer.addChild(g);
@@ -687,6 +960,9 @@ function pixiEnsureApp() {
         app.canvas.style.zIndex = '1';
         boardEl.appendChild(app.canvas);
 
+        // Task 3: platformLayer is added BEFORE gridLayer so its "platform
+        // frame" silhouette always paints beneath the tile group.
+        PIXI_R.platformLayer = new PIXI.Container();
         PIXI_R.gridLayer = new PIXI.Container();
         PIXI_R.markerLayer = new PIXI.Container();
         PIXI_R.drawnMarkers = {};
@@ -695,6 +971,7 @@ function pixiEnsureApp() {
         PIXI_R.fxLayer = new PIXI.Container();
         PIXI_R.floatLayer = new PIXI.Container();
 
+        app.stage.addChild(PIXI_R.platformLayer);
         app.stage.addChild(PIXI_R.gridLayer);
         app.stage.addChild(PIXI_R.markerLayer);
         app.stage.addChild(PIXI_R.unitLayer);
@@ -709,6 +986,15 @@ function pixiEnsureApp() {
         if (typeof console !== 'undefined' && console.error) {
             console.error('render-pixi.js: PIXI.Application.init() failed', err);
         }
+        // Prompt 70 (Task 5): WebGL unavailable/broken on this machine --
+        // fall back to the DOM renderer for the rest of the session rather
+        // than silently leaving combat with a dead canvas (PIXI_R.ready never
+        // becomes true, so frame() would just no-op forever otherwise).
+        // js/ui-combat.js's renderCombatFrame() re-resolves getActiveRenderer()
+        // every call, so this takes effect on the very next tick.
+        if (typeof forceRendererDomFallback === 'function') {
+            forceRendererDomFallback('PIXI.Application.init() failed: ' + err);
+        }
     });
 }
 
@@ -721,6 +1007,8 @@ var RENDER_PIXI = {
     // invite bugs.
     init: function(container, cs, context) {
         pixiPhaseOverlayShownFor = null;
+        PIXI_R.hoveredUnit = null; // Task 4: don't carry a hover/tooltip from the previous wave's now-destroyed token
+        pixiHideUnitTooltip();
 
         // Player units are the SAME object references across every wave of
         // a mission (combatBoard/deployTeam() in ui-combat.js persists them
@@ -757,6 +1045,10 @@ var RENDER_PIXI = {
 
     frame: function(dtMs) {
         if (!PIXI_R.ready || typeof combatState === 'undefined' || !combatState) return;
+
+        // Task 4: idle-bob clock, scaled by COMBAT_SPEED like every other
+        // cosmetic timer in this file (pixiTickFloatingText/pixiTickFlashCells).
+        PIXI_R.clock += (dtMs / 1000) * pixiGetCombatSpeed();
 
         pixiSizeBoard();
         pixiMaybeRebuildGrid();
@@ -805,6 +1097,7 @@ var RENDER_PIXI = {
         }
         PIXI_R.app = null;
         PIXI_R.ready = false;
+        PIXI_R.platformLayer = null;
         PIXI_R.gridLayer = null;
         PIXI_R.markerLayer = null;
         PIXI_R.drawnMarkers = null;
@@ -812,8 +1105,11 @@ var RENDER_PIXI = {
         PIXI_R.fxLayer = null;
         PIXI_R.floatLayer = null;
         PIXI_R.boardEl = null;
+        PIXI_R.hoveredUnit = null;
+        PIXI_R.clock = 0;
         pixiLastGridW = -1;
         pixiLastGridH = -1;
+        pixiHideUnitTooltip();
 
         var enrageTimer = document.getElementById('enrage-timer');
         if (enrageTimer) enrageTimer.textContent = '';

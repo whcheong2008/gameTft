@@ -9,6 +9,13 @@ var combatEnemies = [];
 var currentWaveConfig = null;
 var missionStarTracking = { totalDamageTaken: 0, unitsLostTotal: 0 };
 
+// Prompt 70 (Task 1): collapse state for the arena's overlay-drawer chrome
+// panels (scoreboard, per-side synergy sidebars, the active-synergy bar).
+// Plain UI state -- persists across frames but resets naturally whenever the
+// combat screen is re-entered (a fresh page load / screen switch just
+// re-declares this module, same as every other ui-combat.js var).
+var combatDrawerCollapsed = { scoreboard: false, synergyLeft: false, synergyRight: false, synergyBar: false };
+
 // Prompt 67: registered ONCE, at script-load time, via combatEvents.onPersistent()
 // -- NOT per-wave. See the matching comment in js/render-dom.js (RENDER_DOM's
 // floatingText/abilityFlash registration) for why: initCombat() can emit
@@ -19,6 +26,62 @@ var missionStarTracking = { totalDamageTaken: 0, unitsLostTotal: 0 };
 // long after the whole script has finished loading.
 if (typeof combatEvents !== 'undefined' && typeof combatEvents.onPersistent === 'function') {
     combatEvents.onPersistent('logMessage', function(p) { addLogEntry(p.text, p.cls); });
+}
+
+// ---- Prompt 70 (Phase 3.4, Task 3): procedural arena backdrop per region ----
+//
+// Placeholder art (MASTERPLAN.md Phase 5 replaces this with real environment
+// paintings): a layered CSS gradient scene painted into #arena-backdrop,
+// keyed by region number. Deliberately renderer-agnostic (pure DOM/CSS, no
+// Pixi/canvas involved) so it paints behind BOTH the Pixi and DOM combat
+// boards -- ?renderer=dom still gets region theming, satisfying the "must
+// still work in the new layout" requirement without a second implementation.
+// Every color/position below is fixed per theme (no randomness anywhere in
+// this function), which trivially satisfies the Prompt 67/68 PRNG rule
+// (cosmetic randomness must never touch the seeded Math.random() stream) --
+// there's simply no RNG call to get wrong.
+var ARENA_BACKDROP_THEMES = {
+    // Neutral void theme -- grind repeats with no story region context,
+    // endless mode (js/endless.js), and the Survival challenge (js/challenges.js)
+    // all resolve to this via getActiveMissionRegion() returning null/0.
+    0: { glow: '#3a2a5e', accent: '#8a5cf0', blobA: '#1c1030', blobB: '#241640', blobC: '#150c26' },
+    1: { glow: '#4a3a20', accent: '#caa15a', blobA: '#2a2010', blobB: '#332813', blobC: '#20180c' }, // R1 The Frontier -- dusty wilderness
+    2: { glow: '#3a2f22', accent: '#ff8844', blobA: '#1c1816', blobB: '#26201a', blobC: '#150f0c' }, // R2 The Barracks Trials -- steel + campfire
+    3: { glow: '#26305a', accent: '#66ccdd', blobA: '#12182a', blobB: '#182136', blobC: '#0c1220' }, // R3 The Synergy Trials -- arcane teal
+    4: { glow: '#4a1e14', accent: '#ff5522', blobA: '#2a1008', blobB: '#33150c', blobC: '#1c0a05' }, // R4 The Shattered Lands -- apocalyptic
+    5: { glow: '#16324a', accent: '#44aadd', blobA: '#0c1a2a', blobB: '#102436', blobC: '#081420' }, // R5 The Dual Convergence -- blue confluence
+    6: { glow: '#3a2e4a', accent: '#e2b714', blobA: '#241a30', blobB: '#2e2240', blobC: '#180f22' }, // R6 The Elemental Crucible -- prismatic
+    7: { glow: '#4a141e', accent: '#e2b714', blobA: '#2a0c14', blobB: '#33101a', blobC: '#1c060c' }, // R7 The Proving Grounds -- crimson arena
+    8: { glow: '#100826', accent: '#8844ff', blobA: '#05030a', blobB: '#0a0512', blobC: '#030106' }  // R8 The Abyss Gate -- deep void
+};
+
+// Faint oversized hex-ish grid via two crossed repeating-linear-gradients --
+// procedural placeholder, no image assets (per GRAPHICS-SESSION-HANDOFF.md,
+// real environment art is Phase 5's job). `accent` is a 6-digit hex string;
+// appending 2 hex digits of alpha ('22') is valid #RRGGBBAA CSS color syntax.
+function arenaBdHexPatternCss(accent) {
+    return 'repeating-linear-gradient(60deg, ' + accent + '22 0px, ' + accent + '22 1px, transparent 1px, transparent 42px), ' +
+        'repeating-linear-gradient(-60deg, ' + accent + '22 0px, ' + accent + '22 1px, transparent 1px, transparent 42px)';
+}
+
+// regionNum: 1-8 for a story-region stage (activeMission.region, resolved by
+// missions.js's getActiveMissionRegion()), or null/undefined/0 for
+// grind/endless/challenge missions with no region context -- all fall back
+// to the neutral void theme (theme 0).
+function buildArenaBackdrop(regionNum) {
+    var el = document.getElementById('arena-backdrop');
+    if (!el) return;
+    var theme = ARENA_BACKDROP_THEMES[regionNum] || ARENA_BACKDROP_THEMES[0];
+    if (el._backdropTheme === theme) return; // unchanged since the last wave -- skip the DOM rebuild
+    el._backdropTheme = theme;
+
+    el.innerHTML =
+        '<div class="arena-bd-horizon" style="background:radial-gradient(ellipse 90% 60% at 50% 15%, ' + theme.glow + 'cc 0%, transparent 70%);"></div>' +
+        '<div class="arena-bd-hexfield" style="background-image:' + arenaBdHexPatternCss(theme.accent) + ';"></div>' +
+        '<div class="arena-bd-blob arena-bd-blob-a" style="background:' + theme.blobA + ';"></div>' +
+        '<div class="arena-bd-blob arena-bd-blob-b" style="background:' + theme.blobB + ';"></div>' +
+        '<div class="arena-bd-blob arena-bd-blob-c" style="background:' + theme.blobC + ';"></div>' +
+        '<div class="arena-bd-vignette"></div>';
 }
 
 function beginCombatScreen(sd) {
@@ -267,6 +330,13 @@ function startMissionCombat(playerBoard, enemies) {
     // already reads via setupCombatEncounterMechanics(). No-op outside endless.
     if (typeof applyEndlessFloorModifierEffects === 'function') applyEndlessFloorModifierEffects(combatState);
 
+    // Prompt 70 (Task 3): paint the region backdrop for this wave. Cheap to
+    // call every wave -- buildArenaBackdrop() no-ops if the theme hasn't
+    // changed since the last call (same region across a multi-wave mission).
+    if (typeof buildArenaBackdrop === 'function') {
+        buildArenaBackdrop(typeof getActiveMissionRegion === 'function' ? getActiveMissionRegion() : null);
+    }
+
     // Prompt 67: resolve + init the active renderer for this wave. The
     // combatEvents listeners it needs (floatingText/abilityFlash) and the
     // 'logMessage' chrome listener above are registered once at script-load
@@ -297,7 +367,7 @@ function startMissionCombat(playerBoard, enemies) {
     // which causes all unit overlays to stack at (0,0).
     requestAnimationFrame(function() {
         requestAnimationFrame(function() {
-            renderCombatFrame(activeRenderer, 0);
+            renderCombatFrame(0);
         });
     });
 }
@@ -323,7 +393,16 @@ var combatRenderLoopActive = false;
 // Renders one frame through whichever renderer is active (falls back to the
 // DOM board renderer directly if none is registered/resolvable -- keeps this
 // helper safe to call even before js/render-dom.js registers 'dom').
-function renderCombatFrame(renderer, dtMs) {
+//
+// Prompt 70 (Task 5): re-resolves getActiveRenderer() on every call instead
+// of taking a renderer reference from the caller -- a stale captured
+// reference would keep driving a broken Pixi renderer for the rest of the
+// wave even after js/render-pixi.js's WebGL-init-failure path calls
+// forceRendererDomFallback(). Re-resolving here means the very next frame
+// (tick-pump cadence, ~50ms) after a fallback fires picks up the DOM
+// renderer automatically -- no other caller needs to know this happened.
+function renderCombatFrame(dtMs) {
+    var renderer = (typeof getActiveRenderer === 'function') ? getActiveRenderer() : null;
     if (renderer && typeof renderer.frame === 'function') {
         renderer.frame(dtMs);
     } else if (typeof renderCombatBoard === 'function') {
@@ -348,11 +427,9 @@ function uiStartCombatLoop() {
         initCombatSynergySidebars(combatState.playerUnits || [], combatState.enemyUnits || []);
     }
 
-    var activeRenderer = (typeof getActiveRenderer === 'function') ? getActiveRenderer() : null;
-
     // Re-render board with correct dimensions before combat starts
     // (sidebars may have changed the board width)
-    renderCombatFrame(activeRenderer, 0);
+    renderCombatFrame(0);
 
     // Show FIGHT! text
     showCombatStartText();
@@ -377,7 +454,7 @@ function uiStartCombatLoop() {
             // fused loop did, regardless of how the independent rAF render loop
             // below happens to be scheduled relative to this setTimeout.
             combatRenderLoopActive = false;
-            renderCombatFrame(activeRenderer, 0);
+            renderCombatFrame(0);
             onWaveCombatEnd();
         }
     }
@@ -389,7 +466,7 @@ function uiStartCombatLoop() {
         if (!combatRenderLoopActive) return;
         var dtMs = lastFrameTime === null ? 0 : (now - lastFrameTime);
         lastFrameTime = now;
-        renderCombatFrame(activeRenderer, dtMs);
+        renderCombatFrame(dtMs);
         if (combatRenderLoopActive) requestAnimationFrame(renderLoop);
     }
     requestAnimationFrame(renderLoop);
@@ -920,11 +997,39 @@ function formatNum(n) {
     return '' + n;
 }
 
+// Prompt 70 (Task 1): click-to-collapse toggles for the arena's overlay
+// drawers. Chrome-only (no gameplay effect) -- toggling never touches
+// combatState/combatEvents, only the CSS .collapsed class defined in
+// game-v2.html's "Combat Scoreboard + per-side synergy sidebars" block.
+function toggleCombatScoreboard() {
+    combatDrawerCollapsed.scoreboard = !combatDrawerCollapsed.scoreboard;
+    var sb = document.getElementById('combat-scoreboard');
+    if (sb) sb.classList.toggle('collapsed', combatDrawerCollapsed.scoreboard);
+}
+
+function toggleSynergySidebar(side) {
+    var key = side === 'left' ? 'synergyLeft' : 'synergyRight';
+    combatDrawerCollapsed[key] = !combatDrawerCollapsed[key];
+    var container = document.getElementById('synergy-sidebar-' + side);
+    if (container) container.classList.toggle('collapsed', combatDrawerCollapsed[key]);
+}
+
+function toggleCombatSynergyBar() {
+    combatDrawerCollapsed.synergyBar = !combatDrawerCollapsed.synergyBar;
+    var bar = document.getElementById('combat-synergy-bar');
+    if (bar) bar.classList.toggle('collapsed', combatDrawerCollapsed.synergyBar);
+}
+
+function toggleCombatLogExpand() {
+    var log = document.getElementById('combat-log');
+    if (log) log.classList.toggle('expanded');
+}
+
 function renderCombatScoreboard() {
     var sb = document.getElementById('combat-scoreboard');
     if (!sb || !combatState) return;
 
-    var html = '<div class="sb-header">Combat Stats</div>';
+    var html = '<div class="sb-header" onclick="toggleCombatScoreboard()">Combat Stats</div>';
 
     // Player units sorted by damage dealt descending
     var pUnits = combatState.playerUnits.slice().sort(function(a, b) {
@@ -1009,9 +1114,13 @@ function renderCombatScoreboard() {
 function renderCombatSynergyBar() {
     var bar = document.getElementById('combat-synergy-bar');
     if (!bar || !combatState) { if (bar) bar.innerHTML = ''; return; }
+    bar.classList.toggle('collapsed', combatDrawerCollapsed.synergyBar);
 
-    // Use vertical layout for readable synergy descriptions
-    var html = '<div style="display:flex; flex-direction:column; gap:3px;">';
+    // Use vertical layout for readable synergy descriptions. Prompt 70: body
+    // content is built separately from the (always-present) collapsible
+    // header so the pre-existing "No active synergies" fallback can still
+    // detect an empty body, same as before this task's drawer-header wrap.
+    var bodyHtml = '';
 
     // Active archetype synergies
     var archKeys = Object.keys(combatState.activeSynergies || {});
@@ -1031,7 +1140,7 @@ function renderCombatSynergyBar() {
                 thresholdStr += (th === tierReached - 1 ? '<b style="color:#e2b714;">' + arch.thresholds[th] + '</b>' : '<span style="color:#555;">' + arch.thresholds[th] + '</span>');
                 if (th < arch.thresholds.length - 1) thresholdStr += '/';
             }
-            html += '<div style="background:#2a3a5e; padding:3px 8px; border-radius:4px; border-left:3px solid #e2b714;">' +
+            bodyHtml += '<div style="background:#2a3a5e; padding:3px 8px; border-radius:4px; border-left:3px solid #e2b714;">' +
                 '<div style="font-size:11px;">' + arch.emoji + ' <b>' + arch.name + '</b> <span style="color:#e2b714;">' + count + '</span> (' + thresholdStr + ')</div>' +
                 '<div style="font-size:10px; color:#aaa; margin-top:1px;">' + archDesc + '</div></div>';
         }
@@ -1058,13 +1167,14 @@ function renderCombatSynergyBar() {
             eThresholdStr += (eth === eTierReached - 1 ? '<b style="color:' + (elemSyn.color || '#e2b714') + ';">' + elemSyn.thresholds[eth] + '</b>' : '<span style="color:#555;">' + elemSyn.thresholds[eth] + '</span>');
             if (eth < elemSyn.thresholds.length - 1) eThresholdStr += '/';
         }
-        html += '<div style="background:' + bgColor + '; padding:3px 8px; border-radius:4px; border-left:3px solid ' + borderColor + ';">' +
+        bodyHtml += '<div style="background:' + bgColor + '; padding:3px 8px; border-radius:4px; border-left:3px solid ' + borderColor + ';">' +
             '<div style="font-size:11px; color:' + (elemSyn.color || '#fff') + ';">' + elemSyn.emoji + ' <b>' + elemSyn.name + '</b> <span style="color:' + (elemSyn.color || '#e2b714') + ';">' + eCount + '</span> (' + eThresholdStr + ')</div>' +
             '<div style="font-size:10px; color:#aaa; margin-top:1px;">' + elemDesc + '</div></div>';
     }
 
-    html += '</div>';
-    bar.innerHTML = html || '<span class="text-muted">No active synergies</span>';
+    var header = '<div class="arena-drawer-header" style="font-size:11px; font-weight:bold; color:#888; cursor:pointer; user-select:none;" onclick="toggleCombatSynergyBar()">Synergies</div>';
+    bar.innerHTML = header + '<div class="arena-drawer-body" style="display:flex; flex-direction:column; gap:3px;">' +
+        (bodyHtml || '<span class="text-muted">No active synergies</span>') + '</div>';
 }
 
 // ---- Log ----
@@ -1135,7 +1245,12 @@ function renderCombatSynergySidebar(side, synergies, label) {
         }
     }
 
-    container.innerHTML = '<div style="font-weight:bold; color:#888; margin-bottom:2px;">' + label + '</div>';
+    // Prompt 70 (Task 1): the container's own CSS class (position/width/
+    // collapse styling) lives in game-v2.html's ID-selector stylesheet rules
+    // -- the inline cssText above only pins cosmetic fill/padding/font, so it
+    // can't clobber those. The label header doubles as the collapse toggle.
+    container.classList.toggle('collapsed', combatDrawerCollapsed[side === 'left' ? 'synergyLeft' : 'synergyRight']);
+    container.innerHTML = '<div style="font-weight:bold; color:#888; margin-bottom:2px; cursor:pointer; user-select:none;" onclick="toggleSynergySidebar(\'' + side + '\')">' + label + '</div>';
 
     // Elements
     var allElements = Object.keys(ELEMENTS);
