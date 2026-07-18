@@ -365,6 +365,66 @@ function initCombat(gs) {
     }
 }
 
+// =============================================================================
+// BUGS.md #8 fix (Prompt 66): shared init for any unit spawned MID-COMBAT --
+// i.e. AFTER initCombat()'s own two allUnits loops above have already run
+// once for everyone present at combat start. Those loops give every starting
+// unit its runtime combat state: mana ("Mana initialization"), status/CC
+// arrays and combatStats ("Initialize combatStats" / "Initialize movement
+// cooldowns..."), and -- via the separate loop right before combatStart
+// fires -- initUnitPassiveState(). A unit created after that point (boss
+// minions in combat-boss.js's processBossMinions(), reinforcement-pressure
+// adds in combat-encounters.js's tickReinforcementPressure(), or any future
+// spawner) never goes through either loop unless the spawner replicates it
+// by hand -- which is exactly how BUGS #8 happened: processBossMinions()
+// hand-copied the mana/status/combatStats fields but not
+// initUnitPassiveState(), so a spawned flame_warrior minion's on-attack
+// passive threw "Cannot read properties of undefined (reading
+// 'attackCount')" (combat-passives.js's executeOnAttackPassive reads
+// unit.passiveState unconditionally) the instant it landed an attack.
+// Routing every spawn path through this one function means that class of
+// bug can't recur piecemeal per-spawner again.
+function initSpawnedCombatUnitState(unit, side, row, col) {
+    unit.side = side;
+    if (row !== undefined) unit.gridRow = row;
+    if (col !== undefined) unit.gridCol = col;
+    if (unit.hp === undefined || unit.hp === null) unit.hp = unit.maxHp;
+    unit.shield = unit.shield || 0;
+
+    // Mana (mirrors initCombat()'s "Mana initialization" allUnits loop).
+    var spawnTmpl = (typeof UNIT_TEMPLATES !== 'undefined' && UNIT_TEMPLATES[unit.templateKey || unit.key]) ||
+        (typeof EVOLVED_TEMPLATES !== 'undefined' && EVOLVED_TEMPLATES[unit.templateKey || unit.key]);
+    unit.maxMana = spawnTmpl ? (spawnTmpl.maxMana || 0) : 0;
+    unit.currentMana = 0;
+    unit.isCasting = false;
+    unit.castTimer = 0;
+    unit.abilityBuffs = {};
+    unit.statusEffects = [];
+
+    // Combat stat tracking + CC/movement bookkeeping (mirrors initCombat()'s
+    // "Initialize combatStats" / "Initialize movement cooldowns..." loops).
+    unit.combatStats = { damageDealt: 0, damageTaken: 0, healingDone: 0, shieldGiven: 0, kills: 0, abilityCasts: 0 };
+    unit.ccHistory = [];
+    unit.ccImmuneUntil = 0;
+    unit.tenacity = 0;
+    unit.moveCooldown = 0;
+    unit.attackCooldown = 0;
+
+    // Hero fields default-safe: every read site checks unit._heroKey
+    // truthiness before touching _heroData (see heroes.js), so a spawned
+    // unit that never gets a hero assigned is already safe left unset --
+    // explicit null here so that contract doesn't rely on omission.
+    unit._heroKey = null;
+    unit._heroData = null;
+
+    // The actual BUGS #8 fix: give the spawned unit a passive framework
+    // state so on-attack/on-hit/on-kill/periodic/aura passives on its
+    // template don't throw the instant they fire.
+    if (typeof initUnitPassiveState === 'function') initUnitPassiveState(unit);
+
+    return unit;
+}
+
 function applyElementBonuses(cs) {
     var elemCounts = cs.activeElements || {};
     var elemKeys = Object.keys(elemCounts);

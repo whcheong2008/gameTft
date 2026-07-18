@@ -367,20 +367,14 @@ function processBossMinions(boss, dt) {
                     var minion = createUnit(minionDef.key, minionDef.stars || 1);
                     if (!minion) continue;
                     minion.name = minionDef.name || minion.name;
-                    minion.side = 'enemy';
                     minion.templateKey = minionDef.key;
-                    minion.currentMana = 0;
-                    minion.maxMana = (UNIT_TEMPLATES[minionDef.key] || {}).maxMana || 0;
-                    minion.statusEffects = [];
-                    minion.combatStats = { damageDealt: 0, damageTaken: 0, healingDone: 0, shieldGiven: 0, kills: 0, abilityCasts: 0 };
-                    minion.ccHistory = [];
-                    minion.ccImmuneUntil = 0;
-                    minion.tenacity = 0;
-                    minion.abilityBuffs = {};
-                    minion.moveCooldown = 0;
-                    minion.attackCooldown = 0;
-                    minion.isCasting = false;
-                    minion.castTimer = 0;
+                    // BUGS.md #8 fix (Prompt 66): route through the shared
+                    // spawn-init helper (combat-core.js) instead of hand-copying
+                    // runtime fields -- this is what actually gives the minion
+                    // initUnitPassiveState(), the piece the old hand-copy missed
+                    // and which crashed combat the instant a minion with an
+                    // on-attack passive (e.g. flame_warrior) attacked.
+                    initSpawnedCombatUnitState(minion, 'enemy');
 
                     var placed = false;
                     for (var row = 0; row < 4 && !placed; row++) {

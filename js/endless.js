@@ -76,6 +76,34 @@ function getEndlessEnemyCount(floor) {
     return Math.min(ENDLESS_TUNABLES.maxEnemyCount, ENDLESS_TUNABLES.baseEnemyCount + Math.floor(f / ENDLESS_TUNABLES.enemyCountGrowthFloors));
 }
 
+// BUGS.md #9 (Prompt 66) continued: endless floors had the same fixed-1-star
+// enemy problem as story-region waves (see missions.js's
+// ENEMY_STAR_BANDS_BY_REGION comment for the full root-cause writeup, and
+// its comment for why a hard per-enemy star *floor* was tried first and
+// reverted -- same lesson applies here) -- budget/count/tier-mix all grow
+// with depth, but individual enemy *power* never did, so a post-R8
+// reference team could no-loss its way arbitrarily deep. A per-enemy
+// *chance* to roll 1 star higher, climbing with floor depth, continues the
+// story regions' star progression without a floor-1 power cliff. Tuned
+// against tests/balance-sim.js's endless section (each floor tested
+// independently at full HP against a fixed post-R8 team). // TUNABLE
+var ENDLESS_ENEMY_STAR_BANDS = [
+    { maxFloor: 10,       base: 1, upChance: 0.25 },
+    { maxFloor: 20,       base: 1, upChance: 0.40 },
+    { maxFloor: Infinity, base: 1, upChance: 0.55 }
+];
+
+function getEndlessEnemyStars(floor) {
+    var f = Math.max(1, floor);
+    var band = ENDLESS_ENEMY_STAR_BANDS[ENDLESS_ENEMY_STAR_BANDS.length - 1];
+    for (var i = 0; i < ENDLESS_ENEMY_STAR_BANDS.length; i++) {
+        if (f <= ENDLESS_ENEMY_STAR_BANDS[i].maxFloor) { band = ENDLESS_ENEMY_STAR_BANDS[i]; break; }
+    }
+    var stars = band.base;
+    if (band.upChance > 0 && Math.random() < band.upChance) stars++;
+    return Math.max(1, Math.min(5, stars));
+}
+
 // Generates the enemy roster for a given floor. Tier-weighted (via the
 // shared rollTier() helper from gacha.js) rather than the uniform
 // "affordable pool" pick generateMissionWave() uses for story stages -- this
@@ -99,6 +127,15 @@ function generateEndlessEnemies(floor) {
         var unit = createUnit(key, 1);
         if (!unit) continue;
         unit.isEnemy = true;
+        var endlessStars = getEndlessEnemyStars(floor);
+        if (endlessStars > 1 && typeof getStarMultiplier === 'function') {
+            unit.stars = endlessStars;
+            var multN = getStarMultiplier(endlessStars);
+            var tmplN = UNIT_TEMPLATES[key];
+            unit.hp = Math.floor(tmplN.hp * multN);
+            unit.maxHp = Math.floor(tmplN.hp * multN);
+            unit.attack = Math.floor(tmplN.attack * multN);
+        }
         remaining -= (UNIT_TEMPLATES[key] ? UNIT_TEMPLATES[key].cost : 1);
         enemies.push(unit);
     }

@@ -1166,10 +1166,10 @@ var BOSS_DATA = {
         emoji: '👁️',
         element: null,
         size: [2, 2],
-        baseHp: 8000,
-        hpScaling: 10,
-        baseAtk: 40,
-        atkScaling: 2.5,
+        baseHp: 5000,
+        hpScaling: 2,
+        baseAtk: 16,
+        atkScaling: 1.0,
         dr: 0.20,
         attackSpd: 1.2,
         range: 1,
@@ -1252,10 +1252,10 @@ var BOSS_DATA = {
         emoji: '🐙💧',
         element: 'water',
         size: [2, 2],
-        baseHp: 18000,
-        hpScaling: 3,
+        baseHp: 16000,
+        hpScaling: 2,
         baseAtk: 0,
-        atkScaling: 1.8,
+        atkScaling: 1.4,
         dr: 0.25,
         attackSpd: 1.5,
         range: 2,
@@ -1290,11 +1290,11 @@ var BOSS_DATA = {
         emoji: '🗿🌿',
         element: 'earth',
         size: [2, 2],
-        baseHp: 22000,
-        hpScaling: 3,
+        baseHp: 13000,
+        hpScaling: 1.3,
         baseAtk: 0,
-        atkScaling: 1.5,
-        dr: 0.35,
+        atkScaling: 1.15,
+        dr: 0.25,
         attackSpd: 2.0,
         range: 1,
         enrageTime: 120,
@@ -1330,10 +1330,10 @@ var BOSS_DATA = {
         emoji: '🦅💨',
         element: 'wind',
         size: [2, 2],
-        baseHp: 14000,
-        hpScaling: 3,
+        baseHp: 9000,
+        hpScaling: 1.5,
         baseAtk: 0,
-        atkScaling: 2.2,
+        atkScaling: 1.2,
         dr: 0.10,
         dodgeChance: 0.25,
         attackSpd: 0.8,
@@ -1439,7 +1439,7 @@ var BOSS_DATA = {
         baseHp: 6000,
         hpScaling: 5,
         baseAtk: 0,
-        atkScaling: 1.6,
+        atkScaling: 4.0,
         dr: 0.10,
         attackSpd: 1.0,
         range: 1,
@@ -1494,7 +1494,7 @@ var BOSS_DATA = {
         baseHp: 20000,
         hpScaling: 4,
         baseAtk: 0,
-        atkScaling: 1.8,
+        atkScaling: 4.0,
         dr: 0.25,
         attackSpd: 1.5,
         range: 1,
@@ -1654,10 +1654,10 @@ var BOSS_DATA = {
         emoji: '👿✨',
         element: null,
         size: [2, 2],
-        baseHp: 40000,
-        hpScaling: 4,
+        baseHp: 65000,
+        hpScaling: 2.2,
         baseAtk: 0,
-        atkScaling: 2.5,
+        atkScaling: 0.75,
         dr: 0.20,
         attackSpd: 1.0,
         range: 3,
@@ -2120,6 +2120,73 @@ function getCaptainBonusReward(captainKey) {
 
 // ---- Wave Enemy Generation ----
 
+// BUGS.md #9 (Prompt 66): enemy star level used to be fixed (1 star, 30%
+// chance of 2 star only when a wave's maxCost >= 4) regardless of which
+// region the stage belonged to. Individual enemy *power* never scaled with
+// the player's own star investment the way boss HP does, so once a
+// reference team reached a full roster at 3 star (R6+ per
+// BALANCE-REPORT.md's Reference Progression Model) it could absorb an
+// arbitrarily large count of individually-weak 1-star enemies with zero
+// losses -- more budget just meant more of the same weak enemies (see
+// BALANCE-REPORT.md "Known Issues" #2 for the full writeup / empirical
+// confirmation).
+//
+// The prompt's suggested starting bands (R1-R2 1*, R3-R4 2*, R5-R6 3*, R7
+// 3-4*, R8 4*, applied as a hard per-enemy floor) were tried first and
+// overshot badly: Prompt 65's wave budgets were tuned assuming 1-star
+// fodder, and a hard star floor is a ~1.8x-per-star multiplier applied to
+// EVERY enemy in a wave with no offsetting budget/count cut -- it turned
+// ~48 non-boss stages (all of R3 through R8) into walls, including regions
+// that had no freewin problem to begin with (R3-R5). The actual freewin
+// problem (BALANCE-REPORT.md "Known Issues" #2) is narrow -- 9 non-boss
+// stages, concentrated in R6 (1 stage) and R7 (7 of 9) -- so this instead
+// leaves R1-R5 at the pre-Prompt-66 flat-1-star behavior (untouched,
+// preserves all of Prompt 65's tuning) and applies only a per-enemy *chance*
+// to roll 1 star higher, scaled up region-by-region starting at R6, so no
+// more than a fraction of any wave's enemies actually get tougher. Tuned against
+// tests/balance-sim.js to the Prompt 66 target (freewins past R2 <= 3, 0
+// non-boss walls) rather than to zero freewins outright -- see BUGS.md #9.
+// // TUNABLE
+var ENEMY_STAR_BANDS_BY_REGION = {
+    1: { base: 1, upChance: 0 },
+    2: { base: 1, upChance: 0 },
+    3: { base: 1, upChance: 0 },
+    4: { base: 1, upChance: 0 },
+    5: { base: 1, upChance: 0 },
+    6: { base: 1, upChance: 0.35 },
+    7: { base: 2, upChance: 0.35 },
+    8: { base: 1, upChance: 0.25 }
+};
+
+// Resolves the region a wave's enemies should be scaled for. Story stages
+// set activeMission = the stage object directly (startMission()), which
+// already carries `.region`. Challenge-mode wrappers (Time Trial, Restricted
+// Roster -- js/challenges.js) build a synthetic mission object that omits
+// `region` but does carry `sourceStageId`, so fall back to looking the
+// source stage's region up. Returns null for missions with neither (e.g. a
+// low-level engine test that drives generateMissionWave() without setting
+// activeMission at all) -- callers treat null as "no region scaling".
+function getActiveMissionRegion() {
+    if (!activeMission) return null;
+    if (activeMission.region) return activeMission.region;
+    if (activeMission.sourceStageId) return getStageRegion(activeMission.sourceStageId);
+    return null;
+}
+
+// Picks the star level for one generated wave enemy. Falls back to the
+// pre-Prompt-66 behavior (1 star, 30% chance of 2 star when maxCost >= 4)
+// when there's no region context to scale against, so existing low-level
+// tests/golden scenarios that call generateMissionWave() without a real
+// activeMission are unaffected.
+function getWaveEnemyStars(maxCost) {
+    var region = getActiveMissionRegion();
+    var band = region ? ENEMY_STAR_BANDS_BY_REGION[region] : null;
+    if (!band) return (maxCost >= 4 && Math.random() < 0.3) ? 2 : 1;
+    var stars = band.base;
+    if (band.upChance > 0 && Math.random() < band.upChance) stars++;
+    return Math.max(1, Math.min(5, stars));
+}
+
 function generateMissionWave(waveConfig) {
     var enemies = [];
     var remaining = waveConfig.budget;
@@ -2159,13 +2226,14 @@ function generateMissionWave(waveConfig) {
         var unit = createUnit(pick, 1);
         if (unit) {
             unit.isEnemy = true;
-            if (maxCost >= 4 && Math.random() < 0.3) {
-                unit.stars = 2;
-                var mult2 = getStarMultiplier(2);
-                var tmpl2 = UNIT_TEMPLATES[pick];
-                unit.hp = Math.floor(tmpl2.hp * mult2);
-                unit.maxHp = Math.floor(tmpl2.hp * mult2);
-                unit.attack = Math.floor(tmpl2.attack * mult2);
+            var waveEnemyStars = getWaveEnemyStars(maxCost);
+            if (waveEnemyStars > 1) {
+                unit.stars = waveEnemyStars;
+                var multN = getStarMultiplier(waveEnemyStars);
+                var tmplN = UNIT_TEMPLATES[pick];
+                unit.hp = Math.floor(tmplN.hp * multN);
+                unit.maxHp = Math.floor(tmplN.hp * multN);
+                unit.attack = Math.floor(tmplN.attack * multN);
             }
             enemies.push(unit);
         }
