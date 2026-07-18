@@ -7,10 +7,12 @@
 
 ## Where We Actually Are
 
-- **HTML game (`game-v2.html`) is content-complete and working**: 66 base + 66 evolved units with
+- **HTML game (`game-v2.html`) is core-complete and working**: 66 base + 66 evolved units with
   per-unit unique abilities (v2), 74 stages across 8 regions, 8 bosses, 6 heroes with skill trees,
   Diablo-style items + enhancement + gems, story/dialogue docs, 131 playtest stat adjustments,
-  save v12. Verified loading clean 2026-07-18.
+  save v12. Verified loading clean 2026-07-18. **Not fully content-complete** — the 2026-07-18 code
+  audit (PHASE2-AUDIT.md) found endless mode, challenge modes, in-game lore, and encounter mechanics
+  absent, and hero skill trees mostly inert; Phase 2 closes these.
 - **Unity port (`Unity/ShatteredVeil/`) is PARKED** — not deleted. Tracks A–D complete (209 C# files,
   all scenes with placeholders, asset pipeline). It stalled on editor/UI wiring pain, and Unity is not
   installed on the current dev machine, so nothing can be verified there. It remains the future mobile
@@ -99,15 +101,28 @@ weak-model development scale.
 
 ## Phase 2 — Logic Closure
 
-Close the gaps between "content-complete" and "everything the design promises".
+Close the gaps between the code and what the design promises. ~~2.1 Gap audit~~ **DONE 2026-07-18 —
+see PHASE2-AUDIT.md** (findings: endless/challenges/lore/encounter-mechanics absent; hero skills ~90%
+inert; region rewards drop payouts; 7 achievements unobtainable. Daily quests stay removed and
+ascension stays deferred — deliberate design decisions, not gaps.)
 
-- **2.1 Gap audit** (read-only): verify implementation status of endless mode, challenge modes,
-  lore/codex, daily quests wiring, achievements wiring, region rewards/building gates, and produce
-  the definitive punch list. (Docs conflict; the code is the truth.)
-- **2.2 Hero skill node effects**: implement the placeholder `function(unit, hero) {}` combat effects.
-- **2.3 Punch-list items** from 2.1 (endless/The Abyss, challenges, codex — whatever is missing).
-- **2.4 Cleanups**: remaining "gold"→"Veil Essence" labels, BUGS.md flagged template/design issues.
-- **2.5 Balance verification**: simulator run over all 74 stages; fix walls.
+- **2.2 Combat event hooks + hero skill effects**: add the combat event framework (onAllyBelowHp,
+  onAllyCCd, onLastSurvivor, …) that the 84 placeholder nodes need; implement all 108 nodes; delete
+  the never-read `heroSkillBonuses` flag path or make combat consume it.
+- **2.3 Encounter mechanics**: wire all 6 (`encounterMechanic` currently has zero consumers).
+- **2.4 Region reward payouts**: `claimRegionReward` must pay `randomUnit` / `essenceChoice` /
+  `mythicMaterialChoice`; fix stale building names in descriptions (no building unlocks — buildings
+  stay VE/level-gated per current design).
+- **2.5 Achievement pipeline**: wire `trackStat` call sites (boss kills, deathless clears, max hit,
+  fastest win, element synergy, bonds used, forge ops) so all 24 achievements are obtainable.
+- **2.6 Endless mode** (The Abyss): floors, modifiers, personal best.
+- **2.7 Challenge modes**: Time Trial / Survival / Restricted Roster + the 4 orphaned element bosses
+  (missions.js:1541–1658) as challenge fights.
+- **2.8 Lore delivery**: codex screen, unit lore cards, bond stories, boss pre/post dialogue
+  (content exists in STORY-*.md docs — this is a rendering + data-registration task).
+- **2.9 Cleanups**: delete dead `js/ability-templates.js`; unify bond detection on `detectActiveBonds`;
+  reconcile CONTINUITY.md claims with code.
+- **2.10 Balance verification**: simulator run over all 74 stages; fix walls.
 
 **Done when**: every designed system exists in code, tests green. Tag `v0.7.0-logic-complete`.
 
