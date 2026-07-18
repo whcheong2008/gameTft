@@ -53,6 +53,16 @@ function getScriptLoadOrder() {
         // Strip cache-busting query strings, e.g. "js/save.js?v=2"
         const qIdx = src.indexOf('?');
         if (qIdx >= 0) src = src.substring(0, qIdx);
+        // js/vendor/ holds third-party libraries loaded as opaque browser
+        // blobs (e.g. js/vendor/pixi.min.js, Prompt 68) -- never executed
+        // headlessly. This is what makes "guard renderer registration
+        // behind typeof PIXI !== 'undefined' so headless tests never need
+        // it" (js/render-pixi.js) actually true: without this skip, the
+        // harness would eval the real ~800KB pixi.min.js on every single
+        // createHarness() call, which is both slow and pointless (nothing
+        // headless ever needs a working WebGL/Canvas renderer). Vendor
+        // files are trusted, checked-in, browser-only.
+        if (src.indexOf('js/vendor/') === 0) continue;
         files.push(src);
     }
     return files;

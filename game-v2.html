@@ -918,6 +918,12 @@ body {
     <script src="js/combat-abilities.js"></script>
     <script src="js/combat-legendary.js"></script>
     <script src="js/combat-damage.js"></script>
+    <!-- vendor/pixi.min.js: PixiJS v8.19.0, vendored via `npm pack pixi.js@8`
+         (Prompt 68). Loads before render-interface.js per the spec; exposes
+         global PIXI. tests/harness.js's script loader skips everything under
+         js/vendor/ (browser-only blobs, never executed in the Node vm
+         sandbox) -- see js/render-pixi.js's header comment. -->
+    <script src="js/vendor/pixi.min.js"></script>
     <!-- render-interface.js: renderer registry + getActiveRenderer() (Prompt 67).
          Loads after every combat-*.js file, before any renderer registers itself. -->
     <script src="js/render-interface.js"></script>
@@ -936,6 +942,13 @@ body {
          files (depends on ui-combat.js's COMBAT_SPEED/addLogEntry) and registers
          itself with render-interface.js's registry. -->
     <script src="js/render-dom.js"></script>
+    <!-- render-pixi.js: the PixiJS combat renderer bootstrap (Prompt 68,
+         Phase 3.2). Loads after render-dom.js (reuses its chrome-only
+         renderEncounterMechanicBanner/updateEncounterMechanicHud globals)
+         and ui-combat.js (reads COMBAT_SPEED). Registration is guarded
+         behind `typeof PIXI !== 'undefined'`, so this is a safe no-op
+         wherever js/vendor/pixi.min.js didn't load/execute. -->
+    <script src="js/render-pixi.js"></script>
     <script src="js/main-v2.js"></script>
 </body>
 </html>
