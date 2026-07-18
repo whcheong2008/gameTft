@@ -80,11 +80,21 @@ function startWaveCombat() {
 
     if (!waveConfig) return;
 
-    document.getElementById('wave-info').textContent =
-        progress.missionName + ' — Wave ' + progress.currentWave + ' / ' + progress.totalWaves;
-
-    // Generate enemies
-    combatEnemies = generateMissionWave(waveConfig);
+    // Prompt 64: endless mode / Survival challenge generate their own
+    // tier-weighted enemy rosters (see js/endless.js's generateEndlessEnemies)
+    // instead of the generic per-stage generateMissionWave(), and "Wave N/M"
+    // doesn't make sense for either (both are open-ended).
+    if (activeMission && activeMission.isEndless) {
+        document.getElementById('wave-info').textContent = '🕳️ The Abyss — Floor ' + endlessRunState.floor;
+        combatEnemies = generateEndlessEnemies(endlessRunState.floor);
+    } else if (activeMission && activeMission.isChallengeSurvival) {
+        document.getElementById('wave-info').textContent = '🌊 Survival — Wave ' + survivalRunState.wave;
+        combatEnemies = generateEndlessEnemies(survivalRunState.wave);
+    } else {
+        document.getElementById('wave-info').textContent =
+            progress.missionName + ' — Wave ' + progress.currentWave + ' / ' + progress.totalWaves;
+        combatEnemies = generateMissionWave(waveConfig);
+    }
 
     // Store wave config for combat init to read
     currentWaveConfig = waveConfig;
@@ -92,7 +102,13 @@ function startWaveCombat() {
     // Clear log
     var logEl = document.getElementById('combat-log');
     logEl.innerHTML = '';
-    addLogEntry('⚔️ Wave ' + progress.currentWave + ' begins!', 'info');
+    if (activeMission && activeMission.isEndless) {
+        addLogEntry('⚔️ Floor ' + endlessRunState.floor + ' begins!', 'info');
+    } else if (activeMission && activeMission.isChallengeSurvival) {
+        addLogEntry('⚔️ Wave ' + survivalRunState.wave + ' begins!', 'info');
+    } else {
+        addLogEntry('⚔️ Wave ' + progress.currentWave + ' begins!', 'info');
+    }
 
     // Start combat using V1 engine (adapted)
     startMissionCombat(combatBoard, combatEnemies);
@@ -231,6 +247,14 @@ function startMissionCombat(playerBoard, enemies) {
     // Init combat
     initCombat(gs);
 
+    // Prompt 64: endless mode's pure-stat floor modifiers (enemy ATK/DR up,
+    // player healing/attack-speed down) are applied directly to combatState
+    // here, right after initCombat()'s per-unit resets run -- the same timing
+    // synergy/hero bonuses already use. Encounter-mechanic-kind modifiers need
+    // no seam: they ride activeMission.encounterMechanic, which initCombat()
+    // already reads via setupCombatEncounterMechanics(). No-op outside endless.
+    if (typeof applyEndlessFloorModifierEffects === 'function') applyEndlessFloorModifierEffects(combatState);
+
     // Clean up unit layer for fresh rendering
     var prevUnitLayer = document.getElementById('combat-unit-layer');
     if (prevUnitLayer) prevUnitLayer.remove();
@@ -269,17 +293,35 @@ function renderEncounterMechanicBanner() {
     }
 
     var mechanics = (combatState && combatState.encounterMechanics) || [];
-    if (mechanics.length === 0 || typeof COMBAT_ENCOUNTER_INFO === 'undefined') {
+
+    // Prompt 64: endless mode's pure-stat floor modifiers (enemy ATK/DR up,
+    // player healing/attack-speed down) have no combatState.encounterMechanics
+    // entry -- they're applied directly via applyEndlessFloorModifierEffects()
+    // -- so surface them here too ("show the modifier ... on the combat
+    // banner" per the endless mode spec). No-ops outside an active endless run.
+    var endlessMod = null;
+    if (typeof endlessRunState !== 'undefined' && endlessRunState && endlessRunState.active &&
+        typeof ENDLESS_STAT_MODIFIERS !== 'undefined' && endlessRunState.modifierThisFloor) {
+        endlessMod = ENDLESS_STAT_MODIFIERS[endlessRunState.modifierThisFloor] || null;
+    }
+
+    if (mechanics.length === 0 && !endlessMod) {
         banner.style.display = 'none';
         return;
     }
 
     var html = '';
-    for (var i = 0; i < mechanics.length; i++) {
-        var info = COMBAT_ENCOUNTER_INFO[mechanics[i]];
-        if (!info) continue;
+    if (typeof COMBAT_ENCOUNTER_INFO !== 'undefined') {
+        for (var i = 0; i < mechanics.length; i++) {
+            var info = COMBAT_ENCOUNTER_INFO[mechanics[i]];
+            if (!info) continue;
+            if (html) html += '<br>';
+            html += '<b>' + info.icon + ' ' + info.name + '</b> — ' + info.desc;
+        }
+    }
+    if (endlessMod) {
         if (html) html += '<br>';
-        html += '<b>' + info.icon + ' ' + info.name + '</b> — ' + info.desc;
+        html += '<b>' + (endlessMod.icon || '⚠️') + ' ' + endlessMod.name + '</b> — ' + endlessMod.desc;
     }
     banner.innerHTML = html;
     banner.style.display = html ? 'block' : 'none';
@@ -521,6 +563,27 @@ function onWaveCombatEnd() {
     if (!combatState) return;
     var result = combatState.result;
 
+    // Prompt 64: endless mode and the Survival challenge are both
+    // continuous, open-ended "missions" (see js/endless.js and
+    // js/challenges.js) that manage their own floor/wave progression and
+    // never use the generic star-rated results screen -- route to them
+    // before any of the normal win/loss handling below.
+    if (activeMission && activeMission.isEndless) {
+        onEndlessFloorEnd(result === 'win');
+        return;
+    }
+    if (activeMission && activeMission.isChallengeSurvival) {
+        onSurvivalWaveEnd(result === 'win');
+        return;
+    }
+    // Time Trial accumulates elapsed combat time across every wave of its
+    // (possibly multi-wave) stage, win or lose, so a losing attempt doesn't
+    // silently drop the clock -- only used at victory time in
+    // renderChallengeVictoryResults().
+    if (activeMission && activeMission.isChallengeTimeTrial && typeof accumulateTimeTrialElapsed === 'function') {
+        accumulateTimeTrialElapsed();
+    }
+
     if (result === 'loss' || result === 'draw') {
         // Mission failed
         showMissionResults(false, 0);
@@ -557,7 +620,13 @@ function trackWaveDamage() {
     }
 }
 
-function healBoardUnits() {
+// Prompt 64: skipHpReset lets endless/survival floor transitions reuse this
+// exact restore-to-board logic (position/cooldown/status reset, dead units
+// dropped) while carrying HP forward instead of fully healing -- "no healing
+// reset — units keep current HP; dead units stay dead for the run" per the
+// endless mode spec. Regular mission wave transitions call this with no
+// argument and are unaffected (skipHpReset is falsy -> full heal as before).
+function healBoardUnits(skipHpReset) {
     // Reset player units back to their combatBoard positions and heal them
     // First clear the combatBoard
     for (var r = 0; r < 4; r++) {
@@ -570,7 +639,7 @@ function healBoardUnits() {
         for (var i = 0; i < combatState.playerUnits.length; i++) {
             var u = combatState.playerUnits[i];
             if (u && u.hp > 0) {
-                u.hp = u.maxHp;
+                if (!skipHpReset) u.hp = u.maxHp;
                 u.shield = 0;
                 u.target = null;
                 u.attackCooldown = 0;
@@ -634,8 +703,19 @@ var waveRepositionSelected = null; // {row, col} of selected unit for reposition
 function showWaveTransition() {
     var progress = getMissionProgress();
     document.getElementById('wave-text').textContent = 'Wave ' + progress.currentWave;
+    var subEl = document.getElementById('wave-subtext');
+    if (subEl) subEl.textContent = 'Tap to reposition units, then continue';
     document.getElementById('wave-transition').className = 'wave-transition show';
     waveRepositionSelected = null;
+    // Prompt 64: endless mode's floor-transition screen (showEndlessFloorTransition
+    // in js/endless.js) reuses this same #wave-transition overlay but hides the
+    // default button and injects its own Continue/Retreat controls -- restore
+    // both to their normal state here so a regular mission's wave transition
+    // is never left showing endless-mode leftovers.
+    var defaultBtn = document.querySelector('#wave-transition .btn-primary');
+    if (defaultBtn) defaultBtn.style.display = '';
+    var endlessContainer = document.getElementById('endless-transition-controls');
+    if (endlessContainer) endlessContainer.remove();
     renderWaveRepositionGrid();
 }
 
@@ -736,6 +816,17 @@ function showMissionResults(victory, stars) {
     document.getElementById('results-stars').textContent = starsHtml;
 
     if (victory && activeMission) {
+        // Prompt 64: Time Trial / Restricted Roster / Element Boss challenges
+        // grant custom, non-star-scaled rewards (par-time bonus, restriction
+        // VE multiplier, first-clear essence) that calculateMissionRewards()
+        // doesn't model -- js/challenges.js's renderChallengeVictoryResults()
+        // fully owns #results-rewards for these missions and returns early.
+        if (activeMission.isChallengeTimeTrial || activeMission.isChallengeRestricted || activeMission.isChallengeElementBoss) {
+            if (typeof renderChallengeVictoryResults === 'function') renderChallengeVictoryResults(sd, activeMission);
+            document.getElementById('combat-results').className = 'combat-results show';
+            renderTopBar();
+            return;
+        }
         var rewards = calculateMissionRewards(sd, activeMission, stars);
 
         // Calculate base rewards for bonus display
@@ -883,6 +974,13 @@ function showMissionResults(victory, stars) {
 
 function uiReturnFromCombat() {
     activeMission = null;
+    // Prompt 64: defensively end any endless/survival run state so a stray
+    // return-to-hub mid-run (rather than via Retreat/defeat) can't leave a
+    // "phantom" active run behind.
+    if (typeof endlessRunState !== 'undefined' && endlessRunState) endlessRunState.active = false;
+    if (typeof survivalRunState !== 'undefined' && survivalRunState) survivalRunState.active = false;
+    var endlessControls = document.getElementById('endless-transition-controls');
+    if (endlessControls) endlessControls.remove();
     // Clean up any lingering overlays
     document.getElementById('combat-results').className = 'combat-results';
     document.getElementById('wave-transition').className = 'wave-transition';

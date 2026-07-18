@@ -70,6 +70,39 @@ function renderHubScreen() {
 
         grid.appendChild(div);
     }
+
+    renderEndlessChallengesNav(sd);
+}
+
+// Prompt 64: entry buttons for endless mode (The Abyss) + challenge modes.
+// Shows lock state inline (both gated behind region boss clears) rather than
+// hiding the buttons entirely, so players can see what they're working
+// toward. The actual entry screens live in js/endless.js / js/challenges.js.
+function renderEndlessChallengesNav(saveData) {
+    var nav = document.getElementById('endless-challenges-nav');
+    if (!nav) return;
+
+    var endlessOn = (typeof isEndlessUnlocked === 'function') && isEndlessUnlocked(saveData);
+    var challengesOn = (typeof isChallengesUnlocked === 'function') && isChallengesUnlocked(saveData);
+
+    var endlessBest = (typeof getEndlessSaveData === 'function') ? getEndlessSaveData(saveData).bestFloor : 0;
+
+    nav.innerHTML =
+        '<div class="hub-nav-btn" id="hub-endless-btn"' + (endlessOn ? '' : ' style="opacity:0.5;"') + '>' +
+            '<span class="nav-emoji">🕳️</span> The Abyss' +
+            (endlessOn ? '<div style="font-size:10px; color:#e2b714;">Best: Floor ' + endlessBest + '</div>' : '<div style="font-size:10px; color:#888;">🔒 Clear Region 8</div>') +
+        '</div>' +
+        '<div class="hub-nav-btn" id="hub-challenges-btn"' + (challengesOn ? '' : ' style="opacity:0.5;"') + '>' +
+            '<span class="nav-emoji">🏆</span> Challenges' +
+            (challengesOn ? '' : '<div style="font-size:10px; color:#888;">🔒 Clear Region 4 boss</div>') +
+        '</div>';
+
+    document.getElementById('hub-endless-btn').onclick = function() {
+        if (typeof showEndlessScreen === 'function') showEndlessScreen();
+    };
+    document.getElementById('hub-challenges-btn').onclick = function() {
+        if (typeof showChallengesScreen === 'function') showChallengesScreen();
+    };
 }
 
 function uiUpgradeBuilding(buildingId) {

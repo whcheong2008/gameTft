@@ -106,6 +106,11 @@ function createDefaultSaveData() {
             heroes: {},
             bonds: {}
         },
+        // Endless mode (The Abyss) personal best (Prompt 64). No server
+        // leaderboards per SCOPE.md's endless-mode trimming decision.
+        endless: { bestFloor: 0, totalRuns: 0 },
+        // Challenge mode bests (Prompt 64)
+        challenges: { timeTrial: {}, survival: { bestWave: 0 }, restrictedRoster: {}, elementBosses: {} },
         // Stats tracking
         stats: {
             totalMissionsCompleted: 0,
@@ -774,6 +779,18 @@ function migrateSave(data) {
     if (!data.loreUnlocks.heroes) data.loreUnlocks.heroes = {};
     if (!data.loreUnlocks.bonds) data.loreUnlocks.bonds = {};
 
+    // Prompt 64: endless mode (The Abyss) personal-best tracking + challenge
+    // mode bests (version-agnostic backfill)
+    if (!data.endless) data.endless = { bestFloor: 0, totalRuns: 0 };
+    if (typeof data.endless.bestFloor !== 'number') data.endless.bestFloor = 0;
+    if (typeof data.endless.totalRuns !== 'number') data.endless.totalRuns = 0;
+    if (!data.challenges) data.challenges = { timeTrial: {}, survival: { bestWave: 0 }, restrictedRoster: {}, elementBosses: {} };
+    if (!data.challenges.timeTrial) data.challenges.timeTrial = {};
+    if (!data.challenges.survival) data.challenges.survival = { bestWave: 0 };
+    if (typeof data.challenges.survival.bestWave !== 'number') data.challenges.survival.bestWave = 0;
+    if (!data.challenges.restrictedRoster) data.challenges.restrictedRoster = {};
+    if (!data.challenges.elementBosses) data.challenges.elementBosses = {};
+
     return data;
 }
 
@@ -905,6 +922,17 @@ function validateSaveData(data) {
     if (!data.loreUnlocks.units) data.loreUnlocks.units = {};
     if (!data.loreUnlocks.heroes) data.loreUnlocks.heroes = {};
     if (!data.loreUnlocks.bonds) data.loreUnlocks.bonds = {};
+
+    // Endless mode + challenge mode bests (Prompt 64)
+    if (!data.endless) data.endless = { bestFloor: 0, totalRuns: 0 };
+    if (typeof data.endless.bestFloor !== 'number') data.endless.bestFloor = 0;
+    if (typeof data.endless.totalRuns !== 'number') data.endless.totalRuns = 0;
+    if (!data.challenges) data.challenges = { timeTrial: {}, survival: { bestWave: 0 }, restrictedRoster: {}, elementBosses: {} };
+    if (!data.challenges.timeTrial) data.challenges.timeTrial = {};
+    if (!data.challenges.survival) data.challenges.survival = { bestWave: 0 };
+    if (typeof data.challenges.survival.bestWave !== 'number') data.challenges.survival.bestWave = 0;
+    if (!data.challenges.restrictedRoster) data.challenges.restrictedRoster = {};
+    if (!data.challenges.elementBosses) data.challenges.elementBosses = {};
 
     console.log('Validation complete. Valid entries:', Object.keys(data.collection).length);
     return data;
