@@ -138,7 +138,11 @@ module.exports = [
         }
     },
     {
-        name: 'KNOWN_BUG: real in-combat archetype counting ignores ascension (Transcendent double-count, ascended secondary archetype)',
+        // BUGS.md #4 (fixed by Prompt 60): real in-combat archetype counting
+        // must be ascension-aware, matching the UI preview paths. A
+        // Transcendent unit's primary archetype counts as 2; an Awakened+
+        // unit's secondary archetype also counts toward its threshold.
+        name: 'real in-combat archetype counting is ascension-aware (Transcendent double-count, ascended secondary archetype)',
         fn: function() {
             const h = createHarness({ seed: 1 });
             h.loadScripts();
@@ -150,29 +154,11 @@ module.exports = [
             const gs = { board: board };
             h.context.updateActiveSynergies(gs);
 
-            const guardianCount = gs.activeSynergies.guardian || 0;
-
-            if (guardianCount === 2) {
-                // Bug has been fixed upstream — nothing to flag.
-                assert.equal(guardianCount, 2);
-            } else {
-                assert.knownBug(
-                    'updateActiveSynergies() in js/combat-core.js (~lines 1316-1340) counts each unit\'s primary ' +
-                    'archetype with a flat +1 and never reads unit.ascensionTier or unit.secondaryArchetype. Per ' +
-                    'GROUND-TRUTH.md §3 "Archetype Counting Rules", a Transcendent unit\'s primary archetype should ' +
-                    'count as 2, and an Awakened+ unit\'s secondary archetype should also count toward its threshold. ' +
-                    'The correct ascension-aware logic already exists (getUnitArchetypeContribution() in ' +
-                    'js/units-ascension.js:150-177) and unitHasArchetype() in js/units-core.js:200-207 correctly ' +
-                    'grants bonuses to an ascended unit\'s secondary archetype — but updateActiveSynergies(), the ' +
-                    'function that actually feeds applySynergyBonuses() during real combat (called from ' +
-                    'js/ui-combat.js:112), never calls getUnitArchetypeContribution(). That helper is wired up only ' +
-                    'in UI preview paths: js/ui-builder.js:590-592 (team builder), js/ui-combat.js:1288-1289 (combat ' +
-                    'sidebar display), js/teams.js:261-264 (team synergy preview). Net effect: a single Transcendent ' +
-                    'Guardian shows "2/8 Guardian" in every UI preview but only actually contributes 1 toward the ' +
-                    'real in-combat threshold (got activeSynergies.guardian = ' + guardianCount + ', expected 2). ' +
-                    'Ascended secondary archetypes have the same real-vs-preview mismatch.'
-                );
-            }
+            assert.equal(gs.activeSynergies.guardian || 0, 2,
+                'a Transcendent unit\'s primary archetype (guardian) should count as 2 in real combat, ' +
+                'matching getUnitArchetypeContribution() and the UI preview paths (ui-builder.js, ui-combat.js, teams.js)');
+            assert.equal(gs.activeSynergies.vanguard || 0, 1,
+                'an Awakened+ unit\'s secondary archetype (vanguard) should also count toward its own threshold');
         }
     }
 ];

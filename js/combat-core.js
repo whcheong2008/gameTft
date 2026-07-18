@@ -7,6 +7,15 @@
 var combatState = null;
 
 function initCombat(gs) {
+    // Prompt 60: reset the combat event bus. In this engine initCombat() runs
+    // once per wave (not once per whole mission) — see startWaveCombat() in
+    // ui-combat.js — so "combat" for once-per-combat hero effects means
+    // "once per wave" here, matching the engine's existing per-wave reset
+    // convention (phoenixReviveUsed, frenzyStacks, etc. are also reset by
+    // healBoardUnits() between waves). Listeners are re-registered fresh
+    // below for every wave.
+    if (typeof combatEvents !== 'undefined') combatEvents.reset();
+
     // Build flat arrays of player and enemy units for combat
     var playerUnits = [];
     for (var r = 0; r < 4; r++) {
@@ -102,12 +111,50 @@ function initCombat(gs) {
 
             // Track hero on unit for combat-triggered effects
             hu.heroOncePerCombatUsed = {};
+
+            // Register event-driven skill node listeners (Prompt 60)
+            if (typeof registerHeroSkillEvents === 'function') {
+                registerHeroSkillEvents(hu, heroInfo.key, heroInfo.data);
+            }
         }
     }
 
     // Initialize combatStats on every unit (only if not already present, to persist across waves)
     for (var si = 0; si < combatState.allUnits.length; si++) {
         var su = combatState.allUnits[si];
+
+        // Prompt 60: hero skill dynamic-modifier caches are per-wave (see
+        // registerHeroSkillEvents / heroSet*Mod in heroes.js). Reset every
+        // wave so stale contributions from a previous wave's listeners
+        // never leak forward, and so the lazily-captured "base" value is
+        // re-snapshotted fresh (after this wave's synergy/item/hero-apply
+        // bonuses are in place) the next time a listener fires.
+        su._heroAtkMods = null;
+        su._heroDrMods = null;
+        su._heroAtkSpdMods = null;
+        su._heroLifestealMods = null;
+        su._heroDmgDealtMods = null;
+        su._heroAbilityDmgMods = null;
+        su._heroBaseAtk = undefined;
+        su._heroBaseDr = undefined;
+        su._heroBaseAtkSpd = undefined;
+        su._heroBaseLifesteal = undefined;
+        su._heroMoveSpeedBonus = 0;
+        su._heroExecuteThreshold = undefined;
+        su._heroExecuteBonus = undefined;
+        su._heroWeakPointMax = undefined;
+        su._heroEmergencyCareBonus = undefined;
+        su._heroExploitOpeningBonus = undefined;
+        su._heroForceCritAbility = false;
+        su._heroDrIgnoreAbility = 0;
+        su._heroHealReceivedBonus = 0;
+        su._heroShieldReceivedBonus = 0;
+        su._heroSanctuaryUntil = 0;
+        su._heroSanctuaryCapstoneUntil = 0;
+        su._retributionBuff = false;
+        su._heroNextAbilityManaRefund = 0;
+        su._heroPendingManaRefund = 0;
+
         if (!su.combatStats) {
             su.combatStats = {
                 damageDealt: 0,
@@ -232,6 +279,18 @@ function initCombat(gs) {
         initUnitPassiveState(combatState.allUnits[pi]);
     }
     processCombatStartPassives(combatState.allUnits);
+
+    // Prompt 60: fire combatStart/waveStart for hero skill listeners now that
+    // every unit/hero/item/synergy bonus for this wave is fully applied.
+    if (typeof combatEvents !== 'undefined') {
+        var evtPayload = { playerUnits: combatState.playerUnits, enemyUnits: combatState.enemyUnits };
+        combatEvents.emit('combatStart', evtPayload);
+        combatEvents.emit('waveStart', {
+            playerUnits: combatState.playerUnits,
+            enemyUnits: combatState.enemyUnits,
+            waveIndex: (typeof currentWaveIndex !== 'undefined' ? currentWaveIndex : 0)
+        });
+    }
 }
 
 function applyElementBonuses(cs) {
@@ -621,11 +680,15 @@ function combatTick(dt) {
 
     combatState.elapsed += dt;
 
+    // Prompt 60: per-tick hook for hero skill nodes (ramping/decaying bonuses).
+    if (typeof combatEvents !== 'undefined') combatEvents.emit('tick', { dt: dt });
+
     // Timeout: 180s for boss fights, 60s for normal
     var timeLimit = combatState.bossUnit ? 180 : 60;
     if (combatState.elapsed > timeLimit) {
         combatState.running = false;
         combatState.result = 'draw';
+        if (typeof combatEvents !== 'undefined') combatEvents.emit('combatEnd', { result: 'draw' });
         return;
     }
 
@@ -669,17 +732,20 @@ function combatTick(dt) {
     if (enemiesAlive === 0) {
         combatState.running = false;
         combatState.result = 'win';
+        if (typeof combatEvents !== 'undefined') combatEvents.emit('combatEnd', { result: 'win' });
         return;
     }
     // Boss win condition: boss dead = win even if minions alive
     if (combatState.bossUnit && combatState.bossUnit.hp <= 0) {
         combatState.running = false;
         combatState.result = 'win';
+        if (typeof combatEvents !== 'undefined') combatEvents.emit('combatEnd', { result: 'win' });
         return;
     }
     if (playersAlive === 0) {
         combatState.running = false;
         combatState.result = 'loss';
+        if (typeof combatEvents !== 'undefined') combatEvents.emit('combatEnd', { result: 'loss' });
         return;
     }
 
@@ -750,6 +816,16 @@ function combatTick(dt) {
         // Sage passive mana per second
         if (su.passiveManaPerSec && su.maxMana > 0) {
             su.currentMana = Math.min(su.maxMana, su.currentMana + su.passiveManaPerSec * dt);
+        }
+        // Prompt 60 hero node maren_B_1_2 "Mana Flow" (converted dead flag)
+        if (su.heroSkillBonuses && su.heroSkillBonuses.manaPerSec && su.maxMana > 0) {
+            su.currentMana = Math.min(su.maxMana, su.currentMana + su.heroSkillBonuses.manaPerSec * dt);
+        }
+        // Prompt 60: pending mana refund from hero nodes that can't apply
+        // mana precisely at cast-completion (see voss_B_4_2 in heroes.js)
+        if (su._heroPendingManaRefund && !su.isCasting && su.maxMana > 0) {
+            su.currentMana = Math.min(su.maxMana, su.currentMana + Math.floor(su.maxMana * su._heroPendingManaRefund));
+            su._heroPendingManaRefund = 0;
         }
     }
 
@@ -981,6 +1057,11 @@ function combatTick(dt) {
             if (unit.manaShrine && unit.manaShrine.firstCastDiscount > 0 && !unit._firstCastDone) {
                 effectiveMaxMana = Math.floor(unit.maxMana * (1 - unit.manaShrine.firstCastDiscount));
             }
+            // Prompt 60 hero node sera_B_1_2 "Mana Efficiency" (converted dead flag):
+            // abilities cost X% less mana -> lower the effective mana threshold to cast.
+            if (unit.heroSkillBonuses && unit.heroSkillBonuses.manaCostReduction) {
+                effectiveMaxMana = Math.floor(effectiveMaxMana * (1 - unit.heroSkillBonuses.manaCostReduction));
+            }
             // Mana Shrine: full mana ATK bonus
             if (unit.manaShrine && unit.manaShrine.fullManaAtkBonus > 0 && unit.currentMana >= effectiveMaxMana && !unit._fullManaAtkApplied) {
                 unit.attack = Math.floor(unit.attack * (1 + unit.manaShrine.fullManaAtkBonus));
@@ -1095,10 +1176,15 @@ function getAttackRange(unit) {
 
 function getMoveSpeed(unit) {
     // moveSpd is cells per second from template
-    if (unit.moveSpd !== undefined) return unit.moveSpd;
-    if (unit.type === 'assassin') return 3.3;
-    if (unit.type === 'tank') return 1.7;
-    return 2.0;
+    var base;
+    if (unit.moveSpd !== undefined) base = unit.moveSpd;
+    else if (unit.type === 'assassin') base = 3.3;
+    else if (unit.type === 'tank') base = 1.7;
+    else base = 2.0;
+    // Prompt 60 hero nodes (Voss Unstoppable Advance / Killing Spree): flat
+    // move speed % bonus, undefined/0 for all non-hero units.
+    if (unit._heroMoveSpeedBonus) base = base * (1 + unit._heroMoveSpeedBonus);
+    return base;
 }
 
 function getManhattanDist(r1, c1, r2, c2) {
@@ -1319,6 +1405,13 @@ function updateActiveSynergies(gs) {
     var archCounts = {};
     var elemCounts = {};
 
+    // BUGS.md #4 fix: real in-combat archetype counting must be ascension-aware,
+    // matching the UI preview paths (ui-builder.js:590-592, ui-combat.js:1288-1289,
+    // teams.js:261-264) that already call getUnitArchetypeContribution()
+    // (units-ascension.js:150). A Transcendent unit's primary archetype counts
+    // as 2; an Awakened+ unit also contributes its secondary archetype.
+    var sd = typeof getSaveData === 'function' ? getSaveData() : null;
+
     for (var r = 0; r < 4; r++) {
         for (var c = 0; c < 7; c++) {
             var u = gs.board[r][c];
@@ -1326,9 +1419,32 @@ function updateActiveSynergies(gs) {
             // Evolved T5 units count as 2 for element synergies
             var isEvolvedT5 = u.cost === 5 && u.evolved;
             var elementCount = isEvolvedT5 ? 2 : 1;
-            if (u.archetype) {
+
+            if (typeof getUnitArchetypeContribution === 'function') {
+                var contrib = getUnitArchetypeContribution(u);
+                if (contrib.primary) {
+                    archCounts[contrib.primary] = (archCounts[contrib.primary] || 0) + contrib.primaryCount;
+                }
+                if (contrib.secondary) {
+                    archCounts[contrib.secondary] = (archCounts[contrib.secondary] || 0) + contrib.secondaryCount;
+                }
+            } else if (u.archetype) {
                 archCounts[u.archetype] = (archCounts[u.archetype] || 0) + 1;
             }
+
+            // Prompt 60 hero node lyric_B_2_2 "Synergy Amplifier": the unit
+            // counts as +1 extra toward its own primary archetype synergy.
+            // Must be resolved here (not via unit.heroSkillBonuses, which is
+            // only populated later in initCombat) since real-combat synergy
+            // counting runs before hero bonuses are applied.
+            if (sd && u.key && u.archetype && typeof getHeroForUnit === 'function') {
+                var heroInfo = getHeroForUnit(sd, u.key);
+                if (heroInfo && !heroInfo.data.isDead && heroInfo.data.investedNodes &&
+                    heroInfo.data.investedNodes.indexOf('lyric_B_2_2') >= 0) {
+                    archCounts[u.archetype] = (archCounts[u.archetype] || 0) + 1;
+                }
+            }
+
             if (u.element) {
                 elemCounts[u.element] = (elemCounts[u.element] || 0) + elementCount;
             }

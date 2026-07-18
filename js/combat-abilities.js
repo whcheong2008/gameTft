@@ -29,6 +29,13 @@ function executeAbility(caster) {
     // Track cast
     if (caster.combatStats) caster.combatStats.abilityCasts++;
 
+    // Prompt 60: combat event hook for hero skill listeners. Fired before the
+    // switch below so listeners (e.g. forced-crit/DR-ignore flags) can affect
+    // this same cast's damage synchronously.
+    if (typeof combatEvents !== 'undefined') {
+        combatEvents.emit('abilityCast', { caster: caster, key: key });
+    }
+
     switch (key) {
 
     // ===== FIRE T1 =====
