@@ -34,6 +34,10 @@ function dealHealing(source, target, amount) {
     if (source && source._heroEmergencyCareBonus && target.maxHp > 0 && (target.hp / target.maxHp) < 0.30) {
         amount = Math.floor(amount * (1 + source._heroEmergencyCareBonus));
     }
+    // Prompt 62: bond healing power bonus (water_duo, healing_light -- healPowerPct)
+    if (source && source._bondHealPowerBonus) {
+        amount = Math.floor(amount * (1 + source._bondHealPowerBonus));
+    }
     // Prompt 60 hero node maren_B_4_1 "Fortified Presence": +X% healing received.
     if (target._heroHealReceivedBonus) {
         amount = Math.floor(amount * (1 + target._heroHealReceivedBonus));
@@ -554,6 +558,8 @@ function performAttack(attacker, target) {
         if (attacker.maxMana > 0) {
             var blindManaGain = 10;
             if (attacker.manaShrine && attacker.manaShrine.manaGenMult) blindManaGain = Math.floor(blindManaGain * attacker.manaShrine.manaGenMult);
+            // Prompt 62: bond mana generation bonus (conductor -- manaGenPct)
+            if (attacker.bondManaGenMult && attacker.bondManaGenMult > 1) blindManaGain = Math.floor(blindManaGain * attacker.bondManaGenMult);
             attacker.currentMana = Math.min(attacker.maxMana, attacker.currentMana + blindManaGain);
         }
         return; // miss, no damage

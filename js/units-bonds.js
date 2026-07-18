@@ -151,9 +151,29 @@ var UNIT_BONDS = {
 // Returns array of active bond objects with applied bonuses
 function detectActiveBonds(teamKeys, saveData) {
     var activeBonds = [];
-    var bondHallLevel = (saveData && saveData.buildings && saveData.buildings.bond_hall) || 0;
-    var bondBonusMult = 1.0 + (bondHallLevel * 0.05); // 5% per Bond Hall level
-    var trioBondsUnlocked = bondHallLevel >= 5;
+
+    // Prompt 62: the Bond Hall building was renamed bond_hall -> kindred_circle
+    // (see save.js:599's migration alias); saveData.buildings.bond_hall no
+    // longer exists on migrated saves, so reading it here always produced 0 --
+    // trioBondsUnlocked was permanently false and bondBonusMult was always 1.0x
+    // regardless of the player's actual Bond Hall level. Delegate to
+    // getBondHallBonuses() (hub.js), the single already-canonical source for
+    // Bond Hall gating (used by the Bond Hall UI panel and now by combat --
+    // see combat-core.js Task 3), instead of re-deriving a second, inconsistent
+    // formula from a stale key.
+    var bondBonusMult = 1.0;
+    var trioBondsUnlocked = false;
+    if (saveData && typeof getBondHallBonuses === 'function') {
+        var bondHallInfo = getBondHallBonuses(saveData);
+        bondBonusMult = bondHallInfo.bondBonusMult;
+        trioBondsUnlocked = bondHallInfo.trioBondsUnlocked;
+    } else if (saveData && saveData.buildings) {
+        // Fallback for isolated contexts where hub.js hasn't loaded (shouldn't
+        // happen in-game; kept defensive). Mirrors getBondHallBonuses' formula.
+        var kcLevel = saveData.buildings.kindred_circle || 0;
+        bondBonusMult = kcLevel >= 4 ? 1.50 : (kcLevel >= 2 ? 1.25 : 1.0);
+        trioBondsUnlocked = kcLevel >= 5;
+    }
 
     // Resolve base keys for evolved units
     var resolvedKeys = [];

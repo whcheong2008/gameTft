@@ -76,6 +76,19 @@ function initCombat(gs) {
     // Build the unified 8x7 combat grid
     combatState.grid = buildCombatGrid(playerUnits, enemyUnits);
 
+    // Prompt 62: encounter mechanics (VIP/countdown/reinforcement/objective/
+    // split/escalation) driven off stageData.encounterMechanic. Runs before the
+    // per-unit init loops below so any units this injects (Veil Crystal, Ward
+    // NPC, reinforcement adds) get the same cooldown/combatStats/mana init as
+    // every other unit. No-ops when the stage has no encounterMechanic set --
+    // existing golden scenarios (which use plain stages) are unaffected.
+    if (typeof setupCombatEncounterMechanics === 'function') {
+        setupCombatEncounterMechanics(combatState, (typeof activeMission !== 'undefined' ? activeMission : null));
+        // Re-flatten allUnits/enemyUnits/playerUnits references in case the
+        // mechanic setup pushed new units (allUnits was captured by value above).
+        combatState.allUnits = combatState.playerUnits.concat(combatState.enemyUnits);
+    }
+
     // Initialize movement cooldowns, attack cooldowns, and CC tracking
     for (var mi = 0; mi < combatState.allUnits.length; mi++) {
         combatState.allUnits[mi].moveCooldown = 0;
@@ -242,36 +255,95 @@ function initCombat(gs) {
         }
     }
 
-    // Apply Bond Hall bonuses
-    if (sd && typeof getBondHallBonuses === 'function') {
-        var bondBonuses = getBondHallBonuses(sd);
-        if (bondBonuses.canViewBonds && typeof UNIT_BONDS !== 'undefined' && UNIT_BONDS) {
+    // Apply Bond Hall bonuses (Prompt 62: unified on the canonical
+    // detectActiveBonds() (units-bonds.js) instead of reimplementing bond
+    // detection inline -- PHASE2-AUDIT item 11. The old inline copy checked
+    // `bond.effect`, a field UNIT_BONDS entries have never had (they use
+    // `bonus`), so it was dead code that silently applied nothing; combat
+    // bonds now actually take effect. Bond Hall gating (must be built to
+    // level 1+ to activate bonds at all, trio unlock at level 5, the
+    // 25%/50% bonus-mult tiers) is preserved by gating on
+    // getBondHallBonuses(sd).canViewBonds before calling detectActiveBonds(),
+    // exactly as the old inline code gated on it.
+    combatState.activeBonds = [];
+    if (sd && typeof getBondHallBonuses === 'function' && typeof detectActiveBonds === 'function') {
+        var bondHallInfo = getBondHallBonuses(sd);
+        if (bondHallInfo.canViewBonds) {
             var teamKeys = [];
             for (var bk = 0; bk < combatState.playerUnits.length; bk++) {
                 if (combatState.playerUnits[bk].templateKey) teamKeys.push(combatState.playerUnits[bk].templateKey);
             }
-            var bondKeys = Object.keys(UNIT_BONDS);
-            for (var bdi = 0; bdi < bondKeys.length; bdi++) {
-                var bond = UNIT_BONDS[bondKeys[bdi]];
-                var isTrio = bond.units.length >= 3;
-                if (isTrio && !bondBonuses.trioBondsUnlocked) continue;
-                var allPresent = true;
-                for (var bu = 0; bu < bond.units.length; bu++) {
-                    if (teamKeys.indexOf(bond.units[bu]) < 0) { allPresent = false; break; }
-                }
-                if (allPresent && bond.effect) {
-                    // Apply bond effect to all bond members, scaled by bondBonusMult
-                    for (var bm = 0; bm < combatState.playerUnits.length; bm++) {
-                        var pUnit = combatState.playerUnits[bm];
-                        if (bond.units.indexOf(pUnit.templateKey) >= 0) {
-                            if (bond.effect.atk) pUnit.attack += Math.floor(bond.effect.atk * bondBonuses.bondBonusMult);
-                            if (bond.effect.hp) { pUnit.hp += Math.floor(bond.effect.hp * bondBonuses.bondBonusMult); pUnit.maxHp += Math.floor(bond.effect.hp * bondBonuses.bondBonusMult); }
-                            if (bond.effect.atkSpd) pUnit.attackSpd = Math.max(0.3, pUnit.attackSpd - bond.effect.atkSpd * bondBonuses.bondBonusMult);
-                        }
+            combatState.activeBonds = detectActiveBonds(teamKeys, sd);
+            for (var bdi = 0; bdi < combatState.activeBonds.length; bdi++) {
+                var activeBond = combatState.activeBonds[bdi];
+                var bb = activeBond.bonus;
+                for (var bm = 0; bm < combatState.playerUnits.length; bm++) {
+                    var pUnit = combatState.playerUnits[bm];
+                    if (activeBond.units.indexOf(pUnit.templateKey) < 0) continue;
+                    if (bb.atkPct) pUnit.attack = Math.floor(pUnit.attack * (1 + bb.atkPct));
+                    if (bb.hpPct) { var bondHpAdd = Math.floor(pUnit.maxHp * bb.hpPct); pUnit.hp += bondHpAdd; pUnit.maxHp += bondHpAdd; }
+                    if (bb.atkSpdPct) pUnit.attackSpd = pUnit.attackSpd / (1 + bb.atkSpdPct);
+                    if (bb.critChance) pUnit.critChance = (pUnit.critChance || 0) + bb.critChance;
+                    if (bb.drPct) pUnit.damageReduction = (pUnit.damageReduction || 0) + bb.drPct;
+                    if (bb.allStatsPct) {
+                        pUnit.attack = Math.floor(pUnit.attack * (1 + bb.allStatsPct));
+                        var bondAllStatsHpAdd = Math.floor(pUnit.maxHp * bb.allStatsPct);
+                        pUnit.hp += bondAllStatsHpAdd; pUnit.maxHp += bondAllStatsHpAdd;
                     }
+                    if (bb.moveSpdPct) pUnit.moveSpd = (pUnit.moveSpd || 0) * (1 + bb.moveSpdPct);
+                    // manaGenPct/abilityDmgPct/healPowerPct: accumulator fields consumed at
+                    // their existing per-hit/per-attack sites (combat-core.js mana-gain,
+                    // combat-abilities.js ability damage, combat-damage.js dealHealing).
+                    if (bb.manaGenPct) pUnit.bondManaGenMult = (pUnit.bondManaGenMult || 1) + bb.manaGenPct;
+                    if (bb.abilityDmgPct) pUnit.bondAbilityDmgMult = (pUnit.bondAbilityDmgMult || 1) + bb.abilityDmgPct;
+                    if (bb.healPowerPct) pUnit._bondHealPowerBonus = (pUnit._bondHealPowerBonus || 0) + bb.healPowerPct;
+                    // archetypeCountBonus (legendary_convergence trio only): no combat
+                    // synergy consumer exists for this -- true both before and after this
+                    // unification (the old bond.effect path never read it either). Not
+                    // wired here; flagged in the Prompt 62 report as a pre-existing gap.
                 }
             }
         }
+    }
+
+    // Prompt 62: combat-driven achievement stat wiring (rest of PHASE2-AUDIT
+    // item 5) -- bossesDefeated, deathlessBossClears, maxSingleHit, fastestWin
+    // (kept as a minimum via trackStat's 'min' mode), maxElementSynergy.
+    // Listeners are registered here (fresh every wave, since combatEvents.reset()
+    // ran at the top of this function) and write back to saveData on combatEnd.
+    // "Combat" = "this wave" throughout, matching the Prompt 60 convention
+    // documented above initCombat(): boss stages have exactly one wave, so
+    // bossesDefeated/deathlessBossClears/fastestWin are mission-equivalent for
+    // the case that actually matters (boss clears); for multi-wave non-boss
+    // stages fastestWin/maxSingleHit reflect the fastest/hardest single wave.
+    if (sd && typeof combatEvents !== 'undefined' && typeof trackStat === 'function') {
+        var achWaveDeaths = 0;
+        var achPeakHit = 0;
+        combatEvents.on('unitDamaged', function(dmgPayload) {
+            if (dmgPayload.amount > achPeakHit) achPeakHit = dmgPayload.amount;
+        });
+        combatEvents.on('unitKilled', function(killPayload) {
+            if (killPayload.victim && killPayload.victim.side === 'player') achWaveDeaths++;
+        });
+        combatEvents.on('combatStart', function() {
+            if (!combatState || !combatState.activeElements) return;
+            var synKeys = Object.keys(combatState.activeElements);
+            var maxSynCount = 0;
+            for (var sk2 = 0; sk2 < synKeys.length; sk2++) {
+                if (combatState.activeElements[synKeys[sk2]] > maxSynCount) maxSynCount = combatState.activeElements[synKeys[sk2]];
+            }
+            if (maxSynCount > 0) trackStat(sd, 'maxElementSynergy', maxSynCount, 'max');
+        });
+        combatEvents.on('combatEnd', function(endPayload) {
+            if (achPeakHit > 0) trackStat(sd, 'maxSingleHit', achPeakHit, 'max');
+            if (endPayload.result === 'win') {
+                trackStat(sd, 'fastestWin', combatState.elapsed, 'min');
+                if (combatState.bossUnit) {
+                    trackStat(sd, 'bossesDefeated', 1, 'add');
+                    if (achWaveDeaths === 0) trackStat(sd, 'deathlessBossClears', 1, 'add');
+                }
+            }
+        });
     }
 
     // Initialize passive states and fire combat_start passives
@@ -749,6 +821,14 @@ function combatTick(dt) {
         return;
     }
 
+    // Prompt 62: encounter mechanics (countdown timer/wipe, reinforcement
+    // spawns, protect-objective failure check, escalating stacks, VIP regen).
+    // No-op when the stage has no encounterMechanic set.
+    if (typeof tickCombatEncounterMechanics === 'function') {
+        tickCombatEncounterMechanics(combatState, dt);
+        if (!combatState.running) return; // a mechanic (countdown wipe / objective death) ended combat this tick
+    }
+
     // Regen: heal allies by regenPct of maxHp per second (Water synergy, Warmog's, set regen)
     for (var rg = 0; rg < players.length; rg++) {
         var ru = players[rg];
@@ -1049,6 +1129,8 @@ function combatTick(dt) {
             if (unit.maxMana > 0) {
                 var manaGain = 10;
                 if (unit.manaShrine && unit.manaShrine.manaGenMult) manaGain = Math.floor(manaGain * unit.manaShrine.manaGenMult);
+                // Prompt 62: bond mana generation bonus (conductor -- manaGenPct)
+                if (unit.bondManaGenMult && unit.bondManaGenMult > 1) manaGain = Math.floor(manaGain * unit.bondManaGenMult);
                 unit.currentMana = Math.min(unit.maxMana, unit.currentMana + manaGain);
             }
 

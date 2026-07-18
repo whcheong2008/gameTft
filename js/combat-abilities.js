@@ -25,6 +25,10 @@ function executeAbility(caster) {
     if (caster.manaShrine && caster.manaShrine.abilityDamageMult > 1) {
         atk = Math.floor(atk * caster.manaShrine.abilityDamageMult);
     }
+    // Prompt 62: bond ability damage bonus (arcane_circle, eye_of_the_storm -- abilityDmgPct)
+    if (caster.bondAbilityDmgMult && caster.bondAbilityDmgMult > 1) {
+        atk = Math.floor(atk * caster.bondAbilityDmgMult);
+    }
 
     // Track cast
     if (caster.combatStats) caster.combatStats.abilityCasts++;
