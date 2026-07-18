@@ -21,6 +21,9 @@
 | 5 | LOW | Rewards | `applyMissionRewards` in items.js:1605 is dead code permanently shadowed by the same-named function in missions.js:2706 (different reward shape). Harmless today, live footgun. Found by test-economy.js (KNOWN_BUG). | **FIXED** — deleted the dead items.js copy; missions.js's version is the sole, live definition. test-economy.js KNOWN_BUG converted to a real passing assertion. |
 | 6 | HIGH | Bonds | Unit bonds NEVER applied in combat: inline detection read `bond.effect`, a field UNIT_BONDS entries don't have (they use `bonus`) — silently applied nothing. Found during Prompt 62. | **FIXED** (Prompt 62) — combat now uses canonical `detectActiveBonds()` + full `bonus` schema. |
 | 7 | HIGH | Bonds | `detectActiveBonds()` read `saveData.buildings.bond_hall`, renamed to `kindred_circle` in a save migration — bond multiplier and trio unlock permanently zeroed. | **FIXED** (Prompt 62) — delegates to `getBondHallBonuses()` as single source of truth. |
+| 8 | CRITICAL | Combat / Bosses | Boss-spawned minions skip `initUnitPassiveState()` — crash when a minion with an on-attack passive (e.g. flame_warrior) attacks. Reachable via infernal_wyvern element boss challenge. Found by balance sim (Prompt 65). | OPEN — assigned Prompt 66 |
+| 9 | MEDIUM | Balance / Generation | Enemy star level is fixed in `generateMissionWave()`/`generateEndlessEnemies()` regardless of region → late-region freewins persist after budget tuning (9 remain, mostly R7). | OPEN — assigned Prompt 66 |
+| 10 | MEDIUM | Balance / Bosses | `BOSS_DATA` HP-scaling formula leaves r1_boss and r8_boss as hard walls at reference player power. | OPEN — assigned Prompt 66 |
 
 ## Deferred to Unity
 
