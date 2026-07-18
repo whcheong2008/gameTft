@@ -1,5 +1,78 @@
 // combat-abilities.js -- ability execution (mana/casting) (split from main-v2.js)
 
+// ---- Prompt 69 hex migration: shared pierce-beam / knockback helpers ----
+//
+// Steps a hex ray from caster through target out to maxSteps cells
+// (hexRay(), grid.js -- continues PAST target to the board edge, matching
+// the old square code's "fixed direction, up to 7 steps" pierce-shot
+// semantics) and collects every live enemy unit found along the beam, in
+// order. Replaces 5 near-identical dr/dc square-stepping blocks (wind_archer,
+// steel_archer, tsunami_blade, gale_sniper, ballista_archer).
+function abilityPierceTargets(caster, target, grid, maxSteps) {
+    var cells = hexRay(caster.gridRow, caster.gridCol, target.gridRow, target.gridCol, maxSteps);
+    var hits = [];
+    for (var i = 0; i < cells.length; i++) {
+        var cell = cells[i];
+        var unit = grid[cell.row] && grid[cell.row][cell.col];
+        if (unit && unit.hp > 0 && unit.side !== caster.side && hits.indexOf(unit) < 0) {
+            hits.push(unit);
+        }
+    }
+    return hits;
+}
+
+// Widening cone/wedge of cells from caster toward target, out to maxSteps.
+// JUDGMENT CALL (Prompt 69 report): the old square version walked a straight
+// line in a fixed row/col direction and, at each step d (1-indexed), added a
+// perpendicular spread of (2d-1) cells centered on that step -- a widening
+// isoceles triangle. Hex has no exact equivalent of "perpendicular to a
+// fixed row/col axis", so this composes only grid.js primitives: hexRay()
+// gives the spine (the same "fixed direction, N steps" beam pierce-shot
+// abilities use), and at each spine cell (distance d from caster) the wedge
+// takes every board cell within cellsInRange(spineCell, d-1) that is
+// EXACTLY d hexes from the caster (the ring at that distance) -- producing a
+// widening hex wedge whose cell count grows with distance the same way the
+// square cone did, without doubling back over cells nearer the caster.
+function abilityConeCells(caster, target, maxSteps) {
+    var spine = hexRay(caster.gridRow, caster.gridCol, target.gridRow, target.gridCol, maxSteps);
+    var seen = {};
+    var cells = [];
+    for (var d = 0; d < spine.length; d++) {
+        var step = d + 1;
+        var spread = cellsInRange(spine[d].row, spine[d].col, d);
+        for (var i = 0; i < spread.length; i++) {
+            var cell = spread[i];
+            if (hexDistance(caster.gridRow, caster.gridCol, cell.row, cell.col) !== step) continue;
+            var key = cell.row + ',' + cell.col;
+            if (seen[key]) continue;
+            seen[key] = true;
+            cells.push(cell);
+        }
+    }
+    return cells;
+}
+
+// Push `target` `distance` hex cells directly away from `caster` (knockback).
+// Direction is computed once via hexDirectionIndex() (caster -> target) and
+// walked with hexStep() -- replaces the bmDir/faDir square dr/dc-sign blocks.
+// rowMin/rowMax (default: the whole board, matching bmDir/faDir's original
+// 0<=r<8 bound) restrict where the knockback may land.
+function abilityKnockback(caster, target, grid, distance, rowMin, rowMax) {
+    if (rowMin === undefined) rowMin = 0;
+    if (rowMax === undefined) rowMax = GRID_ROWS - 1;
+    var dirIndex = hexDirectionIndex(caster.gridRow, caster.gridCol, target.gridRow, target.gridCol);
+    var landed = null;
+    for (var step = 1; step <= distance; step++) {
+        var cell = hexStep(target.gridRow, target.gridCol, dirIndex, step);
+        if (!cell) break;
+        if (cell.row < rowMin || cell.row > rowMax) break;
+        if (grid[cell.row][cell.col]) break;
+        landed = cell;
+    }
+    if (landed) moveUnitToCell(target, landed.row, landed.col, grid);
+    return landed;
+}
+
 // ---- Ability Execution ----
 
 function executeAbility(caster) {
@@ -100,7 +173,7 @@ function executeAbility(caster) {
             var faNearestDist = 999;
             for (var j = 0; j < enemies.length; j++) {
                 if (enemies[j].hp > 0) {
-                    var fd = getManhattanDist(faTarget.gridRow, faTarget.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                    var fd = hexDistance(faTarget.gridRow, faTarget.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                     if (fd < faNearestDist) { faNearestDist = fd; faNearestEnemy = enemies[j]; }
                 }
             }
@@ -219,21 +292,7 @@ function executeAbility(caster) {
     case 'wind_archer':
         // Pierce through enemies in line, grant ATK speed
         if (target && target.hp > 0) {
-            var waDir = {
-                dr: target.gridRow > caster.gridRow ? 1 : (target.gridRow < caster.gridRow ? -1 : 0),
-                dc: target.gridCol > caster.gridCol ? 1 : (target.gridCol < caster.gridCol ? -1 : 0)
-            };
-            var waHitTargets = [];
-            for (var step = 1; step <= 7; step++) {
-                var wr = caster.gridRow + waDir.dr * step;
-                var wc = caster.gridCol + waDir.dc * step;
-                if (wr >= 0 && wr < 8 && wc >= 0 && wc < 7 && grid[wr] && grid[wr][wc]) {
-                    var wUnit = grid[wr][wc];
-                    if (wUnit.hp > 0 && wUnit.side !== caster.side && waHitTargets.indexOf(wUnit) < 0) {
-                        waHitTargets.push(wUnit);
-                    }
-                }
-            }
+            var waHitTargets = abilityPierceTargets(caster, target, grid, 7);
             for (var i = 0; i < waHitTargets.length; i++) {
                 dealDamage(caster, waHitTargets[i], Math.floor(atk * 1.70), {isAbility:true, triggerOnHit:false});
             }
@@ -278,7 +337,7 @@ function executeAbility(caster) {
             var sfHasLightning = false;
             for (var j = 0; j < allies.length; j++) {
                 if (allies[j] !== caster && allies[j].hp > 0 && allies[j].element === 'lightning') {
-                    var sfDist = getManhattanDist(caster.gridRow, caster.gridCol, allies[j].gridRow, allies[j].gridCol);
+                    var sfDist = hexDistance(caster.gridRow, caster.gridCol, allies[j].gridRow, allies[j].gridCol);
                     if (sfDist <= 3) { sfHasLightning = true; break; }
                 }
             }
@@ -290,7 +349,7 @@ function executeAbility(caster) {
                 // Chain 60 flat damage to 1 nearby enemy
                 for (var j = 0; j < enemies.length; j++) {
                     if (enemies[j].hp > 0 && sfTargets.indexOf(enemies[j]) < 0) {
-                        var sfcd = getManhattanDist(target.gridRow, target.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                        var sfcd = hexDistance(target.gridRow, target.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                         if (sfcd <= 2) {
                             dealDamage(caster, enemies[j], 60, {isTrueDamage: true, canCrit: false, canDodge: false, applyElement: false, triggerOnHit: false});
                             break;
@@ -332,7 +391,7 @@ function executeAbility(caster) {
                 var taBest = null, taBestDist = 999;
                 for (var j = 0; j < enemies.length; j++) {
                     if (enemies[j].hp > 0 && taChained.indexOf(enemies[j]) < 0) {
-                        var tad = getManhattanDist(taLast.gridRow, taLast.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                        var tad = hexDistance(taLast.gridRow, taLast.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                         if (tad <= 3 && tad < taBestDist) { taBestDist = tad; taBest = enemies[j]; }
                     }
                 }
@@ -398,21 +457,7 @@ function executeAbility(caster) {
     case 'steel_archer':
         // Pierce all enemies in line dealing 170% ATK, apply DR reduction
         if (target && target.hp > 0) {
-            var stDir = {
-                dr: target.gridRow > caster.gridRow ? 1 : (target.gridRow < caster.gridRow ? -1 : 0),
-                dc: target.gridCol > caster.gridCol ? 1 : (target.gridCol < caster.gridCol ? -1 : 0)
-            };
-            var stHitTargets = [];
-            for (var step = 1; step <= 7; step++) {
-                var sr = caster.gridRow + stDir.dr * step;
-                var sc = caster.gridCol + stDir.dc * step;
-                if (sr >= 0 && sr < 8 && sc >= 0 && sc < 7 && grid[sr] && grid[sr][sc]) {
-                    var sUnit = grid[sr][sc];
-                    if (sUnit.hp > 0 && sUnit.side !== caster.side && stHitTargets.indexOf(sUnit) < 0) {
-                        stHitTargets.push(sUnit);
-                    }
-                }
-            }
+            var stHitTargets = abilityPierceTargets(caster, target, grid, 7);
             for (var i = 0; i < stHitTargets.length; i++) {
                 dealDamage(caster, stHitTargets[i], Math.floor(atk * 1.70), {isAbility:true, triggerOnHit:false});
                 addStatus(stHitTargets[i], 'vulnerability', 4, 0.18, caster);
@@ -491,7 +536,7 @@ function executeAbility(caster) {
             var esaNearestDist = 999;
             for (var j = 0; j < enemies.length; j++) {
                 if (enemies[j].hp > 0) {
-                    var esad = getManhattanDist(esaTarget.gridRow, esaTarget.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                    var esad = hexDistance(esaTarget.gridRow, esaTarget.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                     if (esad < esaNearestDist) { esaNearestDist = esad; esaNearestEnemy = enemies[j]; }
                 }
             }
@@ -506,22 +551,13 @@ function executeAbility(caster) {
     case 'tsunami_blade':
         // Enhanced tide_hunter: Slash in line, apply 20% slow, self heal 30% of damage dealt
         if (target && target.hp > 0) {
-            var tbDir = {
-                dr: target.gridRow > caster.gridRow ? 1 : (target.gridRow < caster.gridRow ? -1 : 0),
-                dc: target.gridCol > caster.gridCol ? 1 : (target.gridCol < caster.gridCol ? -1 : 0)
-            };
+            var tbHitTargets = abilityPierceTargets(caster, target, grid, 3);
             var tbTotalDmg = 0;
-            for (var step = 1; step <= 3; step++) {
-                var tbr = caster.gridRow + tbDir.dr * step;
-                var tbc = caster.gridCol + tbDir.dc * step;
-                if (tbr >= 0 && tbr < 8 && tbc >= 0 && tbc < 7 && grid[tbr] && grid[tbr][tbc]) {
-                    var tbUnit = grid[tbr][tbc];
-                    if (tbUnit.hp > 0 && tbUnit.side !== caster.side) {
-                        var tbResult = dealDamage(caster, tbUnit, Math.floor(atk * 1.60), {isAbility:true, triggerOnHit:false});
-                        addStatus(tbUnit, 'slow', 3, 0.20, caster);
-                        tbTotalDmg += tbResult.totalDamage;
-                    }
-                }
+            for (var tbi = 0; tbi < tbHitTargets.length; tbi++) {
+                var tbUnit = tbHitTargets[tbi];
+                var tbResult = dealDamage(caster, tbUnit, Math.floor(atk * 1.60), {isAbility:true, triggerOnHit:false});
+                addStatus(tbUnit, 'slow', 3, 0.20, caster);
+                tbTotalDmg += tbResult.totalDamage;
             }
             if (tbTotalDmg > 0) {
                 dealHealing(caster, caster, Math.floor(tbTotalDmg * 0.30));
@@ -629,21 +665,7 @@ function executeAbility(caster) {
     case 'gale_sniper':
         // Enhanced wind_archer: +8% ATK speed per Wind ally, pierce, slow hit enemies
         if (target && target.hp > 0) {
-            var gsDir = {
-                dr: target.gridRow > caster.gridRow ? 1 : (target.gridRow < caster.gridRow ? -1 : 0),
-                dc: target.gridCol > caster.gridCol ? 1 : (target.gridCol < caster.gridCol ? -1 : 0)
-            };
-            var gsHitTargets = [];
-            for (var step = 1; step <= 7; step++) {
-                var gr = caster.gridRow + gsDir.dr * step;
-                var gc = caster.gridCol + gsDir.dc * step;
-                if (gr >= 0 && gr < 8 && gc >= 0 && gc < 7 && grid[gr] && grid[gr][gc]) {
-                    var gUnit = grid[gr][gc];
-                    if (gUnit.hp > 0 && gUnit.side !== caster.side && gsHitTargets.indexOf(gUnit) < 0) {
-                        gsHitTargets.push(gUnit);
-                    }
-                }
-            }
+            var gsHitTargets = abilityPierceTargets(caster, target, grid, 7);
             for (var i = 0; i < gsHitTargets.length; i++) {
                 dealDamage(caster, gsHitTargets[i], Math.floor(atk * 1.70), {isAbility:true, triggerOnHit:false});
                 addStatus(gsHitTargets[i], 'slow', 3, 0.20, caster);
@@ -740,7 +762,7 @@ function executeAbility(caster) {
                 var sarBest = null, sarBestDist = 999;
                 for (var j = 0; j < enemies.length; j++) {
                     if (enemies[j].hp > 0 && sarChained.indexOf(enemies[j]) < 0) {
-                        var sard = getManhattanDist(sarLast.gridRow, sarLast.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                        var sard = hexDistance(sarLast.gridRow, sarLast.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                         if (sard <= 3 && sard < sarBestDist) { sarBestDist = sard; sarBest = enemies[j]; }
                     }
                 }
@@ -812,21 +834,7 @@ function executeAbility(caster) {
     case 'ballista_archer':
         // Enhanced steel_archer: Pierce 2 arrows, 200% ATK, 25% DR reduction
         if (target && target.hp > 0) {
-            var baDir = {
-                dr: target.gridRow > caster.gridRow ? 1 : (target.gridRow < caster.gridRow ? -1 : 0),
-                dc: target.gridCol > caster.gridCol ? 1 : (target.gridCol < caster.gridCol ? -1 : 0)
-            };
-            var baHitTargets = [];
-            for (var step = 1; step <= 7; step++) {
-                var bar = caster.gridRow + baDir.dr * step;
-                var bac = caster.gridCol + baDir.dc * step;
-                if (bar >= 0 && bar < 8 && bac >= 0 && bac < 7 && grid[bar] && grid[bar][bac]) {
-                    var baUnit = grid[bar][bac];
-                    if (baUnit.hp > 0 && baUnit.side !== caster.side && baHitTargets.indexOf(baUnit) < 0) {
-                        baHitTargets.push(baUnit);
-                    }
-                }
-            }
+            var baHitTargets = abilityPierceTargets(caster, target, grid, 7);
             for (var i = 0; i < baHitTargets.length; i++) {
                 dealDamage(caster, baHitTargets[i], Math.floor(atk * 2.00), {isAbility:true, triggerOnHit:false});
                 addStatus(baHitTargets[i], 'vulnerability', 4, 0.25, caster);
@@ -885,7 +893,7 @@ function executeAbility(caster) {
             // Chain to 1 nearby slowed enemy
             for (var j = 0; j < enemies.length; j++) {
                 if (enemies[j] !== target && enemies[j].hp > 0 && hasStatus(enemies[j], 'slow')) {
-                    var hmDist = getManhattanDist(target.gridRow, target.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                    var hmDist = hexDistance(target.gridRow, target.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                     if (hmDist <= 3) {
                         dealDamage(caster, enemies[j], Math.floor(atk * 1.20), {isAbility:true, triggerOnHit:false});
                         break;
@@ -1011,7 +1019,7 @@ function executeAbility(caster) {
                 var shBest = null, shBestDist = 999;
                 for (var j = 0; j < enemies.length; j++) {
                     if (enemies[j].hp > 0 && shChained.indexOf(enemies[j]) < 0) {
-                        var shd = getManhattanDist(shLast.gridRow, shLast.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                        var shd = hexDistance(shLast.gridRow, shLast.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                         if (shd <= 3 && shd < shBestDist) { shBestDist = shd; shBest = enemies[j]; }
                     }
                 }
@@ -1049,7 +1057,7 @@ function executeAbility(caster) {
         var wcNearestDist = 999;
         for (var j = 0; j < enemies.length; j++) {
             if (enemies[j].hp > 0) {
-                var wcd = getManhattanDist(caster.gridRow, caster.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                var wcd = hexDistance(caster.gridRow, caster.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                 if (wcd < wcNearestDist) { wcNearestDist = wcd; wcNearestEnemy = enemies[j]; }
             }
         }
@@ -1063,15 +1071,7 @@ function executeAbility(caster) {
         if (target && target.hp > 0) {
             var bmResult = dealDamage(caster, target, Math.floor(atk * 2.10), {isAbility:true, triggerOnHit:false});
             // Knockback 1 cell
-            var bmDir = {
-                dr: target.gridRow > caster.gridRow ? 1 : (target.gridRow < caster.gridRow ? -1 : 0),
-                dc: target.gridCol > caster.gridCol ? 1 : (target.gridCol < caster.gridCol ? -1 : 0)
-            };
-            var bmNewR = target.gridRow + bmDir.dr;
-            var bmNewC = target.gridCol + bmDir.dc;
-            if (bmNewR >= 0 && bmNewR < 8 && bmNewC >= 0 && bmNewC < 7 && (!grid[bmNewR] || !grid[bmNewR][bmNewC])) {
-                moveUnitToCell(target, bmNewR, bmNewC, grid);
-            }
+            abilityKnockback(caster, target, grid, 1);
             if (bmResult.killed) {
                 caster.currentMana = Math.floor(caster.maxMana * 0.5);
                 processOnKillPassive(caster, target, combatState.allUnits);
@@ -1150,7 +1150,7 @@ function executeAbility(caster) {
             var amChainCount = 0;
             for (var j = 0; j < enemies.length; j++) {
                 if (enemies[j] !== target && enemies[j].hp > 0 && amChainCount < 2) {
-                    var amd = getManhattanDist(target.gridRow, target.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                    var amd = hexDistance(target.gridRow, target.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                     if (amd <= 3) {
                         dealDamage(caster, enemies[j], Math.floor(atk * 1.40), {isAbility:true, triggerOnHit:false});
                         addStatus(enemies[j], 'slow', 3, 0.25, caster);
@@ -1286,7 +1286,7 @@ function executeAbility(caster) {
                 var tmBest = null, tmBestDist = 999;
                 for (var j = 0; j < enemies.length; j++) {
                     if (enemies[j].hp > 0 && tmChained2.indexOf(enemies[j]) < 0) {
-                        var tmd = getManhattanDist(tmLast.gridRow, tmLast.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                        var tmd = hexDistance(tmLast.gridRow, tmLast.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                         if (tmd <= 3 && tmd < tmBestDist) { tmBestDist = tmd; tmBest = enemies[j]; }
                     }
                 }
@@ -1330,17 +1330,7 @@ function executeAbility(caster) {
         if (target && target.hp > 0) {
             var faResult = dealDamage(caster, target, Math.floor(atk * 2.50), {isAbility:true, triggerOnHit:false});
             // Knockback 2 cells
-            var faDir = {
-                dr: target.gridRow > caster.gridRow ? 1 : (target.gridRow < caster.gridRow ? -1 : 0),
-                dc: target.gridCol > caster.gridCol ? 1 : (target.gridCol < caster.gridCol ? -1 : 0)
-            };
-            for (var step = 0; step < 2; step++) {
-                var faNewR = target.gridRow + faDir.dr;
-                var faNewC = target.gridCol + faDir.dc;
-                if (faNewR >= 0 && faNewR < 8 && faNewC >= 0 && faNewC < 7 && (!grid[faNewR] || !grid[faNewR][faNewC])) {
-                    moveUnitToCell(target, faNewR, faNewC, grid);
-                }
-            }
+            abilityKnockback(caster, target, grid, 2);
             if (faResult.killed) {
                 caster.currentMana = Math.floor(caster.maxMana * 0.5);
                 processOnKillPassive(caster, target, combatState.allUnits);
@@ -1468,7 +1458,7 @@ function executeAbility(caster) {
                 var blNext = null, blBestDist = 999;
                 for (var j = 0; j < enemies.length; j++) {
                     if (enemies[j].hp > 0 && blHit.indexOf(enemies[j]) < 0) {
-                        var blD = getManhattanDist(blCurrent.gridRow, blCurrent.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                        var blD = hexDistance(blCurrent.gridRow, blCurrent.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                         if (blD <= 2 && blD < blBestDist) { blBestDist = blD; blNext = enemies[j]; }
                     }
                 }
@@ -1628,7 +1618,7 @@ function executeAbility(caster) {
                 var pcNext = null, pcBest = 999;
                 for (var j = 0; j < enemies.length; j++) {
                     if (enemies[j].hp > 0 && pcHit.indexOf(enemies[j]) < 0) {
-                        var pcD = getManhattanDist(pcCurr.gridRow, pcCurr.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                        var pcD = hexDistance(pcCurr.gridRow, pcCurr.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                         if (pcD <= 2 && pcD < pcBest) { pcBest = pcD; pcNext = enemies[j]; }
                     }
                 }
@@ -1691,27 +1681,13 @@ function executeAbility(caster) {
     case 'fire_dragon':
         // Breath Weapon: Cone fire 250% ATK, Burn 30 DPS 4s, stun closest 1.5s
         if (target && target.hp > 0) {
-            var dr4 = target.gridRow > caster.gridRow ? 1 : (target.gridRow < caster.gridRow ? -1 : 0);
-            var dc4 = target.gridCol > caster.gridCol ? 1 : (target.gridCol < caster.gridCol ? -1 : 0);
+            var fdConeCells = abilityConeCells(caster, target, 3);
             var fdConeTargets = [];
-            var fdConeCells = [];
-            for (var step = 1; step <= 3; step++) {
-                var fdBaseR = caster.gridRow + dr4 * step;
-                var fdBaseC = caster.gridCol + dc4 * step;
-                var fdSpread = step - 1;
-                for (var sc = -fdSpread; sc <= fdSpread; sc++) {
-                    var fdCr, fdCc;
-                    if (dr4 !== 0) { fdCr = fdBaseR; fdCc = fdBaseC + sc; }
-                    else { fdCr = fdBaseR + sc; fdCc = fdBaseC; }
-                    if (fdCr >= 0 && fdCr < 8 && fdCc >= 0 && fdCc < 7) {
-                        fdConeCells.push({row: fdCr, col: fdCc});
-                        if (grid[fdCr] && grid[fdCr][fdCc]) {
-                            var fdConeUnit = grid[fdCr][fdCc];
-                            if (fdConeUnit.hp > 0 && fdConeUnit.side !== caster.side && fdConeTargets.indexOf(fdConeUnit) < 0) {
-                                fdConeTargets.push(fdConeUnit);
-                            }
-                        }
-                    }
+            for (var fdi = 0; fdi < fdConeCells.length; fdi++) {
+                var fdCell = fdConeCells[fdi];
+                var fdConeUnit = grid[fdCell.row] && grid[fdCell.row][fdCell.col];
+                if (fdConeUnit && fdConeUnit.hp > 0 && fdConeUnit.side !== caster.side && fdConeTargets.indexOf(fdConeUnit) < 0) {
+                    fdConeTargets.push(fdConeUnit);
                 }
             }
             if (typeof flashAbilityCells === 'function') flashAbilityCells(fdConeCells, '#ff8800', 400);
@@ -1719,7 +1695,7 @@ function executeAbility(caster) {
             for (var i = 0; i < fdConeTargets.length; i++) {
                 dealDamage(caster, fdConeTargets[i], Math.floor(atk * 2.5), {isAbility:true, triggerOnHit:false});
                 addStatus(fdConeTargets[i], 'burn', 4, 30, caster);
-                var fdD = getManhattanDist(caster.gridRow, caster.gridCol, fdConeTargets[i].gridRow, fdConeTargets[i].gridCol);
+                var fdD = hexDistance(caster.gridRow, caster.gridCol, fdConeTargets[i].gridRow, fdConeTargets[i].gridCol);
                 if (fdD < fdClosestDist) { fdClosestDist = fdD; fdClosest = fdConeTargets[i]; }
             }
             if (fdClosest && fdClosest.hp > 0) addStatus(fdClosest, 'stun', 1.5, 0, caster);
@@ -1808,27 +1784,13 @@ function executeAbility(caster) {
     case 'elder_wyrm':
         // Breath Weapon Enhanced: 4-cell cone, 250% ATK, stun ALL 2s, Burn 30 DPS 4s
         if (target && target.hp > 0) {
-            var ewDr = target.gridRow > caster.gridRow ? 1 : (target.gridRow < caster.gridRow ? -1 : 0);
-            var ewDc = target.gridCol > caster.gridCol ? 1 : (target.gridCol < caster.gridCol ? -1 : 0);
+            var ewConeCells = abilityConeCells(caster, target, 4);
             var ewConeTargets = [];
-            var ewConeCells = [];
-            for (var step = 1; step <= 4; step++) {
-                var ewBR = caster.gridRow + ewDr * step;
-                var ewBC = caster.gridCol + ewDc * step;
-                var ewSpread = step - 1;
-                for (var sc = -ewSpread; sc <= ewSpread; sc++) {
-                    var ewCr2, ewCc2;
-                    if (ewDr !== 0) { ewCr2 = ewBR; ewCc2 = ewBC + sc; }
-                    else { ewCr2 = ewBR + sc; ewCc2 = ewBC; }
-                    if (ewCr2 >= 0 && ewCr2 < 8 && ewCc2 >= 0 && ewCc2 < 7) {
-                        ewConeCells.push({row: ewCr2, col: ewCc2});
-                        if (grid[ewCr2] && grid[ewCr2][ewCc2]) {
-                            var ewCU = grid[ewCr2][ewCc2];
-                            if (ewCU.hp > 0 && ewCU.side !== caster.side && ewConeTargets.indexOf(ewCU) < 0) {
-                                ewConeTargets.push(ewCU);
-                            }
-                        }
-                    }
+            for (var ewi = 0; ewi < ewConeCells.length; ewi++) {
+                var ewCell = ewConeCells[ewi];
+                var ewCU = grid[ewCell.row] && grid[ewCell.row][ewCell.col];
+                if (ewCU && ewCU.hp > 0 && ewCU.side !== caster.side && ewConeTargets.indexOf(ewCU) < 0) {
+                    ewConeTargets.push(ewCU);
                 }
             }
             if (typeof flashAbilityCells === 'function') flashAbilityCells(ewConeCells, '#ff6600', 400);

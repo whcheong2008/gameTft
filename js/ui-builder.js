@@ -186,8 +186,12 @@ function renderTeamBuilderScreen() {
     }
     var enemyPreviewHtml = '<div class="board-grid" style="gap:2px; opacity:0.3; margin-bottom:4px;">';
     for (var er = 0; er < 4; er++) {
+        // Prompt 69 hex migration: per-row x-offset (half cell on odd rows,
+        // odd-r offset) so this preview's rows visually match combat's hex
+        // positions -- "minimum viable" per the spec (no hex-shaped CSS).
+        var erOffsetStyle = er % 2 === 1 ? ' transform:translateX(50%);' : '';
         for (var ec = 0; ec < 7; ec++) {
-            enemyPreviewHtml += '<div class="board-cell" style="min-height:30px; background:#1a0a0a; border-color:#3a1a1a; cursor:default;"></div>';
+            enemyPreviewHtml += '<div class="board-cell" style="min-height:30px; background:#1a0a0a; border-color:#3a1a1a; cursor:default;' + erOffsetStyle + '"></div>';
         }
     }
     enemyPreviewHtml += '</div>';
@@ -199,11 +203,19 @@ function renderTeamBuilderScreen() {
     boardEl.innerHTML = '';
 
     for (var row = 0; row < 4; row++) {
+        // Prompt 69 hex migration: team-builder slot row `row` maps to combat
+        // row `7 - row` (CLAUDE.md's deployment convention, unchanged by the
+        // hex migration -- Task 2's "unchanged" instruction). Offset by the
+        // COMBAT row's parity, not the builder row's own index, so deploy
+        // positions visually match where units actually land in combat.
+        var combatRowForOffset = 7 - row;
+        var rowOffsetStyle = combatRowForOffset % 2 === 1 ? 'translateX(50%)' : '';
         for (var col = 0; col < 7; col++) {
             var cell = document.createElement('div');
             cell.className = 'board-cell';
             cell.setAttribute('data-row', row);
             cell.setAttribute('data-col', col);
+            if (rowOffsetStyle) cell.style.transform = rowOffsetStyle;
 
             // Check if a unit is here
             var unitHere = null;

@@ -47,10 +47,13 @@ function domSpawnDamageNumber(row, col, text, type) {
     var board = document.getElementById('combat-board');
     if (!board) return;
 
-    // Calculate pixel position from grid cell
+    // Calculate pixel position from grid cell. Prompt 69: odd rows carry the
+    // half-cell x-offset (odd-r), matching renderCombatBoard()'s cell
+    // transform and the unit overlays -- the DOM board keeps its square
+    // vertical row spacing (no 0.75 packing; cells here are still rects).
     var cellW = board.offsetWidth / 7;
     var cellH = board.offsetHeight / 8;
-    var x = col * cellW + cellW / 2;
+    var x = col * cellW + cellW / 2 + (row % 2 === 1 ? cellW / 2 : 0);
     var y = row * cellH + cellH / 2;
 
     // Random horizontal offset to prevent overlap
@@ -323,9 +326,16 @@ function renderCombatBoard() {
         }
     }
 
-    // Rebuild background grid (always rebuild to keep danger zones and death markers current)
+    // Rebuild background grid (always rebuild to keep danger zones and death markers current).
+    // Prompt 69 hex migration (minimum-viable DOM per the spec): odd rows get a
+    // half-cell x-offset via transform so cell positions -- including the
+    // danger-zone highlights and death markers rendered INTO those cells, and
+    // the abilityFlash boxes domFlashAbilityCells() paints onto them -- line up
+    // with hex logic positions. Cells stay rectangular (no hex-shaped CSS);
+    // DOM is deleted after Phase 3.4/3.5 anyway.
     var gridHtml = '';
     for (var r = 0; r < 8; r++) {
+        var hexOffsetStyle = r % 2 === 1 ? ' transform:translateX(50%);' : '';
         for (var c = 0; c < 7; c++) {
             var cls = r <= 3 ? 'enemy-row' : 'player-row';
             var borderStyle = r === 4 ? ' border-top:2px solid #555;' : '';
@@ -334,7 +344,7 @@ function renderCombatBoard() {
             if (combatState.deathMarkers && combatState.deathMarkers[r + ',' + c]) {
                 marker = '<div class="death-marker">' + combatState.deathMarkers[r + ',' + c] + '</div>';
             }
-            gridHtml += '<div class="combat-cell ' + cls + dangerClass + '" style="' + borderStyle + '">' + marker + '</div>';
+            gridHtml += '<div class="combat-cell ' + cls + dangerClass + '" style="' + borderStyle + hexOffsetStyle + '">' + marker + '</div>';
         }
     }
     boardEl.innerHTML = gridHtml;
@@ -379,8 +389,13 @@ function renderCombatBoard() {
             unitLayer.appendChild(el);
         }
 
-        // Position with percentage-based layout (immune to board resize/timing issues)
-        var targetXPct = unit.gridCol * cellWPct;
+        // Position with percentage-based layout (immune to board resize/timing issues).
+        // Prompt 69 hex migration -- DOM is "minimum viable" per the spec (deleted
+        // after Phase 3.4/3.5): keep the existing square rect cells, but offset
+        // odd rows by half a cell in x (odd-r offset, matching grid.js's
+        // cellToPixel()) so unit token positions visually match hex logic
+        // positions/adjacency, even though the background cells stay square.
+        var targetXPct = unit.gridCol * cellWPct + (unit.gridRow % 2 === 1 ? cellWPct / 2 : 0);
         var targetYPct = unit.gridRow * cellHPct;
 
         // Boss: span 2x2

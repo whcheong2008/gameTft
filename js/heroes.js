@@ -2131,7 +2131,7 @@ function heroSideEnemies(unit) {
 
 function heroIsAdjacent(a, b) {
     if (!a || !b || a.gridRow === undefined || b.gridRow === undefined) return false;
-    return getManhattanDist(a.gridRow, a.gridCol, b.gridRow, b.gridCol) === 1;
+    return hexDistance(a.gridRow, a.gridCol, b.gridRow, b.gridCol) === 1;
 }
 
 function heroAdjacentAllies(unit) {

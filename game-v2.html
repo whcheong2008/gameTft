@@ -907,6 +907,10 @@ body {
     <!-- lore-data.js: codex content (world/region/stage/unit/hero/bond text). Data-only, no deps (Prompt 63). -->
     <script src="js/lore-data.js"></script>
     <!-- V2 uses simplified combat in these files, not V1 combat.js. Split from main-v2.js (Prompt 58). -->
+    <!-- grid.js: single source of truth for ALL spatial math (Prompt 69: hex grid
+         migration). Loads before every combat-*.js file and before the renderers
+         (render-dom.js/render-pixi.js) and ui-builder.js, all of which call into it. -->
+    <script src="js/grid.js"></script>
     <!-- combat-events.js: minimal event bus for hero skill combat hooks (Prompt 60). Must load first. -->
     <script src="js/combat-events.js"></script>
     <!-- combat-encounters.js: encounter mechanics (Prompt 62), used by combat-core.js's tick/init. -->

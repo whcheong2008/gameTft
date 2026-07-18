@@ -171,6 +171,29 @@ const TUNING_LOG = [
         was: 'r1_boss (veil_warden) baseHp 8000/hpScaling 10/baseAtk 40/atkScaling 2.5 -- unkillable wall (0% clear) at R1 reference power. r8_boss (void_sovereign) baseHp 40000/hpScaling 4/baseAtk 0/atkScaling 2.5 -- unkillable wall (0% clear) at R8 reference power. r3_boss (twin_heralds) baseAtk 0/atkScaling 1.6 and r4_boss (shattered_colossus) baseAtk 0/atkScaling 1.8 -- both zero-loss freewins (100% clear, 0 units lost) because most of their kit\'s target types (dash_random, frontal_cone, both_sides, etc.) aren\'t implemented in combat-boss.js\'s startBossTelegraph() targeting switch and silently no-op, leaving only a weak melee auto-attack as real threat. tidal_leviathan/stone_colossus/storm_phoenix (element bosses): 0% clear (unkillable) at R6 reference power.',
         now: 'r1_boss: baseHp 5000/hpScaling 2/baseAtk 16/atkScaling 1.0 (100% clear, 2 of 3 units lost -- a genuine near-death win, not a stomp). r8_boss: baseHp 65000/hpScaling 2.2/baseAtk 0/atkScaling 0.75 (100% clear, boss ends near 1% HP, 1 of 8 units lost). r3_boss: atkScaling 1.6 -> 4.0 (same baseHp/hpScaling; boss now actually kills through its only working auto-attack fast enough to cost 2 of 5 units before dying at ~3% HP remaining -- no longer a zero-loss freewin). r4_boss: atkScaling 1.8 -> 4.0 (3 of 6 units lost, boss dies at ~1% HP -- no longer a zero-loss freewin). tidal_leviathan: baseHp 18000->16000/hpScaling 3->2/atkScaling 1.8->1.4 (was losing to the boss\'s 1%/s regen outpacing team DPS; now a clean win, 1 unit lost). stone_colossus: baseHp 22000->13000/hpScaling 3->1.3/atkScaling 1.5->1.15/dr 0.35->0.25 (was hard-stalemating -- its periodic 10%-maxHP self-shield (Stone Skin) combined with 35% DR meant team DPS repeatedly bounced off a shield refresh with zero net HP progress for 40+ seconds before an inevitable wipe; cut DR and HP enough that the boss dies before the shield-refresh cadence can out-heal the team). storm_phoenix: baseHp 14000->9000/hpScaling 3->1.5/atkScaling 2.2->1.2 (was an unkillable wall; now a clean win in ~23s).',
         why: 'BUGS #10: BOSS_DATA\'s HP/ATK-scaling formula (js/ui-combat.js startMissionCombat(), out of this prompt\'s file scope -- only the DATA values are tunable) sums the whole team\'s maxHP (not an average) and multiplies by hpScaling with no cap, so a couple of points of hpScaling difference between regions produced wildly different effective difficulty once combined with each region\'s actual team-power curve. r1_boss and r8_boss were mathematically unkillable regardless of star level (confirmed via tests/balance-sim.js: 0% clear at any reference power); r3_boss/r4_boss were undertuned in the opposite direction (zero-loss freewins) partly because several of their kit\'s ability target types are unimplemented in the current engine (a combat-engine gap, not a balance issue -- left untouched per this prompt\'s "boss MECHANICS untouched" constraint) and their remaining working auto-attack was too weak to matter. All 8 story bosses and all 4 element bosses are now beatable at their region\'s/unlock tier\'s reference power (tests/balance-sim.js: 0 walls, 0 freewins). NOTE on "40-60% clear rate": boss fights in this engine are fully deterministic for a fixed reference team (no crit chance, no dodge chance, and no random-targeting abilities on any of the 8 story bosses\' implemented ability set) -- the sim runs the identical fight on every seed and can only ever report exactly 0% or 100% for a boss stage, confirmed true of every boss in the ORIGINAL (pre-Prompt-66) report as well (every single one was already 0% or 100%, never fractional). A literal 40-60% sim readout is therefore not achievable via BOSS_DATA numbers alone without adding RNG to boss targeting, which is a mechanics change this prompt\'s "boss MECHANICS untouched" constraint disallows. The numbers above instead target the same underlying intent -- a genuinely close, hard-fought fight -- verified by tracing each fight tick-by-tick and tuning to a real (not zero-loss) casualty count and a slim boss-HP-remaining margin at the moment of victory.'
+    },
+
+    // =========================================================================
+    // Prompt 69 (prompts/69-hex-migration.md) additions below: the hex grid
+    // migration is Phase 3's ONE deliberate behavior change -- melee = 6 hex
+    // neighbors (up from 4-neighborhood), radius AoEs = hex discs (bigger than
+    // the old Manhattan diamonds: r1 5->7 cells, r2 13->19, r3 25->37). That
+    // systematically strengthened enemy melee gangs and boss AoEs against R1's
+    // tiny 3-unit 1-star reference team (the exact "melee-range changes break a
+    // band of stages" case the prompt's tuning exception anticipates) while
+    // leaving R2+ regions within targets.
+    // =========================================================================
+    {
+        cluster: 'R1 stages 3, 7 (hex-melee wall fix)', file: 'js/missions.js',
+        was: 'r1_s3 3,5,5 · r1_s7 5,6,6 (per-wave budget; counts/maxCost unchanged)',
+        now: 'r1_s3 3,3,4 · r1_s7 3,4,4',
+        why: 'Both sat at exactly 43% clear pre-hex (just above the 40% wall line) and fell to 14%/29% under hex melee (6 adjacent attackers can now gang each unit of the 3-unit reference team, and every radius AoE grew ~40-46% in cell count). Budget-only trims per the Prompt 69 melee-band exception; re-verified at 57% (r1_s3) and 43% (r1_s7 -- its exact pre-hex value).'
+    },
+    {
+        cluster: 'r1_boss (hex-AoE wall fix)', file: 'js/missions.js (BOSS_DATA)',
+        was: 'veil_warden baseHp 5000',
+        now: 'veil_warden baseHp 4800 (-4%; all other values untouched, mechanics untouched)',
+        why: 'The deterministic R1-reference fight flipped from a 1-of-3-survivor win (pre-hex) to a loss with the boss at 0.4% HP: Ground Slam\'s aoeRadius-2 telegraph grew from a 13-cell Manhattan diamond to a 19-cell hex disc, out-damaging the 3-unit team by a hair over the fight. Two-part fix: (1) grid.js bossCells() deliberately uses the SE "below" direction so an even-row boss anchor reproduces the old square 2x2 footprint exactly (the first SW-direction draft shifted the boss one column toward the player\'s left-packed formation and cost the team another ~360 boss HP of margin); (2) the minimal BOSS_DATA numeric nudge above -- the same data-only lever Prompt 66 used on this same boss. Re-verified: 100% clear, 1 of 3 survivors (identical closeness profile to pre-hex).'
     }
 ];
 
@@ -647,7 +670,7 @@ function n1(x) { return x.toFixed(1); }
 
 function generateReport(referenceModel, stageResults, endlessResults, bossResults, timeTrialResults) {
     let md = '';
-    md += '# Balance Report — Phase 2.10 (Prompt 65 + Prompt 66 closeout)\n\n';
+    md += '# Balance Report — Phase 2.10 (Prompt 65 + Prompt 66 closeout) + Phase 3.3 hex re-verify (Prompt 69)\n\n';
     md += '> Generated by `node tests/balance-sim.js`. Do not hand-edit the tables below the "Tuning Changes"\n';
     md += '> heading is safe to hand-edit (it is a curated log); everything above it is regenerated on every run\n';
     md += '> and must match the script output exactly.\n\n';
@@ -783,7 +806,14 @@ function generateReport(referenceModel, stageResults, endlessResults, bossResult
     md += 'reference team this pass tuned against) previously **lost** to r1_boss outright (0 survivors, 541 ticks) —\n';
     md += 'the same mathematically-unkillable wall BUGS.md #10 flagged. It now **wins** (4 of 5 survivors, 590 ticks),\n';
     md += 'consistent with r1_boss no longer being a wall at any team power. `node tests/run.js` confirms the\n';
-    md += 'regenerated golden is deterministic (two in-process runs match) before being committed.\n';
+    md += 'regenerated golden is deterministic (two in-process runs match) before being committed.\n\n';
+    md += '**Prompt 69 (hex migration):** ALL THREE goldens were regenerated deliberately — the hex grid is Phase 3\'s\n';
+    md += 'one intended behavior change, so tick-count drift is expected and correct. Outcomes (result + survivors)\n';
+    md += 'held on every scenario; only fight lengths moved (hex melee brings more attackers to bear at once, so\n';
+    md += 'fights resolve faster): t1-duo-vs-r1-s1 loss/0 @ 543 -> 463 ticks; mixed5-3star-vs-r2-s5 win/5 @ 140 ->\n';
+    md += '121 ticks; 5unit-3star-vs-r1-boss win/4 @ 590 -> 583 ticks (regenerated a second time after the -4%\n';
+    md += 'veil_warden baseHp trim in the Prompt 69 tuning cluster above, which is included in that 583).\n';
+    md += '`node tests/run.js` green twice on the regenerated set.\n';
 
     return md;
 }

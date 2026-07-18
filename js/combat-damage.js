@@ -7,7 +7,7 @@ function findNearestAlive(source, pool) {
     var bestDist = 999;
     for (var i = 0; i < pool.length; i++) {
         if (pool[i].hp <= 0) continue;
-        var dist = getManhattanDist(source.gridRow, source.gridCol, pool[i].gridRow, pool[i].gridCol);
+        var dist = hexDistance(source.gridRow, source.gridCol, pool[i].gridRow, pool[i].gridCol);
         if (dist < bestDist) {
             bestDist = dist;
             best = pool[i];
@@ -312,7 +312,7 @@ function dealDamage(source, target, rawDamage, options) {
     if (hasStatus(target, 'reflect') && !options.isReflect && source) {
         var reflectPct = getStatusValue(target, 'reflect');
         var reflectDmg = Math.floor((dmg + shieldAbsorbed) * reflectPct);
-        if (reflectDmg > 0 && getManhattanDist(source.gridRow, source.gridCol, target.gridRow, target.gridCol) <= 1) {
+        if (reflectDmg > 0 && hexDistance(source.gridRow, source.gridCol, target.gridRow, target.gridCol) <= 1) {
             dealDamage(target, source, reflectDmg, {isTrueDamage:true, canCrit:false, canDodge:false, applyElement:false, triggerOnHit:false, isReflect:true});
         }
     }
