@@ -79,6 +79,12 @@ function executeLegendaryPhoenix(unit, dt) {
                     dealDamage(unit, reviveTargets[i], Math.floor(unit.attack * reviveDmgMult), {isAbility:true, triggerOnHit:false});
                 }
                 addCombatLog(unit.name + ' rises from the ashes!');
+                // Prompt 73 (Task 2, signature moments): NEW event, event DATA
+                // only -- js/vfx-abilities.js plays a hand-tuned Phoenix revive
+                // composition. Nothing else listens; zero behavior change.
+                if (typeof combatEvents !== 'undefined') {
+                    combatEvents.emit('legendaryTrigger', { caster: unit, key: unit.templateKey, kind: 'revive', targets: reviveTargets });
+                }
             }
         }
     }
@@ -113,6 +119,10 @@ function executeLegendaryLeviathan(unit, dt) {
             ally.hp += bonusHp;
             addStatus(ally, 'drMod', 999, drBuff, unit);
         }
+        // Prompt 73 (Task 2, signature moments): NEW event, event DATA only.
+        if (typeof combatEvents !== 'undefined') {
+            combatEvents.emit('legendaryTrigger', { caster: unit, key: unit.templateKey, kind: 'awaken', targets: levWaterAllies });
+        }
     }
 }
 
@@ -146,6 +156,10 @@ function executeLegendaryWorldTree(unit, dt) {
             }
         }
         addCombatLog(unit.name + ' triggers Bloom of Life!');
+        // Prompt 73 (Task 2, signature moments): NEW event, event DATA only.
+        if (typeof combatEvents !== 'undefined') {
+            combatEvents.emit('legendaryTrigger', { caster: unit, key: unit.templateKey, kind: 'bloom', targets: lowestHpAllies });
+        }
     }
 }
 
@@ -182,6 +196,10 @@ function executeLegendaryStormDragon(unit, dt) {
                 }
             }
             addCombatLog(unit.name + ' triggers Cataclysmic Storm!');
+            // Prompt 73 (Task 2, signature moments): NEW event, event DATA only.
+            if (typeof combatEvents !== 'undefined') {
+                combatEvents.emit('legendaryTrigger', { caster: unit, key: unit.templateKey, kind: 'storm', target: sdTarget, targets: sdChain });
+            }
 
             // On crit, buff Lightning allies (Superconductor on_attack part)
             var sdAllies = unit.side === 'player' ? combatState.playerUnits : combatState.enemyUnits;
@@ -233,6 +251,10 @@ function executeLegendaryTitanLord(unit, dt) {
             addStatus(ttForceAllies[i], 'atkBuff', allyAtkDuration, 0.15, unit);
         }
         addCombatLog(unit.name + ' triggers Earthshaker!');
+        // Prompt 73 (Task 2, signature moments): NEW event, event DATA only.
+        if (typeof combatEvents !== 'undefined') {
+            combatEvents.emit('legendaryTrigger', { caster: unit, key: unit.templateKey, kind: 'shake', targets: ttTargets });
+        }
     }
 
     // CC immunity timer (Cosmic Titan)

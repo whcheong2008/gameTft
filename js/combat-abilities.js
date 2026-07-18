@@ -1918,6 +1918,13 @@ function executeAbility(caster) {
                 for (var vwj = 0; vwj < vwTargets.length; vwj++) {
                     dealDamage(vwUnit, vwTargets[vwj], Math.floor(vwUnit.attack * vwDmgMult), {isAbility:true, triggerOnHit:false});
                 }
+                // Prompt 73 (Task 2, signature moments): NEW event, event DATA
+                // only -- reuses the already-computed vwTargets list (no extra
+                // RNG draw) so js/vfx-abilities.js can play a Void Wyrm bolt
+                // composition. Nothing else listens; zero behavior change.
+                if (typeof combatEvents !== 'undefined' && vwTargets.length > 0) {
+                    combatEvents.emit('legendaryTrigger', { caster: vwUnit, key: vwUnit.templateKey, kind: 'bolt', targets: vwTargets });
+                }
             }
         }
     }
