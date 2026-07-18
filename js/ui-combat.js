@@ -67,9 +67,12 @@ function arenaBdHexPatternCss(accent) {
 // regionNum: 1-8 for a story-region stage (activeMission.region, resolved by
 // missions.js's getActiveMissionRegion()), or null/undefined/0 for
 // grind/endless/challenge missions with no region context -- all fall back
-// to the neutral void theme (theme 0).
-function buildArenaBackdrop(regionNum) {
-    var el = document.getElementById('arena-backdrop');
+// to the neutral void theme (theme 0). `elId` (Prompt 71) lets the team-
+// builder-on-arena screen (js/ui-builder.js) reuse this exact theming against
+// its own '#builder-backdrop' element; defaults to '#arena-backdrop' (combat)
+// so every pre-existing call site is unaffected.
+function buildArenaBackdrop(regionNum, elId) {
+    var el = document.getElementById(elId || 'arena-backdrop');
     if (!el) return;
     var theme = ARENA_BACKDROP_THEMES[regionNum] || ARENA_BACKDROP_THEMES[0];
     if (el._backdropTheme === theme) return; // unchanged since the last wave -- skip the DOM rebuild
@@ -84,6 +87,121 @@ function buildArenaBackdrop(regionNum) {
         '<div class="arena-bd-vignette"></div>';
 }
 
+// ---- Prompt 71 (Phase 3.5, Task 3): relocated from js/render-dom.js ----
+// These three used to live in the DOM renderer, but they're chrome that the
+// PIXI renderer ALSO needs every frame (js/render-pixi.js's RENDER_PIXI.frame
+// calls renderEncounterMechanicBanner/updateEncounterMechanicHud directly,
+// and uiStartCombatLoop() below calls showCombatStartText() unconditionally,
+// regardless of which renderer is active) -- deleting js/render-dom.js
+// wholesale would have deleted these out from under the pixi renderer too.
+// Moved verbatim (same DOM/CSS-class contract, same element IDs) rather than
+// rewritten.
+
+function showCombatStartText() {
+    var area = document.getElementById('combat-area');
+    if (!area) return;
+    var overlay = document.createElement('div');
+    overlay.className = 'combat-start-text';
+    overlay.textContent = 'FIGHT!';
+    area.appendChild(overlay);
+    setTimeout(function() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 1000);
+}
+
+// ---- Prompt 62: Encounter mechanic banner + live HUD readout ----
+// Reuses the wave-transition visual language (a small overlay banner) rather
+// than introducing new UI chrome. No-ops when the stage has no
+// encounterMechanic (banner/HUD elements are simply hidden).
+
+function renderEncounterMechanicBanner() {
+    var banner = document.getElementById('encounter-mechanic-banner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'encounter-mechanic-banner';
+        banner.style.cssText = 'position:absolute; top:8px; left:50%; transform:translateX(-50%); ' +
+            'background:rgba(20,20,30,0.9); border:1px solid #e2b714; border-radius:8px; ' +
+            'padding:6px 14px; font-size:12px; color:#eee; z-index:20; text-align:center; max-width:80%;';
+        var boardEl = document.getElementById('combat-board');
+        if (boardEl && boardEl.appendChild) boardEl.appendChild(banner);
+    }
+
+    var mechanics = (combatState && combatState.encounterMechanics) || [];
+
+    // Prompt 64: endless mode's pure-stat floor modifiers (enemy ATK/DR up,
+    // player healing/attack-speed down) have no combatState.encounterMechanics
+    // entry -- they're applied directly via applyEndlessFloorModifierEffects()
+    // -- so surface them here too ("show the modifier ... on the combat
+    // banner" per the endless mode spec). No-ops outside an active endless run.
+    var endlessMod = null;
+    if (typeof endlessRunState !== 'undefined' && endlessRunState && endlessRunState.active &&
+        typeof ENDLESS_STAT_MODIFIERS !== 'undefined' && endlessRunState.modifierThisFloor) {
+        endlessMod = ENDLESS_STAT_MODIFIERS[endlessRunState.modifierThisFloor] || null;
+    }
+
+    if (mechanics.length === 0 && !endlessMod) {
+        banner.style.display = 'none';
+        return;
+    }
+
+    var html = '';
+    if (typeof COMBAT_ENCOUNTER_INFO !== 'undefined') {
+        for (var i = 0; i < mechanics.length; i++) {
+            var info = COMBAT_ENCOUNTER_INFO[mechanics[i]];
+            if (!info) continue;
+            if (html) html += '<br>';
+            html += '<b>' + info.icon + ' ' + info.name + '</b> — ' + info.desc;
+        }
+    }
+    if (endlessMod) {
+        if (html) html += '<br>';
+        html += '<b>' + (endlessMod.icon || '⚠️') + ' ' + endlessMod.name + '</b> — ' + endlessMod.desc;
+    }
+    banner.innerHTML = html;
+    banner.style.display = html ? 'block' : 'none';
+}
+
+// Called every render frame: keeps the countdown timer and escalation stack
+// count visible during the fight.
+function updateEncounterMechanicHud() {
+    var hud = document.getElementById('encounter-mechanic-hud');
+    if (!combatState || !combatState.encounterState) {
+        if (hud) hud.style.display = 'none';
+        return;
+    }
+
+    var parts = [];
+    var es = combatState.encounterState;
+    if (es.countdown && !es.countdown.fired) {
+        parts.push('⏳ ' + Math.max(0, Math.ceil(es.countdown.timer)) + 's');
+    }
+    if (es.escalatingThreat) {
+        parts.push('📈 Stacks: ' + es.escalatingThreat.stacks);
+    }
+    if (es.reinforcementPressure) {
+        parts.push('🌊 Reinforcements: ' + es.reinforcementPressure.totalSpawned + '/' + es.reinforcementPressure.maxTotalSpawns);
+    }
+    if (es.protectObjective && es.protectObjective.npc) {
+        var npc = es.protectObjective.npc;
+        parts.push('🛡️ Objective: ' + Math.max(0, npc.hp) + '/' + npc.maxHp);
+    }
+
+    if (parts.length === 0) {
+        if (hud) hud.style.display = 'none';
+        return;
+    }
+
+    if (!hud) {
+        hud = document.createElement('div');
+        hud.id = 'encounter-mechanic-hud';
+        hud.style.cssText = 'position:absolute; top:40px; left:50%; transform:translateX(-50%); ' +
+            'background:rgba(20,20,30,0.85); border-radius:6px; padding:4px 10px; ' +
+            'font-size:11px; color:#e2b714; z-index:20; text-align:center;';
+        var boardEl2 = document.getElementById('combat-board');
+        if (boardEl2 && boardEl2.appendChild) boardEl2.appendChild(hud);
+    }
+    hud.style.display = 'block';
+    hud.textContent = parts.join('   ');
+}
+
 function beginCombatScreen(sd) {
     showScreen('combat');
     missionStarTracking = { totalDamageTaken: 0, unitsLostTotal: 0 };
@@ -91,12 +209,6 @@ function beginCombatScreen(sd) {
     // Reset speed button display
     var speedBtn = document.getElementById('speed-btn');
     if (speedBtn) speedBtn.textContent = COMBAT_SPEED + '\u00d7';
-
-    // Clean up any previous unit layer
-    var oldUnitLayer = document.getElementById('combat-unit-layer');
-    if (oldUnitLayer) oldUnitLayer.remove();
-    var dmgNums = document.getElementById('damage-numbers');
-    if (dmgNums) dmgNums.innerHTML = '';
 
     // Deploy player team
     combatBoard = deployTeam(sd);
@@ -372,11 +484,6 @@ function startMissionCombat(playerBoard, enemies) {
     });
 }
 
-// ---- Prompt 62: Encounter mechanic banner + live HUD readout ----
-// Prompt 67: moved to js/render-dom.js (renderEncounterMechanicBanner /
-// updateEncounterMechanicHud) -- battlefield overlay content, called every
-// frame from render-dom.js's renderCombatBoard(), not chrome.
-
 var COMBAT_TICK_MS = 50; // 20 fps
 var COMBAT_DT = COMBAT_TICK_MS / 1000;
 var COMBAT_SPEED = 1; // 1, 2, or 4
@@ -390,23 +497,21 @@ var COMBAT_SPEED = 1; // 1, 2, or 4
 // no-ops instead of rendering/rescheduling once combat has ended.
 var combatRenderLoopActive = false;
 
-// Renders one frame through whichever renderer is active (falls back to the
-// DOM board renderer directly if none is registered/resolvable -- keeps this
-// helper safe to call even before js/render-dom.js registers 'dom').
+// Renders one frame through whichever renderer is active. Prompt 71: there
+// is no more DOM board renderer to fall back to (js/render-dom.js is
+// deleted) -- if getActiveRenderer() resolves nothing (PIXI never loaded, or
+// its Application.init() rejected), this simply renders nothing rather than
+// silently drawing a deleted renderer's board; js/render-pixi.js's WebGL-
+// init-failure path shows its own "requires WebGL" notice separately.
 //
 // Prompt 70 (Task 5): re-resolves getActiveRenderer() on every call instead
-// of taking a renderer reference from the caller -- a stale captured
-// reference would keep driving a broken Pixi renderer for the rest of the
-// wave even after js/render-pixi.js's WebGL-init-failure path calls
-// forceRendererDomFallback(). Re-resolving here means the very next frame
-// (tick-pump cadence, ~50ms) after a fallback fires picks up the DOM
-// renderer automatically -- no other caller needs to know this happened.
+// of taking a renderer reference from the caller, so a stale captured
+// reference can never keep driving a renderer that has since torn itself
+// down mid-wave.
 function renderCombatFrame(dtMs) {
     var renderer = (typeof getActiveRenderer === 'function') ? getActiveRenderer() : null;
     if (renderer && typeof renderer.frame === 'function') {
         renderer.frame(dtMs);
-    } else if (typeof renderCombatBoard === 'function') {
-        renderCombatBoard();
     }
 }
 
@@ -521,11 +626,14 @@ function autoBattle() {
     showMissionResults(true, stars);
 }
 
-// Prompt 67: showCombatStartText / spawnDamageNumber / flashAbilityCells all
-// moved to js/render-dom.js -- battlefield visuals, not chrome. combat-*.js
-// still calls spawnDamageNumber()/flashAbilityCells() by the same names; those
-// are now logic-layer combatEvents-emitting shims defined in combat-core.js
-// (see the Prompt 67 comment block there), not this file.
+// Prompt 67: spawnDamageNumber/flashAbilityCells are logic-layer
+// combatEvents-emitting shims defined in combat-core.js (see the Prompt 67
+// comment block there); the active renderer subscribes to the
+// 'floatingText'/'abilityFlash' combatEvents they emit (js/render-pixi.js
+// does today -- js/render-dom.js used to as well, before Prompt 71 deleted
+// it). showCombatStartText() lives above in this file (relocated from
+// render-dom.js by Prompt 71, Task 3) since it's called unconditionally by
+// uiStartCombatLoop() below regardless of which renderer is active.
 
 function placeEnemiesOnBoard(enemies) {
     // Place enemies on rows 0-3 (top of 8x7 grid)
@@ -686,13 +794,31 @@ function calculateStarRating() {
     return 1;
 }
 
-var waveRepositionSelected = null; // {row, col} of selected unit for repositioning
+// Prompt 71 (Phase 3.5, Task 2): wave-transition repositioning moved from a
+// separate flat DOM grid (renderWaveRepositionGrid, deleted) onto the same
+// arena the fight just used -- js/render-pixi.js's pixiEnterRepositionMode()
+// adds click affordances directly on top of the already-mounted, frozen
+// combat tokens; this file keeps owning what a click MEANS (below), exactly
+// like it owned onWaveRepositionClick()'s combatBoard bookkeeping before.
+//
+// waveRepositionSelected now holds COMBAT grid coordinates (row 4-7),
+// matching unit.gridRow/gridCol directly -- the pre-Prompt-71 version stored
+// combatBoard's own 0-3 "team builder row" indices instead, which meant its
+// `srcUnit.gridRow = row` line was quietly wrong (it should have been `4 +
+// row`; see js/combat-core.js's initCombat(), which is the actual source of
+// truth for the 4+r mapping). That bug was harmless there ONLY because the
+// separate DOM grid never read unit.gridRow to position anything and the
+// NEXT wave's initCombat() always overwrites gridRow fresh from combatBoard
+// indices anyway -- but this version reuses the arena's real token
+// positions (pixiRedrawAfterReposition reads unit.gridRow directly), so it
+// has to get this right.
+var waveRepositionSelected = null; // {row, col} in COMBAT coords (4-7), or null
 
 function showWaveTransition() {
     var progress = getMissionProgress();
     document.getElementById('wave-text').textContent = 'Wave ' + progress.currentWave;
     var subEl = document.getElementById('wave-subtext');
-    if (subEl) subEl.textContent = 'Tap to reposition units, then continue';
+    if (subEl) subEl.textContent = 'Tap a unit to reposition it, then continue';
     document.getElementById('wave-transition').className = 'wave-transition show';
     waveRepositionSelected = null;
     // Prompt 64: endless mode's floor-transition screen (showEndlessFloorTransition
@@ -704,81 +830,46 @@ function showWaveTransition() {
     if (defaultBtn) defaultBtn.style.display = '';
     var endlessContainer = document.getElementById('endless-transition-controls');
     if (endlessContainer) endlessContainer.remove();
-    renderWaveRepositionGrid();
+    if (typeof pixiEnterRepositionMode === 'function') pixiEnterRepositionMode(onWaveRepositionClick);
 }
 
-function renderWaveRepositionGrid() {
-    // Find or create the reposition grid container
-    var container = document.getElementById('wave-reposition-grid');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'wave-reposition-grid';
-        container.style.cssText = 'margin-top:10px; width:100%; max-width:400px;';
-        var btn = document.querySelector('#wave-transition .btn-primary');
-        btn.parentNode.insertBefore(container, btn);
-    }
-
-    var html = '<div class="board-grid" style="gap:2px;">';
-    for (var r = 0; r < 4; r++) {
-        for (var c = 0; c < 7; c++) {
-            var u = combatBoard[r][c];
-            var isSelected = waveRepositionSelected && waveRepositionSelected.row === r && waveRepositionSelected.col === c;
-            var cellClass = 'board-cell' + (u && u.hp > 0 ? ' occupied' : '') + (isSelected ? ' selected' : '');
-            var outline = isSelected ? 'outline:2px solid #e2b714;' : '';
-
-            if (u && u.hp > 0) {
-                html += '<div class="' + cellClass + '" style="' + outline + '" data-wr="' + r + ',' + c + '">' +
-                    '<div class="cell-unit">' + ELEMENTS[u.element].emoji + '<br>' + u.name.split(' ')[0] + '</div></div>';
-            } else {
-                html += '<div class="' + cellClass + '" style="' + outline + '" data-wr="' + r + ',' + c + '"></div>';
-            }
-        }
-    }
-    html += '</div>';
-    html += '<div style="font-size:11px; color:#888; margin-top:4px; text-align:center;">Click a unit, then click an empty cell to move it</div>';
-    container.innerHTML = html;
-
-    // Bind click handlers
-    var cells = container.querySelectorAll('.board-cell');
-    for (var i = 0; i < cells.length; i++) {
-        cells[i].addEventListener('click', function() {
-            var coords = this.getAttribute('data-wr').split(',');
-            var cr = parseInt(coords[0]);
-            var cc = parseInt(coords[1]);
-            onWaveRepositionClick(cr, cc);
-        });
-    }
-}
-
+// `row`/`col` are COMBAT grid coordinates (row 4-7) -- see the header comment
+// above. Called either from a token's own pointertap (js/render-pixi.js's
+// pixiCreateVisual wiring) or from an empty hex's tile-hit target
+// (pixiBuildRepositionTileHits), uniformly, so this function never needs to
+// know which one fired.
 function onWaveRepositionClick(row, col) {
-    var unit = combatBoard[row][col];
+    var br = row - 4, bc = col; // combatBoard index (0-3)
+    if (br < 0 || br > 3) return; // defensive: reposition only ever targets player rows
+    var unit = combatBoard[br][bc];
 
     if (waveRepositionSelected) {
-        var sr = waveRepositionSelected.row;
-        var sc = waveRepositionSelected.col;
+        var sr = waveRepositionSelected.row - 4, sc = waveRepositionSelected.col;
         var srcUnit = combatBoard[sr][sc];
 
         // Swap or move
-        combatBoard[sr][sc] = combatBoard[row][col];
-        combatBoard[row][col] = srcUnit;
+        combatBoard[sr][sc] = combatBoard[br][bc];
+        combatBoard[br][bc] = srcUnit;
 
-        // Update grid positions on unit objects
+        // Update grid positions on the unit objects themselves (4 + board
+        // row -- see js/combat-core.js's initCombat(), the source of truth
+        // for this mapping).
         if (srcUnit) { srcUnit.gridRow = row; srcUnit.gridCol = col; }
-        if (combatBoard[sr][sc]) { combatBoard[sr][sc].gridRow = sr; combatBoard[sr][sc].gridCol = sc; }
+        if (combatBoard[sr][sc]) { combatBoard[sr][sc].gridRow = waveRepositionSelected.row; combatBoard[sr][sc].gridCol = waveRepositionSelected.col; }
 
         waveRepositionSelected = null;
-        renderWaveRepositionGrid();
     } else if (unit && unit.hp > 0) {
         waveRepositionSelected = { row: row, col: col };
-        renderWaveRepositionGrid();
+    } else {
+        return; // empty cell clicked with nothing held -- no-op
     }
+
+    if (typeof pixiSetRepositionSelection === 'function') pixiSetRepositionSelection(waveRepositionSelected);
 }
 
 function uiNextWave() {
     document.getElementById('wave-transition').className = 'wave-transition';
-    // Clean up reposition grid
-    var grid = document.getElementById('wave-reposition-grid');
-    if (grid) grid.remove();
+    if (typeof pixiExitRepositionMode === 'function') pixiExitRepositionMode();
     waveRepositionSelected = null;
     startWaveCombat();
 }
@@ -786,8 +877,7 @@ function uiNextWave() {
 function showMissionResults(victory, stars) {
     // Hide wave transition overlay if still showing
     document.getElementById('wave-transition').className = 'wave-transition';
-    var grid = document.getElementById('wave-reposition-grid');
-    if (grid) grid.remove();
+    if (typeof pixiExitRepositionMode === 'function') pixiExitRepositionMode();
 
     var sd = getSaveData();
 
@@ -972,8 +1062,7 @@ function uiReturnFromCombat() {
     // Clean up any lingering overlays
     document.getElementById('combat-results').className = 'combat-results';
     document.getElementById('wave-transition').className = 'wave-transition';
-    var grid = document.getElementById('wave-reposition-grid');
-    if (grid) grid.remove();
+    if (typeof pixiExitRepositionMode === 'function') pixiExitRepositionMode();
     // Prompt 67: stop the render loop and let the active renderer tear down
     // everything it put on the battlefield (unit overlay layer, damage
     // numbers, enrage timer -- was inline DOM cleanup here before this
@@ -984,11 +1073,13 @@ function uiReturnFromCombat() {
     showScreen('hub');
 }
 
-// Prompt 67: renderCombatUnitCell / buildUnitCellHtml / renderCombatBoard all
-// moved to js/render-dom.js -- board DOM, unit cells, hp/mana bars, status
-// icons, boss telegraph visuals, encounter banner/HUD, enrage timer. This
-// file (ui-combat.js) keeps only the chrome renderCombatBoard() calls into:
-// renderCombatScoreboard() below (scoreboard sidebar).
+// Prompt 71 (Task 3): renderCombatUnitCell/buildUnitCellHtml/renderCombatBoard
+// (the DOM board renderer's cell-building functions) were deleted along with
+// js/render-dom.js -- Pixi draws unit tokens directly on canvas now (see
+// js/render-pixi.js's pixiRedrawToken). This file keeps only chrome:
+// renderCombatScoreboard() below (scoreboard sidebar), still called every
+// frame from js/render-pixi.js's RENDER_PIXI.frame the same way the old DOM
+// renderer's renderCombatBoard() used to call it.
 
 // ---- Combat Scoreboard ----
 
@@ -1289,10 +1380,11 @@ function renderCombatSynergySidebar(side, synergies, label) {
     }
 }
 
-// Prompt 67: initCombatUnitTooltips() (Prompt 20 Phase D2) moved to
-// js/render-dom.js -- it reads/writes #combat-board .combat-cell elements
-// directly, i.e. battlefield, not chrome. Pre-existing dead code either way
-// (nothing in the codebase calls it); see the Prompt 67 report.
+// Prompt 71 (Task 3): initCombatUnitTooltips() (Prompt 20 Phase D2) was
+// deleted along with js/render-dom.js -- it read/wrote #combat-board
+// .combat-cell DOM elements that no longer exist (Pixi draws the board on
+// canvas), and it was already pre-existing dead code before this prompt
+// (nothing in the codebase called it; flagged in the Prompt 67 report).
 
 // ---- Combat Log Enhancement (Prompt 20 Phase D3) ----
 

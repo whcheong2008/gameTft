@@ -5,7 +5,7 @@
 // exactly as the pre-hex square grid). This file is the ONLY place that
 // converts between offset (row, col) grid coordinates and cube coordinates,
 // and the only place hex neighbor/distance/range/line math is implemented.
-// combat-*.js, render-dom.js, render-pixi.js and ui-builder.js all route
+// combat-*.js, render-pixi.js and ui-builder.js all route
 // their spatial math through the functions below -- see prompts/69-hex-
 // migration.md's "audit table of migrated call sites" (in the Prompt 69
 // worker report) for the full list of call sites this replaced.

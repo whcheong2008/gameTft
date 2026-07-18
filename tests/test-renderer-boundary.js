@@ -3,7 +3,8 @@
 // acceptance tests. Combat logic (js/combat-*.js) must never touch the DOM
 // or a renderer directly; everything visual crosses the seam via
 // combatEvents (js/combat-events.js) to whatever renderer js/render-
-// interface.js resolves as active (default: js/render-dom.js).
+// interface.js resolves as active (default and, since Prompt 71, ONLY
+// renderer: pixi -- js/render-dom.js was deleted).
 //
 //   (a) source-scan: zero `document.` references anywhere under js/combat-*.js.
 //   (b) a seeded combat resolves headlessly to a result with NO renderer
@@ -269,55 +270,62 @@ module.exports = [
     },
 
     // ---------------------------------------------------------------
+    // Prompt 71 (Phase 3.5, Task 3) acceptance tests -- js/render-dom.js is
+    // deleted; RENDERERS only ever has 'pixi'. An explicit `?renderer=dom`
+    // URL (documented since Prompt 70) must not silently break -- it falls
+    // back to pixi with a one-time console.warn instead of resolving to
+    // nothing. A WebGL-absent/broken machine has no renderer to run combat
+    // frames through at all (js/render-pixi.js shows a DOM "requires WebGL"
+    // notice directly in that case, outside this headless registry).
+    // ---------------------------------------------------------------
     {
-        name: 'renderer boundary (Prompt 70): ?renderer=dom is still an explicit, working opt-out even when pixi is registered',
+        name: 'renderer boundary (Prompt 71): explicit ?renderer=dom falls back to pixi (with a warn), not to a deleted renderer',
         fn: function() {
             const h = createHarness({ seed: 11 });
             h.context.PIXI = {};
             h.loadScripts();
             h.freshSave();
 
+            assert.ok(!h.context.RENDERERS.dom, 'RENDERERS.dom should not exist -- js/render-dom.js was deleted (Prompt 71)');
+
+            const warnCalls = [];
+            const originalWarn = h.context.console.warn;
+            h.context.console.warn = function(msg) { warnCalls.push(msg); };
+
             h.context.location.search = '?renderer=dom';
-            assert.equal(h.context.getActiveRenderer(), h.context.RENDERERS.dom, 'getActiveRenderer() should resolve RENDERERS.dom when explicitly requested via ?renderer=dom, regardless of pixi being the default');
+            assert.equal(h.context.getActiveRenderer(), h.context.RENDERERS.pixi, 'getActiveRenderer() should resolve pixi when ?renderer=dom is explicitly requested (the DOM renderer it used to name no longer exists)');
+            assert.ok(warnCalls.length > 0, 'requesting the retired ?renderer=dom should emit a console.warn');
+
+            h.context.console.warn = originalWarn;
         }
     },
 
     // ---------------------------------------------------------------
     {
-        name: 'renderer boundary (Prompt 70): default resolution auto-falls-back to dom when PIXI never loaded',
+        name: 'renderer boundary (Prompt 71): registry resolves to null (not a dom fallback) when PIXI never loaded',
         fn: function() {
             const h = createHarness({ seed: 12 });
             h.loadScripts(); // no PIXI stub set -- js/render-pixi.js's registration guard skips it
             h.freshSave();
 
             assert.ok(!h.context.RENDERERS.pixi, 'RENDERERS.pixi should be absent (no PIXI global at script-load time)');
-            assert.equal(h.context.getActiveRenderer(), h.context.RENDERERS.dom, 'getActiveRenderer() should fall back to RENDERERS.dom when the default name (pixi) has nothing registered under it');
+            assert.ok(!h.context.RENDERERS.dom, 'RENDERERS.dom should not exist -- js/render-dom.js was deleted (Prompt 71)');
+            assert.equal(h.context.getActiveRenderer(), null, 'getActiveRenderer() should resolve to null with nothing registered -- there is no more DOM renderer to silently fall back to; js/render-pixi.js\'s pixiEnsureApp() shows a WebGL-required notice in this situation instead');
         }
     },
 
     // ---------------------------------------------------------------
     {
-        name: 'renderer boundary (Prompt 70): forceRendererDomFallback() permanently overrides the default to dom, but not an explicit ?renderer=pixi',
+        name: 'renderer boundary (Prompt 71): forceRendererDomFallback() is a harmless no-op stub',
         fn: function() {
             const h = createHarness({ seed: 13 });
             h.context.PIXI = {};
             h.loadScripts();
             h.freshSave();
 
-            // Before any failure: default resolves to pixi.
-            assert.equal(h.context.getActiveRenderer(), h.context.RENDERERS.pixi, 'sanity check: pixi should be the default before any fallback fires');
-
-            h.context.forceRendererDomFallback('unit test: simulated WebGL init failure');
-            assert.equal(h.context.getActiveRenderer(), h.context.RENDERERS.dom, 'getActiveRenderer() should resolve to dom once forceRendererDomFallback() has fired, even with no ?renderer= param');
-
-            // An explicit ?renderer=pixi should still win -- the fallback only
-            // overrides the DEFAULT resolution, not a developer asking for pixi
-            // by name (see the comment on RENDERER_DOM_FALLBACK_FORCED).
-            h.context.location.search = '?renderer=pixi';
-            assert.equal(h.context.getActiveRenderer(), h.context.RENDERERS.pixi, 'an explicit ?renderer=pixi should still resolve to pixi even after a fallback has fired');
-
-            // A second call is a no-op (idempotent), not an error.
-            assert.doesNotThrow(function() { h.context.forceRendererDomFallback('second call'); }, 'forceRendererDomFallback() should be safe to call more than once');
+            assert.equal(h.context.getActiveRenderer(), h.context.RENDERERS.pixi, 'sanity check: pixi should be the default');
+            assert.doesNotThrow(function() { h.context.forceRendererDomFallback('unit test'); }, 'forceRendererDomFallback() should never throw');
+            assert.equal(h.context.getActiveRenderer(), h.context.RENDERERS.pixi, 'forceRendererDomFallback() should not change renderer resolution -- it is a no-op stub since Prompt 71 (there is nothing left to fall back to)');
         }
     }
 ];

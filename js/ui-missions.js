@@ -299,7 +299,7 @@ function renderStageListScreen() {
 
         if (unlocked && lockCheck.passed) {
             div.onclick = (function(idx) {
-                return function() { uiStartStoryMission(idx); };
+                return function() { uiSelectStoryMission(idx); };
             })(stageIndex);
         }
 
@@ -311,7 +311,37 @@ function renderStageListScreen() {
     grindDiv.style.cssText = 'margin-top:16px; text-align:center;';
     grindDiv.innerHTML = '<button class="btn-primary" id="grind-from-region">Start Training Mission</button>';
     storyEl.appendChild(grindDiv);
-    document.getElementById('grind-from-region').onclick = function() { uiStartGrindMission(); };
+    document.getElementById('grind-from-region').onclick = function() { uiSelectGrindMission(); };
+}
+
+// Prompt 71 (Phase 3.5, Task 1): "team building happens ON the same angled
+// hex arena the fight happens on -- the TFT deploy experience". Picking a
+// stage/training mission now opens the team-builder-on-arena screen (with
+// that stage's region backdrop) instead of jumping straight to combat;
+// js/ui-builder.js's Deploy button (uiDeployFromBuilder) is what actually
+// starts the mission, once the player has adjusted their team.
+//
+// uiStartStoryMission()/uiStartGrindMission() below are UNCHANGED (still
+// deploy + start combat immediately, no builder detour) -- kept exactly as
+// they were specifically because tests/harness.js's runCombat() helper (used
+// by most of the test suite) calls uiStartStoryMission(stageIndex) directly
+// and expects that exact contract; rewiring THAT function would have forced
+// every combat-golden/encounter/boss test to route through a screen
+// transition it has no reason to care about. New entry points below own the
+// builder detour instead; only the mission-select screen's onclick handlers
+// (just rewired above) call them.
+
+function uiSelectStoryMission(index) {
+    var mission = STORY_MISSIONS[index];
+    teamBuilderEntryStage = { index: index, isStory: true, mission: mission };
+    showScreen('team-builder');
+}
+
+function uiSelectGrindMission() {
+    var sd = getSaveData();
+    var mission = generateGrindMission(sd.player.level);
+    teamBuilderEntryStage = { index: -1, isStory: false, mission: mission };
+    showScreen('team-builder');
 }
 
 function uiStartStoryMission(index) {

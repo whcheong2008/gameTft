@@ -47,47 +47,47 @@ function registerRenderer(name, renderer) {
     RENDERERS[name] = renderer;
 }
 
-// Prompt 70 (Phase 3.4, Task 5): once true, getActiveRenderer() treats the
-// default resolution as 'dom' regardless of RENDERERS.pixi's presence, for
-// the rest of the session. Set by js/render-pixi.js's pixiEnsureApp() when
-// PIXI.Application.init() rejects (WebGL unavailable/broken on this
-// machine) -- see forceRendererDomFallback() below. `?renderer=pixi`
-// explicitly in the URL still wins (a developer asking for pixi by name
-// should see it try and fail loudly, not be silently overridden), matching
-// the existing convention that an explicit query param always wins.
-var RENDERER_DOM_FALLBACK_FORCED = false;
-
-// Called once, from the renderer that failed at runtime (currently only
-// js/render-pixi.js's WebGL init failure path). Idempotent -- a second
-// caller (e.g. a second failed wave attempt) is a no-op, not a second
-// console.warn spam.
+// Prompt 71 (Phase 3.5, Task 3): js/render-dom.js is deleted -- RENDERERS
+// only ever has 'pixi' registered now (and only when PIXI actually loaded;
+// see js/render-pixi.js's `typeof PIXI !== 'undefined'` guard). There is no
+// more DOM fallback to silently swap in when Pixi is unavailable/broken:
+// js/render-pixi.js's pixiEnsureApp() shows a "this game requires WebGL"
+// notice directly in that case instead of calling into this file at all.
+// forceRendererDomFallback() is kept as a harmless no-op stub (rather than
+// deleted outright) purely so any stray caller doesn't throw -- nothing in
+// this codebase calls it as of this prompt.
 function forceRendererDomFallback(reason) {
-    if (RENDERER_DOM_FALLBACK_FORCED) return;
-    RENDERER_DOM_FALLBACK_FORCED = true;
     if (typeof console !== 'undefined' && console.warn) {
-        console.warn('render-interface.js: falling back to the DOM renderer for the rest of this session -- ' + (reason || 'the active renderer failed'));
+        console.warn('render-interface.js: forceRendererDomFallback() is a no-op -- the DOM renderer was retired (Prompt 71). ' + (reason || ''));
     }
 }
 
-// Resolves the active renderer from the `?renderer=` query param (falls back
-// to 'pixi' if absent -- Prompt 70 flips the default; 'dom' remains
-// available as an explicit `?renderer=dom` opt-out). Safe to call in
-// headless contexts where window/location may be absent or minimal
-// (tests/harness.js's location stub has no `search`). Falls through to the
-// 'dom' renderer whenever the resolved name isn't registered (e.g. PIXI
-// never loaded -- js/render-pixi.js's registration is itself guarded behind
-// `typeof PIXI !== 'undefined'`) or once forceRendererDomFallback() has
-// fired for this session.
+// Resolves the active renderer from the `?renderer=` query param (defaults
+// to 'pixi' -- the only renderer since Prompt 71 retired js/render-dom.js).
+// Safe to call in headless contexts where window/location may be absent or
+// minimal (tests/harness.js's location stub has no `search`).
+//
+// An explicit `?renderer=dom` is a working, documented URL from Prompt 70
+// that must not silently 404 into nothing -- it now falls back to pixi with
+// a one-time console.warn (Task 3 spec: "explicit ?renderer=dom falls back
+// to pixi with a warn"), rather than resolving to null the way any other
+// unregistered name would.
+var RENDERER_DOM_REQUEST_WARNED = false;
+
 function getActiveRenderer() {
     var name = 'pixi';
-    var explicit = false;
     if (typeof window !== 'undefined' && window.location && window.location.search) {
         var m = window.location.search.match(/[?&]renderer=([^&]+)/);
-        if (m) { name = decodeURIComponent(m[1]); explicit = true; }
+        if (m) name = decodeURIComponent(m[1]);
     }
-    // Only the DEFAULT resolution (no `?renderer=` param at all) is affected
-    // by a forced fallback -- an explicit `?renderer=pixi` must still try
-    // pixi (and fail loudly again) rather than being silently rewritten.
-    if (!explicit && name === 'pixi' && RENDERER_DOM_FALLBACK_FORCED) name = 'dom';
-    return RENDERERS[name] || RENDERERS.dom || null;
+    if (name === 'dom') {
+        if (!RENDERER_DOM_REQUEST_WARNED) {
+            RENDERER_DOM_REQUEST_WARNED = true;
+            if (typeof console !== 'undefined' && console.warn) {
+                console.warn('render-interface.js: ?renderer=dom was retired (Prompt 71) -- running pixi instead.');
+            }
+        }
+        name = 'pixi';
+    }
+    return RENDERERS[name] || null;
 }
