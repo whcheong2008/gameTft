@@ -310,7 +310,17 @@ function tickReinforcementPressure(cs, dt) {
         var unitKey = (typeof getRandomUnitByElementAndTier === 'function') ? getRandomUnitByElementAndTier(null, [1, 2]) : null;
         var unit = (unitKey && typeof createUnit === 'function') ? createUnit(unitKey, 1) : null;
         if (!unit) continue;
-        initSyntheticUnit(unit, 'enemy', spot.row, spot.col);
+        // BUGS.md #8 fix (Prompt 66): reinforcement adds are real
+        // template-based units (unlike the synthetic Veil Crystal/Ward NPC
+        // structures elsewhere in this file, which have no abilities/passives
+        // to worry about), so they need the same full spawn-init as boss
+        // minions -- initSyntheticUnit() alone never called
+        // initUnitPassiveState(), leaving the same latent on-attack-passive
+        // crash combat-boss.js's processBossMinions() had, just not yet
+        // observed here. initSpawnedCombatUnitState() (combat-core.js) is a
+        // superset of initSyntheticUnit()'s field list (same baseline fields
+        // plus mana + passive state), so this is a drop-in replacement.
+        initSpawnedCombatUnitState(unit, 'enemy', spot.row, spot.col);
         unit.isReinforcement = true;
         // Unlike the setup-time constructs (Veil Crystal/Ward NPC), reinforcements
         // spawn mid-wave during tick -- combat-core.js only re-flattens allUnits

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // =============================================================================
-// tests/balance-sim.js — Balance verification CLI (Prompt 65 / MASTERPLAN 2.10)
+// tests/balance-sim.js — Balance verification CLI (Prompt 65 / MASTERPLAN 2.10;
+// extended by Prompt 66, prompts/66-boss-and-generation-fixes.md)
 //
 // NOT part of `node tests/run.js` (not a test-*.js file — this is a reporting
 // tool, not a pass/fail assertion suite). Run directly: `node tests/balance-sim.js`
@@ -10,7 +11,11 @@
 // measures how every piece of PvE content (74 story stages, 30 endless floors,
 // 4 element bosses, all Time Trial pars) performs against that team. Flags
 // outliers (walls / freewins) per the thresholds in prompts/65-balance-pass.md
-// and writes the full report to BALANCE-REPORT.md.
+// and writes the full report to BALANCE-REPORT.md. Prompt 66 used this same
+// script (unmodified in its simulation logic) to verify the BUGS.md #9/#10
+// fixes -- region-scaled enemy stars (js/missions.js generateMissionWave(),
+// js/endless.js generateEndlessEnemies()) and a BOSS_DATA difficulty pass
+// (js/missions.js) -- against its existing wall/freewin thresholds.
 //
 // =============================================================================
 // REFERENCE PROGRESSION MODEL
@@ -150,6 +155,22 @@ const TUNING_LOG = [
         was: 'r8_s1 18,22,26,30 · r8_s2 20,24,30,34 · r8_s3 22,26,30,34 · r8_s4 24,28,30,34 · r8_s5 26,30,30,34 · r8_s6 28,30,34,34 · r8_s7 28,30,34,34',
         now: 'r8_s1 30,37,44,50 · r8_s2 25,30,38,43 · r8_s3 28,33,38,43 · r8_s4 30,35,38,43 · r8_s5 33,38,38,43 · r8_s6 35,38,43,43 · r8_s7 35,38,43,43',
         why: 'r8_s1 was a freewin (100% clear, 0 losses) for the R8/campaign-end reference team (level 20, full 8-unit team, T1-T4 3★, T5 2★). Two-round +25% then +18% (~48%) on r8_s1; the other 6 stages got the base +25% for curve consistency (re-verified: none newly walled, and none newly freewin either — r8_s2 through r8_s7 were already appropriately tuned).'
+    },
+
+    // =========================================================================
+    // Prompt 66 (prompts/66-boss-and-generation-fixes.md) additions below.
+    // =========================================================================
+    {
+        cluster: 'Region-scaled enemy stars (BUGS #9 fix, reversal recorded)', file: 'js/missions.js, js/endless.js',
+        was: 'generateMissionWave(): flat 1★ (30% chance of 2★ only when a wave\'s maxCost >= 4), regardless of region. generateEndlessEnemies(): flat 1★ at every floor.',
+        now: 'REVERSAL: first tried the prompt\'s literal suggested bands (R1-R2 1★, R3-R4 2★, R5-R6 3★, R7 3-4★, R8 4★, applied as a hard per-enemy star FLOOR) -- this overshot badly and turned 48 non-boss stages (all of R3 through R8) into walls, because Prompt 65\'s wave budgets were tuned assuming 1-star fodder and a hard star floor is a ~1.8x-per-enemy multiplier with no offsetting budget cut. Reverted to a much gentler design: R1-R5 left at the exact pre-Prompt-66 behavior (untouched), R6-R8 get a per-enemy *chance* to roll 1 star higher (R6 35%, R7 base 2★ + 35% chance of 3★, R8 25%) -- see ENEMY_STAR_BANDS_BY_REGION in missions.js for the full writeup. Endless floors got the equivalent gentler treatment via ENDLESS_ENEMY_STAR_BANDS (25%/40%/55% chance bands by floor depth, no hard floor) instead of the pattern originally sketched.',
+        why: 'BUGS #9: enemy count scaled with wave budget but individual enemy power never did, so a maxed-out reference team could absorb an arbitrarily large count of individually-weak 1★ enemies with zero losses (9 non-boss freewins: R6 s1, 7 of 9 R7 stages, R8 s1). The reversal above is the actual shipped fix -- it clears all 9 of those freewins (verified via tests/balance-sim.js) without introducing a single new wall anywhere in R1-R8.'
+    },
+    {
+        cluster: 'Boss difficulty pass (BUGS #10 fix)', file: 'js/missions.js (BOSS_DATA)',
+        was: 'r1_boss (veil_warden) baseHp 8000/hpScaling 10/baseAtk 40/atkScaling 2.5 -- unkillable wall (0% clear) at R1 reference power. r8_boss (void_sovereign) baseHp 40000/hpScaling 4/baseAtk 0/atkScaling 2.5 -- unkillable wall (0% clear) at R8 reference power. r3_boss (twin_heralds) baseAtk 0/atkScaling 1.6 and r4_boss (shattered_colossus) baseAtk 0/atkScaling 1.8 -- both zero-loss freewins (100% clear, 0 units lost) because most of their kit\'s target types (dash_random, frontal_cone, both_sides, etc.) aren\'t implemented in combat-boss.js\'s startBossTelegraph() targeting switch and silently no-op, leaving only a weak melee auto-attack as real threat. tidal_leviathan/stone_colossus/storm_phoenix (element bosses): 0% clear (unkillable) at R6 reference power.',
+        now: 'r1_boss: baseHp 5000/hpScaling 2/baseAtk 16/atkScaling 1.0 (100% clear, 2 of 3 units lost -- a genuine near-death win, not a stomp). r8_boss: baseHp 65000/hpScaling 2.2/baseAtk 0/atkScaling 0.75 (100% clear, boss ends near 1% HP, 1 of 8 units lost). r3_boss: atkScaling 1.6 -> 4.0 (same baseHp/hpScaling; boss now actually kills through its only working auto-attack fast enough to cost 2 of 5 units before dying at ~3% HP remaining -- no longer a zero-loss freewin). r4_boss: atkScaling 1.8 -> 4.0 (3 of 6 units lost, boss dies at ~1% HP -- no longer a zero-loss freewin). tidal_leviathan: baseHp 18000->16000/hpScaling 3->2/atkScaling 1.8->1.4 (was losing to the boss\'s 1%/s regen outpacing team DPS; now a clean win, 1 unit lost). stone_colossus: baseHp 22000->13000/hpScaling 3->1.3/atkScaling 1.5->1.15/dr 0.35->0.25 (was hard-stalemating -- its periodic 10%-maxHP self-shield (Stone Skin) combined with 35% DR meant team DPS repeatedly bounced off a shield refresh with zero net HP progress for 40+ seconds before an inevitable wipe; cut DR and HP enough that the boss dies before the shield-refresh cadence can out-heal the team). storm_phoenix: baseHp 14000->9000/hpScaling 3->1.5/atkScaling 2.2->1.2 (was an unkillable wall; now a clean win in ~23s).',
+        why: 'BUGS #10: BOSS_DATA\'s HP/ATK-scaling formula (js/ui-combat.js startMissionCombat(), out of this prompt\'s file scope -- only the DATA values are tunable) sums the whole team\'s maxHP (not an average) and multiplies by hpScaling with no cap, so a couple of points of hpScaling difference between regions produced wildly different effective difficulty once combined with each region\'s actual team-power curve. r1_boss and r8_boss were mathematically unkillable regardless of star level (confirmed via tests/balance-sim.js: 0% clear at any reference power); r3_boss/r4_boss were undertuned in the opposite direction (zero-loss freewins) partly because several of their kit\'s ability target types are unimplemented in the current engine (a combat-engine gap, not a balance issue -- left untouched per this prompt\'s "boss MECHANICS untouched" constraint) and their remaining working auto-attack was too weak to matter. All 8 story bosses and all 4 element bosses are now beatable at their region\'s/unlock tier\'s reference power (tests/balance-sim.js: 0 walls, 0 freewins). NOTE on "40-60% clear rate": boss fights in this engine are fully deterministic for a fixed reference team (no crit chance, no dodge chance, and no random-targeting abilities on any of the 8 story bosses\' implemented ability set) -- the sim runs the identical fight on every seed and can only ever report exactly 0% or 100% for a boss stage, confirmed true of every boss in the ORIGINAL (pre-Prompt-66) report as well (every single one was already 0% or 100%, never fractional). A literal 40-60% sim readout is therefore not achievable via BOSS_DATA numbers alone without adding RNG to boss targeting, which is a mechanics change this prompt\'s "boss MECHANICS untouched" constraint disallows. The numbers above instead target the same underlying intent -- a genuinely close, hard-fought fight -- verified by tracing each fight tick-by-tick and tuning to a real (not zero-loss) casualty count and a slim boss-HP-remaining margin at the moment of victory.'
     }
 ];
 
@@ -626,7 +647,7 @@ function n1(x) { return x.toFixed(1); }
 
 function generateReport(referenceModel, stageResults, endlessResults, bossResults, timeTrialResults) {
     let md = '';
-    md += '# Balance Report — Phase 2.10 (Prompt 65)\n\n';
+    md += '# Balance Report — Phase 2.10 (Prompt 65 + Prompt 66 closeout)\n\n';
     md += '> Generated by `node tests/balance-sim.js`. Do not hand-edit the tables below the "Tuning Changes"\n';
     md += '> heading is safe to hand-edit (it is a curated log); everything above it is regenerated on every run\n';
     md += '> and must match the script output exactly.\n\n';
@@ -704,49 +725,40 @@ function generateReport(referenceModel, stageResults, endlessResults, bossResult
     }
     md += `\n${unbeatable} stage(s) unbeatable at reference power; ${missedPar} beatable but outside par (expected — par times are meant to reward skilled/optimized play, not the baseline reference team).\n`;
 
-    md += '\n## Known Issues (found by the simulator, out of this prompt\'s file scope)\n\n';
+    md += '\n## Known Issues (Prompt 65 findings, all fixed by Prompt 66 -- see "Tuning Changes" below)\n\n';
 
-    md += '**1. r1_boss and r8_boss stay walled (0% clear rate) regardless of team power.** ' +
-        'Region bosses (`BOSS_DATA` in missions.js) have no wave/budget data at all — their difficulty comes ' +
-        'entirely from `boss.hp = baseHp + floor(teamPower * hpScaling)` and `boss.attack = baseAtk + floor(avgAtk * atkScaling)` ' +
-        '(js/ui-combat.js `startMissionCombat()`), i.e. boss stats, not stage data. veil_warden (r1_boss) uses ' +
-        '`hpScaling: 10`: an R1 reference team\'s ~1,830 total HP inflates the boss to ~26,300 HP against a team ' +
-        'dealing roughly 175 raw DPS — mathematically unkillable within the 75s enrage timer regardless of star ' +
-        'level. This is a boss-stat balance issue (`BOSS_DATA`), which this prompt\'s hard constraint explicitly ' +
-        'excludes ("never unit/item/ability stats — they carry human playtesting"; boss stats carry the same ' +
-        'weight). Flagged for a follow-up prompt authorized to touch `BOSS_DATA`, not fixed here. r2_boss/r3_boss/' +
-        'r4_boss/r5_boss/r6_boss/r7_boss all clear at reference power (r5_boss and r6_boss initially walled too and ' +
-        'were incidentally fixed by the stage-data tuning below, which raised the team power feeding into their ' +
-        'boss-scaling formula — r1_boss and r8_boss did not cross the threshold).\n\n';
+    md += '**1. [FIXED — Prompt 66] r1_boss and r8_boss stayed walled (0% clear rate) regardless of team power.** ' +
+        'Was a `BOSS_DATA` HP/ATK-scaling issue (js/ui-combat.js `startMissionCombat()`\'s formula is out of Prompt 66\'s ' +
+        'file scope, but the `baseHp`/`hpScaling`/`baseAtk`/`atkScaling` DATA values it reads were authorized). Both ' +
+        'bosses\' numbers were cut substantially (see "Tuning Changes"); all 8 story bosses now clear at their region\'s ' +
+        'reference power with no non-boss-stage walls anywhere. See that section\'s note on why the sim reports boss ' +
+        'clear rates as exactly 0% or 100% (never a fractional 40-60%) regardless of tuning -- an engine-determinism ' +
+        'property, not a tuning gap.\n\n';
 
-    md += '**2. R6 stage 1 and 7 of 9 R7 stages stay freewins (100% clear, 0 losses) even after a ~48% budget increase.** ' +
-        'Regular (non-boss) wave enemies are generated by `generateMissionWave()` at a fixed 1★ (30% chance of 2★ if ' +
-        '`maxCost >= 4`, `js/missions.js`) — enemy *count* scales with wave budget, but individual enemy *power* does ' +
-        'not scale with the player\'s star investment the way boss HP does. Once a reference team reaches a full 8-unit ' +
-        'roster at 3★ (R6 onward per the Reference Progression Model above), it can absorb an arbitrarily large count ' +
-        'of individually-weak 1★ enemies with zero losses — a further budget increase just adds more of the same weak ' +
-        'enemies. Confirmed empirically: a further unscoped budget bump (checked, not committed) had zero effect on ' +
-        'which stages stayed freewins. The only remaining lever within this prompt\'s file scope is budget/count/' +
-        'maxCost — genuinely fixing this needs a change to enemy star-up probability in `generateMissionWave()`, ' +
-        'which is shared generation *logic*, not per-stage *data*, and out of scope here. Flagged for a follow-up ' +
-        'prompt. Endless mode (100% clear through floor 30, below) is the same story for the same structural reason.\n\n';
+    md += '**2. [FIXED — Prompt 66] R6 stage 1 and 7 of 9 R7 stages stayed freewins (100% clear, 0 losses) even after ' +
+        'a ~48% budget increase.** Was a `generateMissionWave()`/`generateEndlessEnemies()` generation-logic gap ' +
+        '(enemy *count* scaled with wave budget, but individual enemy *power* never did) -- exactly the kind of fix ' +
+        'Prompt 66 was authorized to make (generation logic + BOSS_DATA, not stage data). Region-scaled enemy star ' +
+        'chances (`ENEMY_STAR_BANDS_BY_REGION` / `ENDLESS_ENEMY_STAR_BANDS`) now clear all 9 of these freewins with ' +
+        'zero new walls anywhere in R1-R8 -- see "Tuning Changes" for the full writeup, including a reversal (a ' +
+        'harsher first attempt at this fix overshot into ~48 new walls and was walked back).\n\n';
 
-    md += '**3. Engine crash on element-boss minion spawns.**\n\n';
+    md += '**3. [FIXED — Prompt 66] Engine crash on boss-minion spawns (BUGS.md #8).**\n\n';
     if (engineErrorCount === 0) {
-        md += 'None encountered during this run.\n';
+        md += 'None encountered during this run (previously 7/7 `infernal_wyvern` runs threw). Root cause: ' +
+            '`js/combat-boss.js`\'s `processBossMinions()` spawned minions without calling `initUnitPassiveState()` ' +
+            'the way `initCombat()`\'s own per-unit init loops do for every unit present at combat start -- any ' +
+            'minion with an on-attack passive (e.g. `flame_warrior`) crashed combat the instant it attacked. Fixed by ' +
+            'routing every mid-combat spawn path (boss minions, and reinforcement-pressure adds in ' +
+            '`combat-encounters.js`, which had the identical latent gap) through one shared helper, ' +
+            '`initSpawnedCombatUnitState()` (`js/combat-core.js`), that gives a spawned unit the same runtime state ' +
+            '(passives, mana, status/CC arrays, hero-field defaults) `initCombat()` gives every starting unit. ' +
+            'Regression-tested in `tests/test-boss-minions.js`.\n';
     } else {
         md += `${engineErrorCount} simulated combat(s) threw an engine exception instead of resolving to win/loss/draw ` +
-            '(caught per-run so the simulation could continue; recorded as \'error\', excluded from clear-rate math):\n\n';
+            '(caught per-run so the simulation could continue; recorded as \'error\', excluded from clear-rate math) ' +
+            '-- if this is non-zero, the fix above has regressed:\n\n';
         for (const msg of engineErrorMessages) md += '- `' + msg + '`\n';
-        md += '\n**Root cause**: `js/combat-boss.js`\'s `processBossMinions()` spawns minions via ' +
-            '`createUnit(key, stars)` (teams.js) directly into `combatState.enemyUnits`/`allUnits`, but never calls ' +
-            '`initUnitPassiveState()` on them the way `initCombat()`\'s main unit loop does for every unit present at ' +
-            'combat start (`js/combat-core.js` ~line 350). Any `minionSpawns` entry whose unit template has an ' +
-            'on-attack passive (e.g. `flame_warrior`\'s "every 3rd attack" passive in `js/combat-passives.js`) throws ' +
-            'the instant that minion lands an attack. Observed via `infernal_wyvern`, which spawns flame_warrior-' +
-            'templated "Fire Drake" minions. This is a combat-engine bug, not a tuning issue — it is out of this ' +
-            'prompt\'s file scope (missions.js stage data / TUNABLE constants only) and has been flagged separately ' +
-            'rather than fixed here.\n';
     }
 
     md += '\n## Tuning Changes\n\n';
@@ -760,13 +772,18 @@ function generateReport(referenceModel, stageResults, endlessResults, bossResult
     }
 
     md += '\n## Golden Files\n\n';
-    md += 'r1_s1 and r1_boss (2 of the 3 golden scenarios in `tests/test-combat-golden.js`) were **not** retuned —\n';
-    md += 'their goldens remain byte-identical to before this prompt.\n\n';
+    md += '**Prompt 65:** r1_s1 was **not** retuned — its golden remains byte-identical to before that prompt.\n\n';
     md += 'r2_s5 (`tests/golden/mixed5-3star-vs-r2-s5.json`) **was** retuned as part of the R2 wall-fix cluster above\n';
     md += '(budgets 10,12,13 -> 5,6,6). Its golden was regenerated deliberately: the fixed 5-unit 3★ golden-test\n';
     md += 'team still wins every time (result and survivor count unchanged — 5 survivors), but the fight now resolves\n';
-    md += 'in 140 ticks instead of 236 since the wave is smaller. `node tests/run.js` confirms the regenerated golden\n';
-    md += 'is deterministic (two in-process runs match) before being committed.\n';
+    md += 'in 140 ticks instead of 236 since the wave is smaller.\n\n';
+    md += '**Prompt 66:** r1_boss (`tests/golden/5unit-3star-vs-r1-boss.json`) **was** retuned as part of the boss\n';
+    md += 'difficulty pass above (veil_warden baseHp 8000->5000, hpScaling 10->2, baseAtk 40->16, atkScaling 2.5->1.0).\n';
+    md += 'Its golden was regenerated deliberately: the golden-test team (a strong 5-unit 3★ squad, well above the R1\n';
+    md += 'reference team this pass tuned against) previously **lost** to r1_boss outright (0 survivors, 541 ticks) —\n';
+    md += 'the same mathematically-unkillable wall BUGS.md #10 flagged. It now **wins** (4 of 5 survivors, 590 ticks),\n';
+    md += 'consistent with r1_boss no longer being a wall at any team power. `node tests/run.js` confirms the\n';
+    md += 'regenerated golden is deterministic (two in-process runs match) before being committed.\n';
 
     return md;
 }
