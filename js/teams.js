@@ -197,11 +197,13 @@ function deployTeam(saveData) {
     }
 
     // Place each team member
+    var teamKeys = [];
     for (var i = 0; i < team.slots.length; i++) {
         var slot = team.slots[i];
         var entry = saveData.collection[slot.key];
         if (!entry) continue;
 
+        teamKeys.push(slot.key);
         var unit = createUnit(slot.key, entry.stars);
         if (unit) {
             unit.ascensionTier = slot.ascensionTier || null;
@@ -209,7 +211,32 @@ function deployTeam(saveData) {
         }
     }
 
+    trackUniqueBondsUsed(saveData, teamKeys);
+
     return board;
+}
+
+// Records distinct bond ids activated by this deployment into
+// saveData.stats.uniqueBondsUsed (the achievement stat bond_collector reads:
+// "Activate 5 different bonds", checked as a plain count via s.stats.uniqueBondsUsed).
+// A persistent seen-set (stats.bondsUsedSeen) is kept so the stat reflects
+// distinct bonds ever triggered across deploys, not just the current team's count.
+function trackUniqueBondsUsed(saveData, teamKeys) {
+    if (typeof detectActiveBonds !== 'function') return;
+    var active = detectActiveBonds(teamKeys, saveData);
+    if (!active || active.length === 0) return;
+
+    if (!saveData.stats) saveData.stats = {};
+    if (!saveData.stats.bondsUsedSeen) saveData.stats.bondsUsedSeen = [];
+
+    var changed = false;
+    for (var b = 0; b < active.length; b++) {
+        if (saveData.stats.bondsUsedSeen.indexOf(active[b].id) < 0) {
+            saveData.stats.bondsUsedSeen.push(active[b].id);
+            changed = true;
+        }
+    }
+    if (changed) trackStat(saveData, 'uniqueBondsUsed', saveData.stats.bondsUsedSeen.length);
 }
 
 // Create a combat-ready unit instance from template + star level

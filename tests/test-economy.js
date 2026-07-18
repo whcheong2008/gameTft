@@ -144,44 +144,55 @@ module.exports = [
         }
     },
     {
-        name: 'KNOWN_BUG: js/items.js defines a second, permanently-shadowed applyMissionRewards() that is dead code',
+        name: 'BUGS.md #5 fixed: applyMissionRewards() is now the sole global definition and correctly applies every field of the calculateMissionRewards() contract',
         fn: function() {
             const h = createHarness({ seed: 1 });
             const sd = h.freshSave();
 
-            // js/items.js:1605 defines applyMissionRewards(saveData, rewards) expecting
-            // a { items, gems, essences, mythicMaterials } shape (the shape returned by
-            // generateMissionRewards()). js/missions.js:2706 defines a SECOND, unrelated
-            // applyMissionRewards(saveData, rewards) expecting a totally different shape
-            // ({ gold, xp, unitCopies, equipmentDrops, gemDrops, essenceDropsNew, ... },
-            // the shape returned by calculateMissionRewards()). Since both are plain
-            // `function` declarations in shared global scope and missions.js loads AFTER
-            // items.js in game-v2.html, the missions.js version silently wins — the
-            // items.js version can never execute. This is currently harmless in practice
-            // (the only real caller, js/ui-combat.js:742, already pairs
-            // calculateMissionRewards() with the surviving missions.js version), but the
-            // items.js function is ~35 lines of unreachable dead code that looks
-            // functional and will silently no-op (dropping items/essences/materials on
-            // the floor with no error) for anyone who calls
-            // generateMissionRewards() + applyMissionRewards() expecting the items.js
-            // contract, exactly as this test originally did before being corrected.
-            const rewardsItemsShape = h.context.generateMissionRewards(3, 3, false, sd);
-            const before = sd.equipment.inventory.length;
-            h.context.applyMissionRewards(sd, rewardsItemsShape);
-            const after = sd.equipment.inventory.length;
+            // js/items.js:1605 used to define a second, permanently-shadowed
+            // applyMissionRewards(saveData, rewards) expecting a { items, gems, essences,
+            // mythicMaterials } shape (the shape generateMissionRewards() returns).
+            // js/missions.js:2706 defines the real, live applyMissionRewards(saveData, rewards)
+            // expecting the { gold, xp, unitCopies, equipmentDrops, gemDrops, essenceDropsNew,
+            // mythicMatDrops, materialDrops } shape calculateMissionRewards() returns. Since
+            // both were plain `function` declarations in shared global scope and missions.js
+            // loaded after items.js in game-v2.html, the missions.js version always won —
+            // the items.js copy was unreachable dead code. It has been deleted (Prompt 61);
+            // this test exercises every field of the one surviving, correct contract.
+            sd.player.veilEssence = 0;
+            sd.player.xp = 0;
+            const beforeItems = sd.equipment.inventory.length;
+            const beforeGems = sd.equipment.gems.length;
+            const beforeCollectionKeys = Object.keys(sd.collection).length;
 
-            if (after === before + rewardsItemsShape.items.length) {
-                assert.equal(after, before + rewardsItemsShape.items.length); // shadowing bug has been fixed upstream
-            } else {
-                assert.knownBug(
-                    'applyMissionRewards(saveData, generateMissionRewards()-shaped rewards) silently dropped ' +
-                    rewardsItemsShape.items.length + ' equipment reward(s) (inventory stayed at ' + after + ' instead of ' +
-                    (before + rewardsItemsShape.items.length) + ') because js/missions.js:2706 redeclares ' +
-                    'applyMissionRewards() and shadows js/items.js:1605, which is the version that actually knows ' +
-                    'how to read the { items, gems, essences, mythicMaterials } shape. Fix: rename one of the two ' +
-                    'functions (e.g. items.js\'s dead copy) or delete it.'
-                );
-            }
+            const fakeItem = {
+                id: 'test-fake-item', slot: 'weapon', itemKey: 'iron_blade', tier: 1,
+                rarity: 'common', enhanceLevel: 0, enhanceFailStreak: 0, gems: [], affixes: [],
+                setId: null, equipped: null
+            };
+            const rewards = {
+                gold: 123,
+                xp: 45,
+                starRating: 3,
+                unitCopies: ['flame_warrior'],  // already in the starter collection
+                equipmentDrops: [fakeItem],
+                gemDrops: ['fire_uncommon'],
+                essenceDropsNew: { fire: 2 },
+                mythicMatDrops: { dragon_scale: 1 },
+                materialDrops: { oreShards: 3 },
+                missionId: null
+            };
+
+            h.context.applyMissionRewards(sd, rewards);
+
+            assert.equal(sd.player.veilEssence, 123, 'gold reward should credit VE');
+            assert.equal(sd.equipment.inventory.length, beforeItems + 1, 'equipment reward should be appended to inventory');
+            assert.equal(sd.equipment.gems.length, beforeGems + 1, 'gem reward should be appended');
+            assert.equal(sd.equipment.essences.fire, 2, 'essence reward should be credited');
+            assert.equal(sd.equipment.mythicMaterials.dragon_scale, 1, 'mythic material reward should be credited');
+            assert.equal(sd.equipment.materials.oreShards, 3, 'material reward should be credited');
+            assert.equal(sd.collection.flame_warrior.copiesForNext, 1, 'unit copy reward should bank a copy on the existing collection entry');
+            assert.equal(Object.keys(sd.collection).length, beforeCollectionKeys, 'an already-owned unit copy should not create a new collection entry');
         }
     }
 ];

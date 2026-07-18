@@ -961,49 +961,49 @@ var REGIONS = {
         name: 'The Frontier',
         subtitle: 'Basic combat, positioning',
         stageIds: ['r1_s1', 'r1_s2', 'r1_s3', 'r1_s4', 'r1_s5', 'r1_s6', 'r1_s7', 'r1_s8', 'r1_boss'],
-        reward: { description: 'Unlock Summoning Circle upgrades + 1 free 10-pull', gold: 0, freeMultiRoll: 1 }
+        reward: { description: '1 free 10-pull', gold: 0, freeMultiRoll: 1 }
     },
     2: {
         name: 'The Barracks Trials',
         subtitle: 'Archetype roles',
         stageIds: ['r2_s1', 'r2_s2', 'r2_s3', 'r2_s4', 'r2_s5', 'r2_s6', 'r2_s7', 'r2_s8', 'r2_boss'],
-        reward: { description: 'Unlock Evolution Lab + 500 VE + 1 random Cost-3 unit', gold: 500, randomUnit: { minCost: 3, maxCost: 3 } }
+        reward: { description: '500 VE + 1 random Cost-3 unit', gold: 500, randomUnit: { minCost: 3, maxCost: 3 } }
     },
     3: {
         name: 'The Synergy Trials',
         subtitle: 'Synergy pairing',
         stageIds: ['r3_s1', 'r3_s2', 'r3_s3', 'r3_s4', 'r3_s5', 'r3_s6', 'r3_s7', 'r3_s8', 'r3_boss'],
-        reward: { description: 'Unlock Forge Level 3 (Transmute) + 1 essence of choice', gold: 0, essenceChoice: 1 }
+        reward: { description: '1 essence of your choice', gold: 0, essenceChoice: 1 }
     },
     4: {
         name: 'The Shattered Lands',
         subtitle: 'Adaptive combat',
         stageIds: ['r4_s1', 'r4_s2', 'r4_s3', 'r4_s4', 'r4_s5', 'r4_s6', 'r4_s7', 'r4_s8', 'r4_boss'],
-        reward: { description: 'Unlock Forge Level 4 (Set Crafting) + 750 VE', gold: 750 }
+        reward: { description: '750 VE', gold: 750 }
     },
     5: {
         name: 'The Dual Convergence',
         subtitle: 'Element coverage',
         stageIds: ['r5_s1', 'r5_s2', 'r5_s3', 'r5_s4', 'r5_s5', 'r5_s6', 'r5_s7', 'r5_s8', 'r5_s9', 'r5_boss'],
-        reward: { description: 'Unlock Gem Workshop + 1 random Cost-4 unit', gold: 0, randomUnit: { minCost: 4, maxCost: 4 } }
+        reward: { description: '1 random Cost-4 unit', gold: 0, randomUnit: { minCost: 4, maxCost: 4 } }
     },
     6: {
         name: 'The Elemental Crucible',
         subtitle: 'Multi-element orchestration',
         stageIds: ['r6_s1', 'r6_s2', 'r6_s3', 'r6_s4', 'r6_s5', 'r6_s6', 'r6_s7', 'r6_s8', 'r6_s9', 'r6_boss'],
-        reward: { description: '1,000 VE + 2 essences of choice', gold: 1000, essenceChoice: 2 }
+        reward: { description: '1,000 VE + 2 essences of your choice', gold: 1000, essenceChoice: 2 }
     },
     7: {
         name: 'The Proving Grounds',
         subtitle: 'Peak tactical challenge',
         stageIds: ['r7_s1', 'r7_s2', 'r7_s3', 'r7_s4', 'r7_s5', 'r7_s6', 'r7_s7', 'r7_s8', 'r7_s9', 'r7_boss'],
-        reward: { description: 'Unlock Forge Level 5 (Ability Crafting) + Mythic Material', gold: 0, mythicMaterialChoice: 1 }
+        reward: { description: '1 Mythic Material of your choice', gold: 0, mythicMaterialChoice: 1 }
     },
     8: {
         name: 'The Abyss Gate',
         subtitle: 'Endgame mastery',
         stageIds: ['r8_s1', 'r8_s2', 'r8_s3', 'r8_s4', 'r8_s5', 'r8_s6', 'r8_s7', 'r8_boss'],
-        reward: { description: 'Choice of any Cost-5 unit + 2,000 VE + Mythic Material', gold: 2000, randomUnit: { minCost: 5, maxCost: 5 }, mythicMaterialChoice: 1 }
+        reward: { description: '1 random Cost-5 unit + 2,000 VE + 1 Mythic Material of your choice', gold: 2000, randomUnit: { minCost: 5, maxCost: 5 }, mythicMaterialChoice: 1 }
     }
 };
 
@@ -2556,19 +2556,82 @@ function isRegionRewardClaimed(saveData, regionNum) {
     if (!saveData.missions.regionRewardsClaimed) return false;
     return saveData.missions.regionRewardsClaimed.indexOf(regionNum) >= 0;
 }
-function claimRegionReward(saveData, regionNum) {
+// Roll a random base unit key within a region reward's cost range.
+// Region rewards always specify minCost === maxCost today, but a range is
+// supported in case that changes — picks a random cost within [minCost, maxCost]
+// that actually has units, falling back to minCost / cost-1 pool.
+function rollRegionRewardUnit(costRange) {
+    var minCost = (costRange && costRange.minCost) || 1;
+    var maxCost = (costRange && costRange.maxCost) || minCost;
+    var cost = minCost + Math.floor(Math.random() * (maxCost - minCost + 1));
+    var pool = UNITS_BY_COST[cost];
+    if (!pool || pool.length === 0) pool = UNITS_BY_COST[minCost];
+    if (!pool || pool.length === 0) pool = UNITS_BY_COST[1];
+    if (!pool || pool.length === 0) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// Claim a region's completion reward. Rewards that require a player choice
+// (essenceChoice / mythicMaterialChoice) need `choice` supplied
+// ({ essenceElement: 'fire', mythicMaterial: 'dragon_scale' }) — if it's
+// missing or invalid, the claim is rejected with needsEssenceChoice /
+// needsMythicChoice so the UI can show a picker and retry. The region is
+// only marked claimed once every required choice is present, so retrying
+// after a picker is shown is safe (no double-claim, no lost reward).
+function claimRegionReward(saveData, regionNum, choice) {
     if (!isRegionComplete(saveData, regionNum)) return { success: false, reason: 'Region not complete' };
     if (isRegionRewardClaimed(saveData, regionNum)) return { success: false, reason: 'Already claimed' };
-    if (!saveData.missions.regionRewardsClaimed) saveData.missions.regionRewardsClaimed = [];
-    saveData.missions.regionRewardsClaimed.push(regionNum);
     var region = REGIONS[regionNum];
     var reward = region.reward;
-    if (reward.gold > 0) saveData.player.veilEssence += reward.gold;
+
+    if (reward.essenceChoice) {
+        if (!choice || !choice.essenceElement || !ESSENCES[choice.essenceElement]) {
+            return { success: false, reason: 'Choose an essence', needsEssenceChoice: true, reward: reward, regionName: region.name };
+        }
+    }
+    if (reward.mythicMaterialChoice) {
+        if (!choice || !choice.mythicMaterial || !MYTHIC_MATERIALS[choice.mythicMaterial]) {
+            return { success: false, reason: 'Choose a Mythic Material', needsMythicChoice: true, reward: reward, regionName: region.name };
+        }
+    }
+
+    if (!saveData.missions.regionRewardsClaimed) saveData.missions.regionRewardsClaimed = [];
+    saveData.missions.regionRewardsClaimed.push(regionNum);
+
+    var granted = { gold: 0, freeMultiRoll: 0, unit: null, essenceElement: null, essenceAmount: 0, mythicMaterial: null, mythicMaterialAmount: 0 };
+
+    if (reward.gold > 0) {
+        saveData.player.veilEssence += reward.gold;
+        granted.gold = reward.gold;
+    }
     if (reward.freeMultiRoll) {
         if (!saveData.player.freeMultiRolls) saveData.player.freeMultiRolls = 0;
         saveData.player.freeMultiRolls += reward.freeMultiRoll;
+        granted.freeMultiRoll = reward.freeMultiRoll;
     }
-    return { success: true, reward: reward, regionName: region.name };
+    if (reward.randomUnit) {
+        var unitKey = rollRegionRewardUnit(reward.randomUnit);
+        if (unitKey) {
+            addUnitToCollection(saveData, unitKey);
+            granted.unit = unitKey;
+        }
+    }
+    if (reward.essenceChoice) {
+        var essKey = choice.essenceElement;
+        if (!saveData.equipment.essences) saveData.equipment.essences = {};
+        saveData.equipment.essences[essKey] = (saveData.equipment.essences[essKey] || 0) + reward.essenceChoice;
+        granted.essenceElement = essKey;
+        granted.essenceAmount = reward.essenceChoice;
+    }
+    if (reward.mythicMaterialChoice) {
+        var matKey = choice.mythicMaterial;
+        if (!saveData.equipment.mythicMaterials) saveData.equipment.mythicMaterials = {};
+        saveData.equipment.mythicMaterials[matKey] = (saveData.equipment.mythicMaterials[matKey] || 0) + reward.mythicMaterialChoice;
+        granted.mythicMaterial = matKey;
+        granted.mythicMaterialAmount = reward.mythicMaterialChoice;
+    }
+
+    return { success: true, reward: reward, regionName: region.name, granted: granted };
 }
 function getRegionStatuses(saveData) {
     var statuses = [];

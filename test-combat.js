@@ -11,7 +11,6 @@ var files = [
     'js/units-core.js',
     'js/units-templates.js',
     'js/units-abilities.js',
-    'js/ability-templates.js',
     'js/main-v2.js'
 ];
 

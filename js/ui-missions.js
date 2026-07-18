@@ -82,37 +82,101 @@ function renderRegionMapScreen() {
 
 function uiClaimRegionReward(regionNum) {
     var sd = getSaveData();
-    var result = claimRegionReward(sd, regionNum);
-    if (result.success) {
-        var reward = result.reward;
-        var msg = 'Region ' + regionNum + ' (' + result.regionName + ') reward claimed!';
-        if (reward.gold > 0) msg += '\n+' + (reward.veilEssence || 0) + ' VE';
-        if (reward.freeMultiRoll) msg += '\n+' + reward.freeMultiRoll + ' free 10-pull(s)';
-        if (reward.randomUnit) {
-            var unitKey = rollOneUnit(reward.randomUnit.minCost);
-            if (unitKey) {
-                addUnitToCollection(sd, unitKey);
-                var uTmpl = UNIT_TEMPLATES[unitKey];
-                msg += '\nUnit: ' + (uTmpl ? uTmpl.name : unitKey);
-            }
-        }
-        if (reward.essenceChoice) msg += '\n+' + reward.essenceChoice + ' essence(s) of choice (auto-granted as fire)';
-        if (reward.essenceChoice) {
-            if (sd.equipment && sd.equipment.essences) {
-                sd.equipment.essences.fire = (sd.equipment.essences.fire || 0) + reward.essenceChoice;
-            }
-        }
-        if (reward.mythicMaterialChoice) {
-            if (sd.equipment && sd.equipment.mythicMaterials) {
-                sd.equipment.mythicMaterials.dragon_scale = (sd.equipment.mythicMaterials.dragon_scale || 0) + reward.mythicMaterialChoice;
-            }
-            msg += '\n+' + reward.mythicMaterialChoice + ' Mythic Material (Dragon Scale)';
-        }
-        autoSave(sd);
-        showToast(msg);
-        renderTopBar();
-        renderMissionSelectScreen();
+    var region = REGIONS[regionNum];
+    if (!region) return;
+    var reward = region.reward;
+
+    // Rewards that require a choice show a picker first; claimRegionReward()
+    // rejects the claim (without marking it claimed) until a valid choice
+    // is supplied, so it's safe to just probe with no choice here.
+    if (reward.essenceChoice) {
+        showRegionRewardPicker(regionNum, 'essence');
+        return;
     }
+    if (reward.mythicMaterialChoice) {
+        showRegionRewardPicker(regionNum, 'mythicMaterial');
+        return;
+    }
+
+    finalizeRegionRewardClaim(regionNum, null);
+}
+
+// choiceType: 'essence' | 'mythicMaterial'
+function showRegionRewardPicker(regionNum, choiceType) {
+    var overlay = document.getElementById('region-reward-picker-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'region-reward-picker-overlay';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:2000;';
+        document.body.appendChild(overlay);
+    }
+
+    var title, optionsHtml, keys;
+    if (choiceType === 'essence') {
+        title = 'Choose an essence';
+        keys = Object.keys(ESSENCES);
+        optionsHtml = keys.map(function(k) {
+            var e = ESSENCES[k];
+            return '<button class="reward-picker-option" data-choice="' + k + '" style="padding:10px 14px; font-size:13px;">' + e.emoji + ' ' + e.name + '</button>';
+        }).join('');
+    } else {
+        title = 'Choose a Mythic Material';
+        keys = Object.keys(MYTHIC_MATERIALS);
+        optionsHtml = keys.map(function(k) {
+            var m = MYTHIC_MATERIALS[k];
+            return '<button class="reward-picker-option" data-choice="' + k + '" style="padding:10px 14px; font-size:13px;">' + m.emoji + ' ' + m.name + '</button>';
+        }).join('');
+    }
+
+    overlay.innerHTML = '<div style="background:#1a1a2e; border:2px solid #e2b714; border-radius:10px; padding:20px; max-width:420px; text-align:center;">' +
+        '<div style="font-size:15px; margin-bottom:14px;">' + title + '</div>' +
+        '<div id="reward-picker-options" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">' + optionsHtml + '</div>' +
+        '<div style="margin-top:16px;"><button id="reward-picker-cancel" class="btn-secondary" style="padding:8px 20px;">Cancel</button></div>' +
+        '</div>';
+    overlay.style.display = 'flex';
+
+    var optionBtns = overlay.querySelectorAll('.reward-picker-option');
+    for (var i = 0; i < optionBtns.length; i++) {
+        optionBtns[i].addEventListener('click', (function(chosenKey) {
+            return function() {
+                overlay.style.display = 'none';
+                var choice = (choiceType === 'essence') ? { essenceElement: chosenKey } : { mythicMaterial: chosenKey };
+                finalizeRegionRewardClaim(regionNum, choice);
+            };
+        })(optionBtns[i].getAttribute('data-choice')));
+    }
+    document.getElementById('reward-picker-cancel').onclick = function() { overlay.style.display = 'none'; };
+}
+
+function finalizeRegionRewardClaim(regionNum, choice) {
+    var sd = getSaveData();
+    var result = claimRegionReward(sd, regionNum, choice);
+    if (!result.success) {
+        if (!result.needsEssenceChoice && !result.needsMythicChoice) showToast(result.reason || 'Could not claim reward');
+        return;
+    }
+
+    var granted = result.granted;
+    var msg = 'Region ' + regionNum + ' (' + result.regionName + ') reward claimed!';
+    if (granted.gold > 0) msg += '\n+' + granted.gold + ' VE';
+    if (granted.freeMultiRoll) msg += '\n+' + granted.freeMultiRoll + ' free 10-pull(s)';
+    if (granted.unit) {
+        var uTmpl = UNIT_TEMPLATES[granted.unit];
+        msg += '\nUnit: ' + (uTmpl ? uTmpl.name : granted.unit);
+    }
+    if (granted.essenceElement) {
+        var essDef = ESSENCES[granted.essenceElement];
+        msg += '\n+' + granted.essenceAmount + ' ' + (essDef ? essDef.name : granted.essenceElement);
+    }
+    if (granted.mythicMaterial) {
+        var matDef = MYTHIC_MATERIALS[granted.mythicMaterial];
+        msg += '\n+' + granted.mythicMaterialAmount + ' ' + (matDef ? matDef.name : granted.mythicMaterial);
+    }
+
+    autoSave(sd);
+    showToast(msg);
+    renderTopBar();
+    renderMissionSelectScreen();
 }
 
 function renderStageListScreen() {
