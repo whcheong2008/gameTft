@@ -17,6 +17,10 @@ function findNearestAlive(source, pool) {
 }
 
 function grantShield(source, target, amount) {
+    // Prompt 60 hero node maren_B_4_1 "Fortified Presence": +X% shields received.
+    if (target._heroShieldReceivedBonus) {
+        amount = Math.floor(amount * (1 + target._heroShieldReceivedBonus));
+    }
     target.shield = (target.shield || 0) + amount;
     if (source && source.combatStats) source.combatStats.shieldGiven += amount;
     if (typeof spawnDamageNumber === 'function' && (!combatState || !combatState.autoBattle) && amount > 0) {
@@ -25,6 +29,21 @@ function grantShield(source, target, amount) {
 }
 
 function dealHealing(source, target, amount) {
+    // Prompt 60 hero node maren_A_2_1 "Emergency Care" (heals on targets <30% HP
+    // are stronger) — evaluated before the burn/poison reduction below.
+    if (source && source._heroEmergencyCareBonus && target.maxHp > 0 && (target.hp / target.maxHp) < 0.30) {
+        amount = Math.floor(amount * (1 + source._heroEmergencyCareBonus));
+    }
+    // Prompt 60 hero node maren_B_4_1 "Fortified Presence": +X% healing received.
+    if (target._heroHealReceivedBonus) {
+        amount = Math.floor(amount * (1 + target._heroHealReceivedBonus));
+    }
+    // Prompt 60 hero nodes maren_B_4_2/B_5_1 "Sanctuary": healing doubled/tripled in zone.
+    if (target.side === 'player' && typeof heroSanctuaryStateFor === 'function') {
+        var healSanct = heroSanctuaryStateFor(target);
+        if (healSanct && healSanct.healMult > 1) amount = Math.floor(amount * healSanct.healMult);
+    }
+
     // Healing reduction from burn, poison, and healReduction status
     var reduction = 0;
     if (hasStatus(target, 'burn')) reduction += 0.25;
@@ -42,6 +61,10 @@ function dealHealing(source, target, amount) {
     }
     if (typeof spawnDamageNumber === 'function' && (!combatState || !combatState.autoBattle) && actualHeal > 0) {
         spawnDamageNumber(target.gridRow, target.gridCol, '+' + actualHeal, 'heal');
+    }
+    // Prompt 60: combat event hook for hero skill listeners.
+    if (typeof combatEvents !== 'undefined' && actualHeal > 0) {
+        combatEvents.emit('unitHealed', { source: source, target: target, amount: actualHeal, overheal: overheal });
     }
 
     // Sage heal-shield: when a Sage heals, target gains shield equal to % of heal
@@ -81,6 +104,24 @@ function dealDamage(source, target, rawDamage, options) {
     var wasDodged = false;
     var shieldAbsorbed = 0;
 
+    // Prompt 60 hero nodes: generic "% damage dealt" accumulator (Lyric
+    // "Overload" converted dead flag + Voss "Escalation"/ramping nodes).
+    // Undefined/0 for every non-hero unit -> no golden-test impact.
+    var heroDmgDealtBonus = (source._heroDmgDealtMods && source._heroDmgDealtTotal) || 0;
+    if (source.heroSkillBonuses && source.heroSkillBonuses.overloadDmgBonus) {
+        heroDmgDealtBonus += source.heroSkillBonuses.overloadDmgBonus;
+    }
+    if (heroDmgDealtBonus) dmg = Math.floor(dmg * (1 + heroDmgDealtBonus));
+
+    // Prompt 60 hero nodes: temporary/continuous ability-damage buffs (Kael
+    // Inspiring Leader, Sera Coordinated Burst/Killsteal Synergy, Lyric
+    // Utilitarian's Gift, ...). Only applies to ability damage.
+    if (options.isAbility) {
+        var heroAbilityDmgBonus = getStatusValue(source, 'heroAbilityDmgBuff') +
+            ((source._heroAbilityDmgMods && source._heroAbilityDmgTotal) || 0);
+        if (heroAbilityDmgBonus) dmg = Math.floor(dmg * (1 + heroAbilityDmgBonus));
+    }
+
     // Step 2: Element Multiplier
     if (applyElement && typeof getElementMultiplier === 'function' && source.element && target.element) {
         var elemMult = getElementMultiplier(source.element, target.element);
@@ -90,6 +131,10 @@ function dealDamage(source, target, rawDamage, options) {
                     elemMult += source.abilities[em].elemDmgBoost;
                 }
             }
+        }
+        // Prompt 60 hero node sera_B_2_2 "Elemental Affinity" (converted dead flag)
+        if (source.heroSkillBonuses && source.heroSkillBonuses.elemDmgMultBonus && elemMult > 1.0) {
+            elemMult += source.heroSkillBonuses.elemDmgMultBonus;
         }
         if (target.elemResist && elemMult > 1.0) {
             var effectiveElemResist = target.elemResist;
@@ -101,8 +146,19 @@ function dealDamage(source, target, rawDamage, options) {
         dmg = Math.floor(dmg * elemMult);
     }
 
+    // Prompt 60 hero node sera_A_3_2 "Weak Point": +% dmg per missing target HP.
+    if (source._heroWeakPointMax && target.maxHp > 0) {
+        var wpMissingPct = 1 - (target.hp / target.maxHp);
+        var wpBonus = Math.min(source._heroWeakPointMax, Math.floor(wpMissingPct / 0.05) * 0.06);
+        if (wpBonus > 0) dmg = Math.floor(dmg * (1 + wpBonus));
+    }
+
     // Step 3: Critical Strike
-    if (options.forceCrit || (canCrit && source.critChance && Math.random() < source.critChance)) {
+    // Prompt 60 hero nodes: forced ability crit (Sera Burst Window/Death Sentence)
+    // and temporary crit chance buffs (Sera Weakpoint Exposure/Perfect Execution).
+    var heroForceCrit = options.isAbility && source._heroForceCritAbility;
+    var critChanceTotal = (source.critChance || 0) + getStatusValue(source, 'critChanceBuff');
+    if (options.forceCrit || heroForceCrit || (canCrit && critChanceTotal && Math.random() < critChanceTotal)) {
         dmg = Math.floor(dmg * 1.5);
         wasCrit = true;
     }
@@ -123,6 +179,10 @@ function dealDamage(source, target, rawDamage, options) {
     if (options && options.focusedShotIgnoreDR && totalDR > 0) {
         totalDR = totalDR * (1 - options.focusedShotIgnoreDR);
     }
+    // Prompt 60 hero nodes: ability DR-ignore (Sera Burst Window/Death Sentence)
+    if (options && options.isAbility && source._heroDrIgnoreAbility && totalDR > 0) {
+        totalDR = totalDR * (1 - source._heroDrIgnoreAbility);
+    }
     totalDR = Math.min(totalDR, 0.75);
     if (!isTrueDamage && totalDR > 0) {
         dmg = Math.floor(dmg * (1 - totalDR));
@@ -136,6 +196,17 @@ function dealDamage(source, target, rawDamage, options) {
     // Vulnerability status
     var vulnPct = getStatusValue(target, 'vulnerability');
     if (vulnPct > 0) dmg = Math.floor(dmg * (1 + vulnPct));
+
+    // Prompt 60 hero node lyric_A_4_1 "Overload" (converted dead flag): +% damage taken.
+    if (target.heroSkillBonuses && target.heroSkillBonuses.overloadDmgTaken) {
+        dmg = Math.floor(dmg * (1 + target.heroSkillBonuses.overloadDmgTaken));
+    }
+    // Prompt 60 hero nodes maren_B_4_2/B_5_1 "Sanctuary": incoming dmg reduced in zone.
+    if (target.side === 'player' && typeof heroSanctuaryStateFor === 'function') {
+        var dmgSanct = heroSanctuaryStateFor(target);
+        if (dmgSanct && dmgSanct.dmgReduction > 0) dmg = Math.floor(dmg * (1 - dmgSanct.dmgReduction));
+    }
+    if (dmg < 1) dmg = 1;
 
     // Ranger mark: marked target takes more damage from all sources
     if (target._rangerMarked && target._rangerMarkAmp) {
@@ -171,6 +242,8 @@ function dealDamage(source, target, rawDamage, options) {
         target._shieldBreakTriggered = true;
         target.tenacity = (target.tenacity || 0) + target.shieldBreakTenacity;
     }
+    // Prompt 60: did this hit fully deplete an existing shield? (ren_B_3_1, maren_B_4_1)
+    var shieldBroke = !!(hadShield && target.shield <= 0);
 
     // Process on-hit passive (with reentry guard)
     if (combatState && source && !source._processingPassive) {
@@ -203,6 +276,14 @@ function dealDamage(source, target, rawDamage, options) {
     if (target.hp < 0) target.hp = 0;
     if (target.combatStats) target.combatStats.damageTaken += (dmg + shieldAbsorbed);
     if (source.combatStats) source.combatStats.damageDealt += (dmg + shieldAbsorbed);
+
+    // Prompt 60: combat event hook for hero skill listeners.
+    if (typeof combatEvents !== 'undefined' && (dmg + shieldAbsorbed) > 0) {
+        combatEvents.emit('unitDamaged', {
+            source: source, target: target, amount: dmg + shieldAbsorbed,
+            isCrit: wasCrit, shieldBroke: shieldBroke
+        });
+    }
 
     // Spawn floating damage number
     if (typeof spawnDamageNumber === 'function' && (!combatState || !combatState.autoBattle) && (dmg + shieldAbsorbed) > 0) {
@@ -367,6 +448,11 @@ function dealDamage(source, target, rawDamage, options) {
             }
             if (source.combatStats) source.combatStats.kills++;
 
+            // Prompt 60: combat event hook for hero skill listeners.
+            if (typeof combatEvents !== 'undefined') {
+                combatEvents.emit('unitKilled', { killer: source, victim: target, amount: dmg + shieldAbsorbed });
+            }
+
             // Process on-kill passive
             if (combatState) {
                 processOnKillPassive(source, target, combatState.allUnits);
@@ -515,9 +601,25 @@ function performAttack(attacker, target) {
         rawDmg = Math.floor(rawDmg * (1 + attacker.chargeDmgBonus));
     }
 
-    // Execute damage (Predator): bonus damage to low-HP targets
+    // Execute damage (Predator): bonus damage to low-HP targets. Also reused
+    // by hero nodes lyric_B_2_1 "Exploit Weakness" and sera_A_2_1 "Finishing
+    // Blow" (Prompt 60), which set the same fields via apply().
     if (attacker.executeDamageBonus && attacker.executeThreshold && target.hp / target.maxHp < attacker.executeThreshold) {
         rawDmg = Math.floor(rawDmg * (1 + attacker.executeDamageBonus));
+    }
+
+    // Prompt 60 hero node kael_A_2_1 "Retribution": next attack after an
+    // adjacent ally took damage deals bonus damage (one-shot flag).
+    if (attacker._retributionBuff) {
+        rawDmg = Math.floor(rawDmg * 1.15);
+        attacker._retributionBuff = false;
+    }
+
+    // Prompt 60 hero node sera_A_3_1 "Exploit Opening": bonus damage vs a
+    // hard-CC'd target.
+    if (attacker._heroExploitOpeningBonus &&
+        (hasStatus(target, 'stun') || hasStatus(target, 'root') || hasStatus(target, 'freeze'))) {
+        rawDmg = Math.floor(rawDmg * (1 + attacker._heroExploitOpeningBonus));
     }
 
     // Track attack counter for Duelist guaranteed crit and Ranger focused shot

@@ -133,6 +133,14 @@ function addStatus(unit, type, duration, value, source) {
         unit.statusEffects.push({type: type, duration: duration, value: value, source: source});
     }
 
+    // Prompt 60: combat event hook for hero skill listeners. Fires only for
+    // hard CC (stun/freeze/root) that actually landed (immunity/diminishing
+    // returns above already returned early when the CC was blocked or
+    // reduced under the 0.25s floor).
+    if (hardCC.indexOf(type) >= 0 && typeof combatEvents !== 'undefined') {
+        combatEvents.emit('ccApplied', { source: source, target: unit, type: type });
+    }
+
     // --- Combat Log for notable status effects ---
     if (type === 'stun') addCombatLog(unit.name + ' is Stunned!');
     if (type === 'freeze') addCombatLog(unit.name + ' is Frozen!');
