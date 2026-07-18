@@ -11,8 +11,10 @@
 >   deterministic, golden combat scenarios) + GitHub Actions CI (prompt 59)
 > - Phase 2 IN PROGRESS: audit in `PHASE2-AUDIT.md`. Done: region reward payouts + achievement stat
 >   wiring + dead-code cleanup (prompt 61), combat event bus (`js/combat-events.js`) + all 108 hero
->   skill nodes + synergy-count fix (prompt 60). Remaining: encounter mechanics, combat-driven
->   achievement stats, endless mode, challenge modes, lore delivery, balance pass.
+>   skill nodes + synergy-count fix (prompt 60), lore data + Codex screen + blocking-dialog removal
+>   (prompt 63), all 6 encounter mechanics (`js/combat-encounters.js`) + combat-driven achievement
+>   stats + bond fix — bonds were silently broken since forever, now work (prompt 62, BUGS #6/#7).
+>   Remaining: endless mode, challenge modes, balance pass. Suite: 114 cases green.
 > - Dev server for verification: `node scripts/serve.js` → http://localhost:8123 (no-cache headers;
 >   file:// caching serves stale js — don't verify via file://). NOTE: `alert()`/`confirm()` freeze
 >   the embedded browser pane — shim them before driving the UI programmatically.
