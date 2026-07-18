@@ -1,6 +1,10 @@
 # Auto Battler — Continuity Document
 > Tracks current development state for cross-session continuity.
 
+> **DIRECTION (2026-07-18): See `MASTERPLAN.md`** — the authoritative roadmap to TFT-grade
+> presentation. Platform decision: **Web + PixiJS**; the Unity port is parked (kept, not resumed).
+> Worker conventions: `CLAUDE.md`. New prompts number from 58.
+
 ## Git Branch Conventions
 
 **Branch naming:**
