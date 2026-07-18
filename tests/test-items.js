@@ -241,5 +241,67 @@ module.exports = [
             const res = h.context.forgeGemCombine(sd, 'ruby', 'standard');
             assert.equal(res.success, false, 'combining with only 2 gems should fail');
         }
+    },
+    {
+        name: 'forgeOperations stat (PHASE2-AUDIT item 5): echoShapingReroll/Disassemble/Transmute and craftMythic each increment it by 1 on success',
+        fn: function() {
+            const h = createHarness({ seed: 1 });
+            const sd = h.freshSave();
+            sd.player.veilEssence = 1000000;
+            sd.stats.forgeOperations = 0;
+
+            // Reroll — needs an item with affixes (non-common).
+            const rerollItem = makeUncommonItem(h);
+            rerollItem.id = 'forge-reroll';
+            sd.equipment.inventory.push(rerollItem);
+            const rerollRes = h.context.echoShapingReroll(sd, 'forge-reroll');
+            assert.ok(rerollRes.success, 'reroll should succeed');
+            assert.equal(sd.stats.forgeOperations, 1, 'forgeOperations should be 1 after a reroll');
+
+            // Disassemble — any unequipped item.
+            const disItem = makeUncommonItem(h);
+            disItem.id = 'forge-dis';
+            sd.equipment.inventory.push(disItem);
+            const disRes = h.context.echoShapingDisassemble(sd, 'forge-dis');
+            assert.ok(disRes.success, 'disassemble should succeed');
+            assert.equal(sd.stats.forgeOperations, 2, 'forgeOperations should be 2 after a disassemble');
+
+            // Transmute — move to a different slot.
+            const transItem = makeUncommonItem(h);
+            transItem.id = 'forge-trans';
+            sd.equipment.inventory.push(transItem);
+            const transRes = h.context.echoShapingTransmute(sd, 'forge-trans', 'helm');
+            assert.ok(transRes.success, 'transmute should succeed');
+            assert.equal(sd.stats.forgeOperations, 3, 'forgeOperations should be 3 after a transmute');
+
+            // Craft Mythic — needs forge level 5, a legendary base item, and the material.
+            sd.buildings.echo_shaping = 5;
+            const legendaryItem = { id: 'forge-legendary', slot: 'weapon', itemKey: Object.keys(h.context.ITEM_LINES).filter(function(k) { return h.context.ITEM_LINES[k].slot === 'weapon'; })[0], tier: 5, rarity: 'legendary', enhanceLevel: 0, enhanceFailStreak: 0, gems: [], affixes: [], setId: null, equipped: null };
+            sd.equipment.inventory.push(legendaryItem);
+            sd.equipment.mythicMaterials.void_crystal = 1;
+            const craftRes = h.context.craftMythic(sd, 'forge-legendary', 'eclipse');
+            assert.ok(craftRes.success, 'craftMythic should succeed with the right prerequisites — got: ' + JSON.stringify(craftRes));
+            assert.equal(sd.stats.forgeOperations, 4, 'forgeOperations should be 4 after crafting a mythic');
+        }
+    },
+    {
+        name: 'master_forger achievement fires once forgeOperations reaches 100',
+        fn: function() {
+            const h = createHarness({ seed: 1 });
+            const sd = h.freshSave();
+            sd.player.veilEssence = 1000000;
+            sd.stats.forgeOperations = 99;
+            assert.equal(sd.achievements.earned.indexOf('master_forger'), -1, 'achievement should not be earned yet at 99 ops');
+
+            const item = makeUncommonItem(h);
+            item.id = 'forge-final';
+            sd.equipment.inventory.push(item);
+            const res = h.context.echoShapingDisassemble(sd, 'forge-final');
+            assert.ok(res.success, 'the 100th forge op should succeed');
+            assert.equal(sd.stats.forgeOperations, 100, 'forgeOperations should reach 100');
+
+            const newlyEarned = h.context.checkAchievements(sd);
+            assert.ok(newlyEarned.indexOf('master_forger') >= 0, 'master_forger should be newly earned at 100 forge operations');
+        }
     }
 ];

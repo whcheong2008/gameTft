@@ -117,6 +117,7 @@ function createDefaultSaveData() {
             mythicsCrafted: 0,
             gemsSocketed: 0,
             uniqueBondsUsed: 0,
+            bondsUsedSeen: [],  // distinct bond ids ever triggered on deploy — backs uniqueBondsUsed
             totalGachaPulls: 0
         },
         // Timestamp
@@ -753,6 +754,7 @@ function migrateSave(data) {
     if (typeof data.stats.mythicsCrafted === 'undefined') data.stats.mythicsCrafted = 0;
     if (typeof data.stats.gemsSocketed === 'undefined') data.stats.gemsSocketed = 0;
     if (typeof data.stats.uniqueBondsUsed === 'undefined') data.stats.uniqueBondsUsed = 0;
+    if (!data.stats.bondsUsedSeen) data.stats.bondsUsedSeen = [];
     if (typeof data.stats.totalGachaPulls === 'undefined') data.stats.totalGachaPulls = 0;
     return data;
 }

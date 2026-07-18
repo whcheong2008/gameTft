@@ -18,7 +18,7 @@
 | 2 | CRITICAL | Combat / Synergies | Combat crashes on wave start — `unitHasArchetype is not defined` (main-v2.js:6502). Function exists in synergies.js but that file is NOT loaded in V2. Combat board renders but units never fight. | **FIXED** — added `unitHasArchetype()` to units-core.js |
 | 3 | CRITICAL | Combat / Stasis | Enemy units with Burrow passive (Mud Stalker, Quake Reaper) are permanently untargetable. Stasis timer only decremented in player-unit loop, not for enemies. Enemy Mud Stalker stays burrowed forever. | **FIXED** — added stasis decrement in allUnits loop |
 | 4 | MEDIUM | Combat / Synergies | `updateActiveSynergies` (combat-core.js ~1316) counts flat +1 per unit, ignoring `getUnitArchetypeContribution()` (ascension double-count / secondary archetype). UI previews use the correct helper → preview vs real-combat mismatch. Latent while ascension is unreachable, but must be fixed before ascension ships. Found by test-synergies.js (KNOWN_BUG). | OPEN — assigned Prompt 60 |
-| 5 | LOW | Rewards | `applyMissionRewards` in items.js:1605 is dead code permanently shadowed by the same-named function in missions.js:2706 (different reward shape). Harmless today, live footgun. Found by test-economy.js (KNOWN_BUG). | OPEN — assigned Prompt 61 |
+| 5 | LOW | Rewards | `applyMissionRewards` in items.js:1605 is dead code permanently shadowed by the same-named function in missions.js:2706 (different reward shape). Harmless today, live footgun. Found by test-economy.js (KNOWN_BUG). | **FIXED** — deleted the dead items.js copy; missions.js's version is the sole, live definition. test-economy.js KNOWN_BUG converted to a real passing assertion. |
 
 ## Deferred to Unity
 

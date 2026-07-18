@@ -847,6 +847,7 @@ function infuseSet(saveData, equipmentId, setKey) {
     equip.setId = setKey;
 
     invalidateEquipCache(equipmentId);
+    trackStat(saveData, 'forgeOperations', 1, 'add');
     autoSave(saveData);
     return { success: true };
 }
@@ -890,6 +891,7 @@ function echoShapingReroll(saveData, itemId) {
     item.affixes = _rollAffixes(affixPool, affixCount, item.rarity);
 
     invalidateEquipCache(itemId);
+    trackStat(saveData, 'forgeOperations', 1, 'add');
     autoSave(saveData);
     return { success: true, msg: 'Affixes rerolled!', affixes: item.affixes };
 }
@@ -914,6 +916,7 @@ function echoShapingDisassemble(saveData, itemId) {
     saveData.player.veilEssence = (saveData.player.veilEssence || 0) + veGain;
 
     _removeEquipment(saveData, itemId);
+    trackStat(saveData, 'forgeOperations', 1, 'add');
     autoSave(saveData);
     return { success: true, msg: 'Item disassembled for ' + veGain + ' VE', veGain: veGain };
 }
@@ -1006,6 +1009,7 @@ function echoShapingTransmute(saveData, fromItemId, toSlot) {
     item.affixes = _rollAffixes(affixPool, affixCount, item.rarity);
 
     invalidateEquipCache(fromItemId);
+    trackStat(saveData, 'forgeOperations', 1, 'add');
     autoSave(saveData);
     return { success: true, msg: 'Item transmuted to ' + (SLOT_DISPLAY[toSlot] ? SLOT_DISPLAY[toSlot].name : toSlot) + '!' };
 }
@@ -1058,6 +1062,7 @@ function craftMythic(saveData, legendaryEquipmentId, mythicKey) {
 
     saveData.equipment.inventory.push(mythicEquip);
     saveData.stats.mythicsCrafted = (saveData.stats.mythicsCrafted || 0) + 1;
+    trackStat(saveData, 'forgeOperations', 1, 'add');
 
     // Discover in codex
     saveData.equipment.codex.discovered[mythicKey] = true;
@@ -1602,42 +1607,15 @@ function generateMissionRewards(missionLevel, starRating, isBoss, saveData) {
     return rewards;
 }
 
-function applyMissionRewards(saveData, rewards) {
-    if (!saveData.equipment) return;
-
-    // Add equipment to inventory
-    for (var i = 0; i < rewards.items.length; i++) {
-        saveData.equipment.inventory.push(rewards.items[i]);
-        // Codex discovery
-        saveData.equipment.codex.discovered[rewards.items[i].itemKey + '_t' + rewards.items[i].tier] = true;
-    }
-
-    // Add gems
-    if (!saveData.equipment.gems) saveData.equipment.gems = [];
-    for (var g = 0; g < rewards.gems.length; g++) {
-        saveData.equipment.gems.push(rewards.gems[g]);
-    }
-
-    // Add essences
-    var essKeys = Object.keys(rewards.essences);
-    for (var e = 0; e < essKeys.length; e++) {
-        saveData.equipment.essences[essKeys[e]] = (saveData.equipment.essences[essKeys[e]] || 0) + rewards.essences[essKeys[e]];
-    }
-
-    // Add materials
-    if (rewards.materials) {
-        var matKeys = Object.keys(rewards.materials);
-        for (var m = 0; m < matKeys.length; m++) {
-            saveData.equipment.materials[matKeys[m]] = (saveData.equipment.materials[matKeys[m]] || 0) + rewards.materials[matKeys[m]];
-        }
-    }
-
-    // Add mythic materials
-    var mythMatKeys = Object.keys(rewards.mythicMaterials);
-    for (var mm = 0; mm < mythMatKeys.length; mm++) {
-        saveData.equipment.mythicMaterials[mythMatKeys[mm]] = (saveData.equipment.mythicMaterials[mythMatKeys[mm]] || 0) + rewards.mythicMaterials[mythMatKeys[mm]];
-    }
-}
+// NOTE: applyMissionRewards(saveData, rewards) used to be defined here too, expecting
+// the { items, gems, essences, mythicMaterials } shape generateMissionRewards() returns
+// above. It was permanently dead code (BUGS.md #5) — js/missions.js:2706 declares a
+// second, unrelated applyMissionRewards() expecting the { gold, xp, unitCopies,
+// equipmentDrops, ... } shape calculateMissionRewards() returns, and since missions.js
+// loads after items.js in game-v2.html, that version always won in global scope. The
+// real caller (js/ui-combat.js) always paired calculateMissionRewards() with the
+// missions.js version, so this file's copy could never execute. Deleted rather than
+// fixed — missions.js's applyMissionRewards() is the live, correct pairing.
 
 // ---- Inventory Helpers (backward-compat wrappers) ----
 
