@@ -918,6 +918,9 @@ body {
     <script src="js/combat-abilities.js"></script>
     <script src="js/combat-legendary.js"></script>
     <script src="js/combat-damage.js"></script>
+    <!-- render-interface.js: renderer registry + getActiveRenderer() (Prompt 67).
+         Loads after every combat-*.js file, before any renderer registers itself. -->
+    <script src="js/render-interface.js"></script>
     <!-- UI renderers. Split from ui-v2.js (Prompt 58); ui-shared.js loads first. -->
     <script src="js/ui-shared.js"></script>
     <script src="js/ui-lore.js"></script>
@@ -929,6 +932,10 @@ body {
     <script src="js/ui-missions.js"></script>
     <script src="js/ui-combat.js"></script>
     <script src="js/ui-items.js"></script>
+    <!-- render-dom.js: the DOM combat renderer (Prompt 67). Loads after all ui-*.js
+         files (depends on ui-combat.js's COMBAT_SPEED/addLogEntry) and registers
+         itself with render-interface.js's registry. -->
+    <script src="js/render-dom.js"></script>
     <script src="js/main-v2.js"></script>
 </body>
 </html>

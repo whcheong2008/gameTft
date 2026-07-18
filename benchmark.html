@@ -40,6 +40,38 @@
     <script src="js/units-ascension.js"></script>
     <script src="js/combat-benchmark.js"></script>
     <script>
+        // Prompt 67: moved from js/combat-benchmark.js verbatim (see that
+        // file's header comment for why) -- this dev tool's own DOM-table
+        // renderer, unrelated to the game's combat renderer abstraction.
+        function renderBenchmarkTable(results, containerId) {
+            var container = document.getElementById(containerId);
+            if (!container) return;
+
+            var html = '<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse; width:100%; font-size:13px;">';
+            html += '<tr style="background:#333; color:#fff;"><th>#</th><th>Unit</th><th>Tier</th><th>Archetype</th><th>Element</th><th>Single DPS</th><th>AoE DPS</th><th>Survival</th><th>Power Rating</th><th>Combat Rating</th><th>Healing</th></tr>';
+
+            for (var i = 0; i < results.length; i++) {
+                var r = results[i];
+                var bg = i % 2 === 0 ? '#1a1a2e' : '#16213e';
+                html += '<tr style="background:' + bg + ';">';
+                html += '<td>' + (i + 1) + '</td>';
+                html += '<td>' + r.unitName + '</td>';
+                html += '<td>' + r.tier + '</td>';
+                html += '<td>' + r.archetype + '</td>';
+                html += '<td>' + r.element + '</td>';
+                html += '<td>' + r.singleDPS + '</td>';
+                html += '<td>' + (r.aoeDPS || '-') + '</td>';
+                html += '<td>' + r.survivalTime + 's</td>';
+                html += '<td>' + r.powerRating + '</td>';
+                html += '<td style="font-weight:bold;">' + r.combatRating + '</td>';
+                html += '<td>' + (r.healingDone > 0 ? r.healingDone : '-') + '</td>';
+                html += '</tr>';
+            }
+
+            html += '</table>';
+            container.innerHTML = html;
+        }
+
         // Populate archetype dropdown
         var select = document.getElementById('archetype-select');
         var archKeys = Object.keys(ARCHETYPES);

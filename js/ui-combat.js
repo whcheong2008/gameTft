@@ -9,6 +9,18 @@ var combatEnemies = [];
 var currentWaveConfig = null;
 var missionStarTracking = { totalDamageTaken: 0, unitsLostTotal: 0 };
 
+// Prompt 67: registered ONCE, at script-load time, via combatEvents.onPersistent()
+// -- NOT per-wave. See the matching comment in js/render-dom.js (RENDER_DOM's
+// floatingText/abilityFlash registration) for why: initCombat() can emit
+// 'logMessage' (via combat-core.js's addCombatLog(), e.g. from a combat-start
+// passive) before a per-wave on() listener registered after initCombat()
+// returns would exist yet. addLogEntry itself is defined further down this
+// file, but that's fine -- this closure doesn't call it until an event fires,
+// long after the whole script has finished loading.
+if (typeof combatEvents !== 'undefined' && typeof combatEvents.onPersistent === 'function') {
+    combatEvents.onPersistent('logMessage', function(p) { addLogEntry(p.text, p.cls); });
+}
+
 function beginCombatScreen(sd) {
     showScreen('combat');
     missionStarTracking = { totalDamageTaken: 0, unitsLostTotal: 0 };
@@ -255,9 +267,24 @@ function startMissionCombat(playerBoard, enemies) {
     // already reads via setupCombatEncounterMechanics(). No-op outside endless.
     if (typeof applyEndlessFloorModifierEffects === 'function') applyEndlessFloorModifierEffects(combatState);
 
-    // Clean up unit layer for fresh rendering
-    var prevUnitLayer = document.getElementById('combat-unit-layer');
-    if (prevUnitLayer) prevUnitLayer.remove();
+    // Prompt 67: resolve + init the active renderer for this wave. The
+    // combatEvents listeners it needs (floatingText/abilityFlash) and the
+    // 'logMessage' chrome listener above are registered once at script-load
+    // time (combatEvents.onPersistent(), see js/render-dom.js and the top of
+    // this file) -- they survive initCombat()'s per-wave combatEvents.reset(),
+    // so there's nothing per-wave to (re)register here anymore, just the
+    // renderer's own per-wave init() (board DOM cleanup).
+    var activeRenderer = (typeof getActiveRenderer === 'function') ? getActiveRenderer() : null;
+    if (activeRenderer && typeof activeRenderer.init === 'function') {
+        var rendererProgress = getMissionProgress();
+        activeRenderer.init(document.getElementById('combat-area'), combatState, {
+            missionName: rendererProgress ? rendererProgress.missionName : null,
+            waveIndex: rendererProgress ? rendererProgress.currentWave : null,
+            totalWaves: rendererProgress ? rendererProgress.totalWaves : null,
+            encounterMechanic: activeMission ? activeMission.encounterMechanic : null,
+            isBoss: !!(activeMission && activeMission.boss)
+        });
+    }
 
     // Render synergy bar
     renderCombatSynergyBar();
@@ -270,109 +297,39 @@ function startMissionCombat(playerBoard, enemies) {
     // which causes all unit overlays to stack at (0,0).
     requestAnimationFrame(function() {
         requestAnimationFrame(function() {
-            renderCombatBoard();
+            renderCombatFrame(activeRenderer, 0);
         });
     });
 }
 
 // ---- Prompt 62: Encounter mechanic banner + live HUD readout ----
-// Reuses the wave-transition visual language (a small overlay banner) rather
-// than introducing new UI chrome. No-ops when the stage has no
-// encounterMechanic (banner/HUD elements are simply hidden).
-
-function renderEncounterMechanicBanner() {
-    var banner = document.getElementById('encounter-mechanic-banner');
-    if (!banner) {
-        banner = document.createElement('div');
-        banner.id = 'encounter-mechanic-banner';
-        banner.style.cssText = 'position:absolute; top:8px; left:50%; transform:translateX(-50%); ' +
-            'background:rgba(20,20,30,0.9); border:1px solid #e2b714; border-radius:8px; ' +
-            'padding:6px 14px; font-size:12px; color:#eee; z-index:20; text-align:center; max-width:80%;';
-        var boardEl = document.getElementById('combat-board');
-        if (boardEl && boardEl.appendChild) boardEl.appendChild(banner);
-    }
-
-    var mechanics = (combatState && combatState.encounterMechanics) || [];
-
-    // Prompt 64: endless mode's pure-stat floor modifiers (enemy ATK/DR up,
-    // player healing/attack-speed down) have no combatState.encounterMechanics
-    // entry -- they're applied directly via applyEndlessFloorModifierEffects()
-    // -- so surface them here too ("show the modifier ... on the combat
-    // banner" per the endless mode spec). No-ops outside an active endless run.
-    var endlessMod = null;
-    if (typeof endlessRunState !== 'undefined' && endlessRunState && endlessRunState.active &&
-        typeof ENDLESS_STAT_MODIFIERS !== 'undefined' && endlessRunState.modifierThisFloor) {
-        endlessMod = ENDLESS_STAT_MODIFIERS[endlessRunState.modifierThisFloor] || null;
-    }
-
-    if (mechanics.length === 0 && !endlessMod) {
-        banner.style.display = 'none';
-        return;
-    }
-
-    var html = '';
-    if (typeof COMBAT_ENCOUNTER_INFO !== 'undefined') {
-        for (var i = 0; i < mechanics.length; i++) {
-            var info = COMBAT_ENCOUNTER_INFO[mechanics[i]];
-            if (!info) continue;
-            if (html) html += '<br>';
-            html += '<b>' + info.icon + ' ' + info.name + '</b> — ' + info.desc;
-        }
-    }
-    if (endlessMod) {
-        if (html) html += '<br>';
-        html += '<b>' + (endlessMod.icon || '⚠️') + ' ' + endlessMod.name + '</b> — ' + endlessMod.desc;
-    }
-    banner.innerHTML = html;
-    banner.style.display = html ? 'block' : 'none';
-}
-
-// Called every render frame from renderCombatBoard(): keeps the countdown
-// timer and escalation stack count visible during the fight.
-function updateEncounterMechanicHud() {
-    var hud = document.getElementById('encounter-mechanic-hud');
-    if (!combatState || !combatState.encounterState) {
-        if (hud) hud.style.display = 'none';
-        return;
-    }
-
-    var parts = [];
-    var es = combatState.encounterState;
-    if (es.countdown && !es.countdown.fired) {
-        parts.push('⏳ ' + Math.max(0, Math.ceil(es.countdown.timer)) + 's');
-    }
-    if (es.escalatingThreat) {
-        parts.push('📈 Stacks: ' + es.escalatingThreat.stacks);
-    }
-    if (es.reinforcementPressure) {
-        parts.push('🌊 Reinforcements: ' + es.reinforcementPressure.totalSpawned + '/' + es.reinforcementPressure.maxTotalSpawns);
-    }
-    if (es.protectObjective && es.protectObjective.npc) {
-        var npc = es.protectObjective.npc;
-        parts.push('🛡️ Objective: ' + Math.max(0, npc.hp) + '/' + npc.maxHp);
-    }
-
-    if (parts.length === 0) {
-        if (hud) hud.style.display = 'none';
-        return;
-    }
-
-    if (!hud) {
-        hud = document.createElement('div');
-        hud.id = 'encounter-mechanic-hud';
-        hud.style.cssText = 'position:absolute; top:40px; left:50%; transform:translateX(-50%); ' +
-            'background:rgba(20,20,30,0.85); border-radius:6px; padding:4px 10px; ' +
-            'font-size:11px; color:#e2b714; z-index:20; text-align:center;';
-        var boardEl2 = document.getElementById('combat-board');
-        if (boardEl2 && boardEl2.appendChild) boardEl2.appendChild(hud);
-    }
-    hud.style.display = 'block';
-    hud.textContent = parts.join('   ');
-}
+// Prompt 67: moved to js/render-dom.js (renderEncounterMechanicBanner /
+// updateEncounterMechanicHud) -- battlefield overlay content, called every
+// frame from render-dom.js's renderCombatBoard(), not chrome.
 
 var COMBAT_TICK_MS = 50; // 20 fps
 var COMBAT_DT = COMBAT_TICK_MS / 1000;
 var COMBAT_SPEED = 1; // 1, 2, or 4
+
+// Prompt 67: renderer + render-loop bookkeeping. The combat tick pump
+// (setTimeout, COMBAT_TICK_MS-cadenced, unchanged from before this refactor)
+// and the render loop (requestAnimationFrame, browser-cadenced) are now two
+// independent loops instead of one fused setTimeout callback -- see
+// uiStartCombatLoop() below. combatRenderLoopActive is the render loop's own
+// stop flag; a stray leftover requestAnimationFrame callback checks it and
+// no-ops instead of rendering/rescheduling once combat has ended.
+var combatRenderLoopActive = false;
+
+// Renders one frame through whichever renderer is active (falls back to the
+// DOM board renderer directly if none is registered/resolvable -- keeps this
+// helper safe to call even before js/render-dom.js registers 'dom').
+function renderCombatFrame(renderer, dtMs) {
+    if (renderer && typeof renderer.frame === 'function') {
+        renderer.frame(dtMs);
+    } else if (typeof renderCombatBoard === 'function') {
+        renderCombatBoard();
+    }
+}
 
 function toggleCombatSpeed() {
     if (COMBAT_SPEED === 1) COMBAT_SPEED = 2;
@@ -391,30 +348,53 @@ function uiStartCombatLoop() {
         initCombatSynergySidebars(combatState.playerUnits || [], combatState.enemyUnits || []);
     }
 
+    var activeRenderer = (typeof getActiveRenderer === 'function') ? getActiveRenderer() : null;
+
     // Re-render board with correct dimensions before combat starts
     // (sidebars may have changed the board width)
-    renderCombatBoard();
+    renderCombatFrame(activeRenderer, 0);
 
     // Show FIGHT! text
     showCombatStartText();
 
-    // Start combat loop
-    function combatLoop() {
+    // Prompt 67: the combat tick (logic pump) and the render loop are now
+    // independent. The tick pump keeps its exact pre-refactor cadence/
+    // semantics (setTimeout, COMBAT_TICK_MS, COMBAT_SPEED ticks per call).
+    function tickLoop() {
         // Run multiple physics ticks per frame at higher speeds
         for (var s = 0; s < COMBAT_SPEED; s++) {
             if (combatState && combatState.running) {
                 combatTick(COMBAT_DT);
             }
         }
-        renderCombatBoard();
 
         if (combatState && combatState.running) {
-            setTimeout(combatLoop, COMBAT_TICK_MS);
+            setTimeout(tickLoop, COMBAT_TICK_MS);
         } else {
+            // Render the final post-combat state once more before handing off
+            // to the results/wave-transition flow -- guarantees a render always
+            // happens immediately before onWaveCombatEnd(), exactly like the old
+            // fused loop did, regardless of how the independent rAF render loop
+            // below happens to be scheduled relative to this setTimeout.
+            combatRenderLoopActive = false;
+            renderCombatFrame(activeRenderer, 0);
             onWaveCombatEnd();
         }
     }
-    setTimeout(combatLoop, COMBAT_TICK_MS);
+
+    // Render loop: requestAnimationFrame, decoupled from the tick pump above.
+    combatRenderLoopActive = true;
+    var lastFrameTime = null;
+    function renderLoop(now) {
+        if (!combatRenderLoopActive) return;
+        var dtMs = lastFrameTime === null ? 0 : (now - lastFrameTime);
+        lastFrameTime = now;
+        renderCombatFrame(activeRenderer, dtMs);
+        if (combatRenderLoopActive) requestAnimationFrame(renderLoop);
+    }
+    requestAnimationFrame(renderLoop);
+
+    setTimeout(tickLoop, COMBAT_TICK_MS);
 }
 
 function autoBattle() {
@@ -464,80 +444,11 @@ function autoBattle() {
     showMissionResults(true, stars);
 }
 
-function showCombatStartText() {
-    var area = document.getElementById('combat-area');
-    if (!area) return;
-    var overlay = document.createElement('div');
-    overlay.className = 'combat-start-text';
-    overlay.textContent = 'FIGHT!';
-    area.appendChild(overlay);
-    setTimeout(function() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 1000);
-}
-
-// ---- Floating Damage Numbers ----
-
-var lastDmgNumberTime = 0;
-
-function spawnDamageNumber(row, col, text, type) {
-    if (combatState && combatState.autoBattle) return;
-
-    var now = Date.now();
-    // Throttle at high speeds
-    if (COMBAT_SPEED >= 4 && type !== 'crit' && type !== 'ability' && type !== 'boss') {
-        if (now - lastDmgNumberTime < 150) return;
-    }
-    if (COMBAT_SPEED >= 2 && type === 'dot') {
-        if (now - lastDmgNumberTime < 100) return;
-    }
-    lastDmgNumberTime = now;
-
-    var container = document.getElementById('damage-numbers');
-    if (!container) return;
-
-    var board = document.getElementById('combat-board');
-    if (!board) return;
-
-    // Calculate pixel position from grid cell
-    var cellW = board.offsetWidth / 7;
-    var cellH = board.offsetHeight / 8;
-    var x = col * cellW + cellW / 2;
-    var y = row * cellH + cellH / 2;
-
-    // Random horizontal offset to prevent overlap
-    x += (Math.random() - 0.5) * 20;
-
-    var el = document.createElement('div');
-    el.className = 'dmg-number dmg-' + type;
-    el.textContent = text;
-    el.style.left = x + 'px';
-    el.style.top = y + 'px';
-    container.appendChild(el);
-
-    // Remove after animation
-    setTimeout(function() {
-        if (el.parentNode) el.parentNode.removeChild(el);
-    }, 800);
-}
-
-// ---- AoE Ability Cell Highlights ----
-
-function flashAbilityCells(cells, color, duration) {
-    if (combatState && combatState.autoBattle) return;
-
-    var board = document.getElementById('combat-board');
-    if (!board) return;
-
-    for (var i = 0; i < cells.length; i++) {
-        var idx = cells[i].row * 7 + cells[i].col;
-        var cell = board.children[idx];
-        if (cell) {
-            cell.style.boxShadow = 'inset 0 0 12px ' + color;
-            (function(c) {
-                setTimeout(function() { c.style.boxShadow = 'none'; }, duration || 300);
-            })(cell);
-        }
-    }
-}
+// Prompt 67: showCombatStartText / spawnDamageNumber / flashAbilityCells all
+// moved to js/render-dom.js -- battlefield visuals, not chrome. combat-*.js
+// still calls spawnDamageNumber()/flashAbilityCells() by the same names; those
+// are now logic-layer combatEvents-emitting shims defined in combat-core.js
+// (see the Prompt 67 comment block there), not this file.
 
 function placeEnemiesOnBoard(enemies) {
     // Place enemies on rows 0-3 (top of 8x7 grid)
@@ -986,295 +897,21 @@ function uiReturnFromCombat() {
     document.getElementById('wave-transition').className = 'wave-transition';
     var grid = document.getElementById('wave-reposition-grid');
     if (grid) grid.remove();
-    // Clean up unit overlay layer and damage numbers
-    var unitLayer = document.getElementById('combat-unit-layer');
-    if (unitLayer) unitLayer.remove();
-    var dmgNums = document.getElementById('damage-numbers');
-    if (dmgNums) dmgNums.innerHTML = '';
-    var enrageTimer = document.getElementById('enrage-timer');
-    if (enrageTimer) enrageTimer.textContent = '';
+    // Prompt 67: stop the render loop and let the active renderer tear down
+    // everything it put on the battlefield (unit overlay layer, damage
+    // numbers, enrage timer -- was inline DOM cleanup here before this
+    // refactor; see RENDER_DOM.destroy() in js/render-dom.js).
+    combatRenderLoopActive = false;
+    var endingRenderer = (typeof getActiveRenderer === 'function') ? getActiveRenderer() : null;
+    if (endingRenderer && typeof endingRenderer.destroy === 'function') endingRenderer.destroy();
     showScreen('hub');
 }
 
-// ---- Combat Board Rendering ----
-
-function renderCombatUnitCell(unit, cssClass) {
-    if (unit && unit.hp > 0) {
-        var hpPct = Math.floor((unit.hp / unit.maxHp) * 100);
-        var shieldPct = (unit.shield && unit.shield > 0) ? Math.min(100 - hpPct, Math.floor((unit.shield / unit.maxHp) * 100)) : 0;
-        var shieldBar = shieldPct > 0 ?
-            '<div style="height:100%; background:#4488ff; position:absolute; left:' + hpPct + '%; width:' + shieldPct + '%;"></div>' : '';
-        var evolvedStyle = unit.evolved ? ' border:1px solid #e2b714; box-shadow:0 0 6px rgba(226,183,20,0.5);' : '';
-        var evolvedIcon = unit.evolved ? '✨' : '';
-        // Item icons for combat units
-        var combatItemIcons = '';
-        if (unit.combatItems && unit.combatItems.length > 0) {
-            combatItemIcons = '<div style="font-size:7px; line-height:1;">';
-            for (var ci = 0; ci < unit.combatItems.length; ci++) {
-                combatItemIcons += unit.combatItems[ci];
-            }
-            combatItemIcons += '</div>';
-        }
-        var unitElemEmoji = (unit.element && ELEMENTS[unit.element]) ? ELEMENTS[unit.element].emoji : '';
-        return '<div class="combat-cell ' + cssClass + '" style="' + evolvedStyle + '"><div class="combat-unit">' +
-            unitElemEmoji + evolvedIcon +
-            '<div style="font-size:8px;">' + unit.name.split(' ')[0] + '</div>' +
-            combatItemIcons +
-            '<div class="hp-bar" style="position:relative;"><div class="hp-fill' + (hpPct < 30 ? ' low' : '') +
-            '" style="width:' + hpPct + '%"></div>' + shieldBar + '</div>' +
-            '</div></div>';
-    }
-    return '<div class="combat-cell ' + cssClass + '"></div>';
-}
-
-function buildUnitCellHtml(unit) {
-    if (unit.isBoss && unit.hp > 0) {
-        var bHpPct = Math.max(0, Math.floor(unit.hp / unit.maxHp * 100));
-        var bShieldBar = '';
-        if (unit.shield && unit.shield > 0) {
-            var bShPct = Math.min(100, Math.floor(unit.shield / unit.maxHp * 100));
-            bShieldBar = '<div class="boss-shield-bar"><div class="boss-shield-fill" style="width:' + bShPct + '%"></div></div>';
-        }
-        var enrageHtml = unit.enraged ? '<div class="boss-enrage">ENRAGED</div>' : '';
-        var phaseTransHtml = '';
-        if (unit.phaseTransitioning) {
-            phaseTransHtml = '<div style="font-size:8px; color:#ff9900; font-weight:bold;">INVULNERABLE</div>';
-        }
-        var bossEmoji = unit.emoji || '\ud83d\udc51';
-        return '<div class="boss-unit">' +
-            '<div class="boss-emoji">' + bossEmoji + '</div>' +
-            '<div class="boss-name">' + unit.name + '</div>' +
-            '<div class="boss-phase">Phase ' + (unit.currentPhase + 1) + '</div>' +
-            '<div class="boss-hp-bar"><div class="boss-hp-fill" style="width:' + bHpPct + '%"></div></div>' +
-            bShieldBar + enrageHtml + phaseTransHtml +
-            '</div>';
-    }
-
-    var hpPct = Math.floor((unit.hp / unit.maxHp) * 100);
-    var shieldPct = (unit.shield && unit.shield > 0) ? Math.min(100 - hpPct, Math.floor((unit.shield / unit.maxHp) * 100)) : 0;
-    var shieldBar = shieldPct > 0 ?
-        '<div style="height:100%; background:#4488ff; position:absolute; left:' + hpPct + '%; width:' + shieldPct + '%;"></div>' : '';
-    var evolvedIcon = unit.evolved ? '\u2728' : '';
-    var combatItemIcons = '';
-    if (unit.combatItems && unit.combatItems.length > 0) {
-        combatItemIcons = '<div style="font-size:7px; line-height:1;">';
-        for (var ci = 0; ci < unit.combatItems.length; ci++) {
-            combatItemIcons += unit.combatItems[ci];
-        }
-        combatItemIcons += '</div>';
-    }
-    var manaBar = '';
-    if (unit.maxMana && unit.maxMana > 0) {
-        var manaPct = Math.floor((unit.currentMana / unit.maxMana) * 100);
-        manaBar = '<div class="mana-bar"><div class="mana-fill" style="width:' + manaPct + '%"></div></div>';
-    }
-    var statusIconsHtml = '';
-    if (unit.statusEffects && unit.statusEffects.length > 0) {
-        statusIconsHtml = '<div class="status-icons">';
-        var shown = 0;
-        var uniqueTypes = [];
-        for (var si = 0; si < unit.statusEffects.length; si++) {
-            var sType = unit.statusEffects[si].type;
-            if (uniqueTypes.indexOf(sType) >= 0) continue;
-            uniqueTypes.push(sType);
-            if (shown < 3) {
-                var sIcon = STATUS_ICONS[sType] || '?';
-                statusIconsHtml += '<span class="status-icon" title="' + sType + '">' + sIcon + '</span>';
-                shown++;
-            }
-        }
-        if (uniqueTypes.length > 3) {
-            statusIconsHtml += '<span class="status-overflow">+' + (uniqueTypes.length - 3) + '</span>';
-        }
-        statusIconsHtml += '</div>';
-    }
-    var elemEmoji = (unit.element && ELEMENTS[unit.element]) ? ELEMENTS[unit.element].emoji : '';
-    return '<div class="combat-unit">' +
-        elemEmoji + evolvedIcon +
-        '<div style="font-size:7px;' + (unit.side === 'enemy' ? 'color:#ff6b6b;' : '') + '">' + unit.name.split(' ')[0] + '</div>' +
-        combatItemIcons +
-        '<div class="hp-bar" style="position:relative;"><div class="hp-fill' + (hpPct < 30 ? ' low' : '') +
-        '" style="width:' + hpPct + '%"></div>' + shieldBar + '</div>' +
-        manaBar +
-        statusIconsHtml +
-        '</div>';
-}
-
-function renderCombatBoard() {
-    var boardEl = document.getElementById('combat-board');
-    if (!combatState) return;
-
-    var grid = combatState.grid;
-
-    // Use percentage-based positioning so units are correct regardless of board size/timing
-    var cellWPct = 100 / 7;
-    var cellHPct = 100 / 8;
-
-    // Collect telegraph danger cells
-    var dangerCells = {};
-    var bossList = combatState.enemyUnits.filter(function(u){ return u.isBoss && u.hp > 0; });
-    for (var b = 0; b < bossList.length; b++) {
-        var bossU = bossList[b];
-        for (var t = 0; t < bossU.telegraphs.length; t++) {
-            var tele = bossU.telegraphs[t];
-            for (var tc = 0; tc < tele.targetCells.length; tc++) {
-                dangerCells[tele.targetCells[tc].row + ',' + tele.targetCells[tc].col] = true;
-            }
-        }
-    }
-
-    // Rebuild background grid (always rebuild to keep danger zones and death markers current)
-    var gridHtml = '';
-    for (var r = 0; r < 8; r++) {
-        for (var c = 0; c < 7; c++) {
-            var cls = r <= 3 ? 'enemy-row' : 'player-row';
-            var borderStyle = r === 4 ? ' border-top:2px solid #555;' : '';
-            var dangerClass = dangerCells[r + ',' + c] ? ' danger-zone' : '';
-            var marker = '';
-            if (combatState.deathMarkers && combatState.deathMarkers[r + ',' + c]) {
-                marker = '<div class="death-marker">' + combatState.deathMarkers[r + ',' + c] + '</div>';
-            }
-            gridHtml += '<div class="combat-cell ' + cls + dangerClass + '" style="' + borderStyle + '">' + marker + '</div>';
-        }
-    }
-    boardEl.innerHTML = gridHtml;
-
-    // Render unit overlays inside the board (board is position:relative)
-    var unitLayer = document.getElementById('combat-unit-layer');
-    if (!unitLayer) {
-        unitLayer = document.createElement('div');
-        unitLayer.id = 'combat-unit-layer';
-        unitLayer.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:4;';
-        boardEl.appendChild(unitLayer);
-    }
-
-    // Prompt 62: encounter mechanic banner + live HUD readout. Called every
-    // frame (like unitLayer above) because boardEl.innerHTML = gridHtml just
-    // wiped #combat-board's children in a real browser -- these have to be
-    // recreated/reappended every render, not just once at wave start.
-    if (typeof renderEncounterMechanicBanner === 'function') renderEncounterMechanicBanner();
-    if (typeof updateEncounterMechanicHud === 'function') updateEncounterMechanicHud();
-
-    // Create/update unit elements
-    var allUnits = combatState.playerUnits.concat(combatState.enemyUnits);
-    var existingEls = {};
-    var children = unitLayer.children;
-    for (var i = 0; i < children.length; i++) {
-        existingEls[children[i].dataset.uid] = children[i];
-    }
-
-    var activeIds = {};
-    for (var u = 0; u < allUnits.length; u++) {
-        var unit = allUnits[u];
-        if (unit.deathComplete) continue;
-        if (unit.hp <= 0 && !unit.deathAnimating) continue;
-        if (!unit._uid) unit._uid = 'u' + u + '_' + Math.random().toString(36).substr(2, 4);
-        activeIds[unit._uid] = true;
-
-        var el = existingEls[unit._uid];
-        if (!el) {
-            el = document.createElement('div');
-            el.dataset.uid = unit._uid;
-            el.className = 'combat-unit-overlay';
-            unitLayer.appendChild(el);
-        }
-
-        // Position with percentage-based layout (immune to board resize/timing issues)
-        var targetXPct = unit.gridCol * cellWPct;
-        var targetYPct = unit.gridRow * cellHPct;
-
-        // Boss: span 2x2
-        if (unit.isBoss) {
-            el.style.width = (cellWPct * 2) + '%';
-            el.style.height = (cellHPct * 2) + '%';
-        } else {
-            el.style.width = cellWPct + '%';
-            el.style.height = cellHPct + '%';
-        }
-
-        el.style.left = targetXPct + '%';
-        el.style.top = targetYPct + '%';
-
-        // Death animation
-        if (unit.deathAnimating) {
-            var deathPct = Math.max(0, unit.deathTimer / 0.5);
-            el.style.opacity = deathPct.toFixed(2);
-            el.style.transform = 'scale(' + (0.5 + deathPct * 0.5).toFixed(2) + ')';
-        } else {
-            el.style.opacity = '1';
-            el.style.transform = 'scale(1)';
-        }
-
-        // Casting glow — element color
-        if (unit.isCasting) {
-            var elemColor = '#ffffff';
-            if (unit.element && typeof ELEMENTS !== 'undefined' && ELEMENTS[unit.element]) {
-                elemColor = ELEMENTS[unit.element].color || '#ffffff';
-            }
-            el.style.boxShadow = '0 0 8px ' + elemColor;
-        } else {
-            el.style.boxShadow = 'none';
-        }
-
-        // Evolved border
-        if (unit.evolved) {
-            el.style.border = '1px solid #e2b714';
-        } else {
-            el.style.border = 'none';
-        }
-
-        // Render unit content
-        el.innerHTML = buildUnitCellHtml(unit);
-    }
-
-    // Remove elements for dead/gone units
-    for (var uid in existingEls) {
-        if (!activeIds[uid]) {
-            existingEls[uid].parentNode.removeChild(existingEls[uid]);
-        }
-    }
-
-    // Phase transition flash overlay
-    for (var bi = 0; bi < bossList.length; bi++) {
-        var bossF = bossList[bi];
-        if (bossF.phaseTransitioning && bossF.phaseTransitionTimer > 1.5) {
-            var phOverlay = document.createElement('div');
-            phOverlay.className = 'phase-transition-overlay';
-            document.getElementById('combat-area').appendChild(phOverlay);
-            setTimeout(function(){ if (phOverlay.parentNode) phOverlay.parentNode.removeChild(phOverlay); }, 2000);
-        }
-    }
-
-    // Enrage timer display
-    if (combatState.bossUnit && combatState.bossUnit.hp > 0 && !combatState.bossUnit.enraged) {
-        var bossData = combatState.bossUnit.bossData || {};
-        var enrageTime = bossData.enrageTime || 120;
-        var timeLeft = enrageTime - combatState.elapsed;
-        var timerEl = document.getElementById('enrage-timer');
-        if (timerEl) {
-            if (timeLeft > 0 && timeLeft <= 30) {
-                timerEl.textContent = '\u23f1\ufe0f Enrage: ' + Math.ceil(timeLeft) + 's';
-            } else {
-                timerEl.textContent = '';
-            }
-        }
-    } else {
-        var timerEl2 = document.getElementById('enrage-timer');
-        if (timerEl2) timerEl2.textContent = '';
-    }
-
-    renderCombatScoreboard();
-
-    // Attach unit data to cells for tooltips
-    var combatCells = boardEl.querySelectorAll('.combat-cell');
-    for (var tc = 0; tc < combatCells.length; tc++) {
-        var cellEl = combatCells[tc];
-        var cellUnit = cellEl._unitRef;
-        if (cellUnit) {
-            cellEl._unitData = cellUnit;
-        }
-    }
-}
+// Prompt 67: renderCombatUnitCell / buildUnitCellHtml / renderCombatBoard all
+// moved to js/render-dom.js -- board DOM, unit cells, hp/mana bars, status
+// icons, boss telegraph visuals, encounter banner/HUD, enrage timer. This
+// file (ui-combat.js) keeps only the chrome renderCombatBoard() calls into:
+// renderCombatScoreboard() below (scoreboard sidebar).
 
 // ---- Combat Scoreboard ----
 
@@ -1537,52 +1174,10 @@ function renderCombatSynergySidebar(side, synergies, label) {
     }
 }
 
-// ---- Combat Unit Tooltips (Prompt 20 Phase D2) ----
-
-function initCombatUnitTooltips() {
-    var unitCells = document.querySelectorAll('#combat-board .combat-cell');
-    for (var i = 0; i < unitCells.length; i++) {
-        (function(cell) {
-            cell.addEventListener('mouseenter', function(e) {
-                var unitData = cell._unitData;
-                if (!unitData) return;
-
-                var tooltip = document.createElement('div');
-                tooltip.className = 'unit-combat-tooltip';
-                tooltip.style.cssText = 'position:fixed; background:#16213e; border:1px solid #444; border-radius:6px; padding:8px; font-size:11px; z-index:100; pointer-events:none; max-width:200px;';
-
-                var buffsHTML = '';
-                if (unitData.buffs && unitData.buffs.length > 0) {
-                    for (var b = 0; b < unitData.buffs.length; b++) {
-                        buffsHTML += '<div style="color:#66bb6a;">' + unitData.buffs[b] + '</div>';
-                    }
-                }
-
-                tooltip.innerHTML =
-                    '<div style="font-weight:bold;">' + unitData.name + '</div>' +
-                    '<div>HP: ' + Math.floor(unitData.hp) + ' / ' + unitData.maxHp + '</div>' +
-                    '<div>ATK: ' + unitData.attack + '</div>' +
-                    '<div>' + getElementEmoji(unitData.element) + ' ' + unitData.element + '</div>' +
-                    (buffsHTML || '<div style="color:#555;">No active buffs</div>');
-
-                document.body.appendChild(tooltip);
-
-                var rect = cell.getBoundingClientRect();
-                tooltip.style.left = (rect.right + 10) + 'px';
-                tooltip.style.top = (rect.top) + 'px';
-
-                cell._tooltip = tooltip;
-            });
-
-            cell.addEventListener('mouseleave', function() {
-                if (cell._tooltip) {
-                    cell._tooltip.remove();
-                    cell._tooltip = null;
-                }
-            });
-        })(unitCells[i]);
-    }
-}
+// Prompt 67: initCombatUnitTooltips() (Prompt 20 Phase D2) moved to
+// js/render-dom.js -- it reads/writes #combat-board .combat-cell elements
+// directly, i.e. battlefield, not chrome. Pre-existing dead code either way
+// (nothing in the codebase calls it); see the Prompt 67 report.
 
 // ---- Combat Log Enhancement (Prompt 20 Phase D3) ----
 
