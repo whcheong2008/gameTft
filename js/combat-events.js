@@ -13,10 +13,18 @@
 //   unitDamaged ({ source, target, amount, isCrit, shieldBroke })
 //   unitHealed  ({ source, target, amount, overheal })
 //   unitKilled  ({ killer, victim, amount })
-//   ccApplied   ({ source, target, type })
+//   ccApplied   ({ source, target, type })          -- hard CC only (stun/freeze/root)
 //   abilityCast ({ caster, key })
 //   tick        ({ dt })
 //   combatEnd   ({ result })
+//
+// Prompt 72 (VFX framework, Phase 4.1) events -- cosmetic-only event DATA;
+// nothing balance-relevant listens to these, added purely so js/vfx.js can
+// drive presentation without combat-*.js ever importing a renderer:
+//   statusApplied       ({ source, target, type, duration, value }) -- EVERY
+//                        status type (unlike ccApplied's hardCC-only gate).
+//   bossTelegraphStart  ({ boss, cells, duration, isTeamWide? })
+//   bossTelegraphDetonate ({ boss, cells, targetUnits, isTeamWide })
 //
 // Prompt 67 (combat renderer abstraction) events -- these three exist purely
 // so combat-*.js never has to call a DOM-drawing function by name. The

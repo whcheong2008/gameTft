@@ -223,6 +223,12 @@ function startBossTelegraph(boss, ability, abilityIndex) {
             targetUnits: targets
         });
         addCombatLog('⚠️ ' + boss.name + ' telegraphs ' + ability.name + '!');
+        // Prompt 72 (VFX framework, Task 3): event DATA only -- js/vfx.js
+        // renders pulsing groundDecals over `cells` for `duration`; nothing
+        // else listens, so this cannot change combat behavior/goldens.
+        if (typeof combatEvents !== 'undefined') {
+            combatEvents.emit('bossTelegraphStart', { boss: boss, cells: cells, duration: ability.telegraphTime });
+        }
     } else if (ability.targetType === 'all_players') {
         boss.telegraphs.push({
             ability: ability,
@@ -232,6 +238,9 @@ function startBossTelegraph(boss, ability, abilityIndex) {
             isTeamWide: true
         });
         addCombatLog('⚠️ ' + boss.name + ' charges ' + ability.name + '!');
+        if (typeof combatEvents !== 'undefined') {
+            combatEvents.emit('bossTelegraphStart', { boss: boss, cells: [], duration: ability.telegraphTime || 1.0, isTeamWide: true });
+        }
     }
 }
 
@@ -239,6 +248,17 @@ function processBossTelegraphs(boss, dt) {
     for (var i = boss.telegraphs.length - 1; i >= 0; i--) {
         boss.telegraphs[i].timer -= dt;
         if (boss.telegraphs[i].timer <= 0) {
+            // Prompt 72 (VFX framework, Task 3): fired BEFORE executeBossAbility
+            // (which itself may emit unitDamaged/ccApplied for the hit units) so
+            // js/vfx.js's detonation nova+burst reads as "the telegraph zone went
+            // off", then per-unit hit VFX layers on top. Event DATA only.
+            if (typeof combatEvents !== 'undefined') {
+                combatEvents.emit('bossTelegraphDetonate', {
+                    boss: boss, cells: boss.telegraphs[i].targetCells,
+                    targetUnits: boss.telegraphs[i].targetUnits,
+                    isTeamWide: !!boss.telegraphs[i].isTeamWide
+                });
+            }
             executeBossAbility(boss, boss.telegraphs[i].ability, boss.telegraphs[i]);
             boss.telegraphs.splice(i, 1);
         }
