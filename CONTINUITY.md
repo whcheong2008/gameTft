@@ -9,12 +9,12 @@
 > - Phase 0 DONE (`v0.6.0-foundation`): monoliths split into 17 system files, V1 pruned (prompt 58)
 > - Phase 1 DONE (`v0.6.1-harness`): headless test suite (`node tests/run.js`, 85 cases, seeded/
 >   deterministic, golden combat scenarios) + GitHub Actions CI (prompt 59)
-> - Phase 2 IN PROGRESS: audit in `PHASE2-AUDIT.md`. Done: region reward payouts + achievement stat
->   wiring + dead-code cleanup (prompt 61), combat event bus (`js/combat-events.js`) + all 108 hero
->   skill nodes + synergy-count fix (prompt 60), lore data + Codex screen + blocking-dialog removal
->   (prompt 63), all 6 encounter mechanics (`js/combat-encounters.js`) + combat-driven achievement
->   stats + bond fix — bonds were silently broken since forever, now work (prompt 62, BUGS #6/#7).
->   Remaining: endless mode, challenge modes, balance pass. Suite: 114 cases green.
+> - Phase 2 DONE (`v0.7.0-logic-complete`): audit in `PHASE2-AUDIT.md`, all closed by prompts 60-66 —
+>   hero skill system (event bus + 108 nodes), region reward payouts, achievement pipeline,
+>   encounter mechanics, lore Codex, endless mode (The Abyss), 4 challenge modes, balance pass
+>   (`tests/balance-sim.js` + `BALANCE-REPORT.md`), bond fix (bonds NEVER worked before — BUGS #6/#7),
+>   minion-spawn crash fix, region star scaling, boss difficulty pass. Suite: 139 cases green.
+> - Phase 3 IN PROGRESS: renderer abstraction → PixiJS arena (prompts 67+).
 > - Dev server for verification: `node scripts/serve.js` → http://localhost:8123 (no-cache headers;
 >   file:// caching serves stale js — don't verify via file://). NOTE: `alert()`/`confirm()` freeze
 >   the embedded browser pane — shim them before driving the UI programmatically.

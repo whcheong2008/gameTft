@@ -33,9 +33,13 @@
 
 ## Known Limitations (Not Bugs)
 
-- No story content / cutscenes (intentionally deferred to Unity)
+> Updated 2026-07-18 at Phase 2 completion (`v0.7.0-logic-complete`). Old entries about missing
+> endless/challenges/lore/hero-skills are resolved — those systems now exist (prompts 60-66).
+
 - No hard mode stages (design not finalized)
-- No endless mode / challenge modes (deferred)
 - Fragment stub in heroes.js (harmless, returns empty)
-- Many hero skill node effects are placeholder `function(unit, hero) {}` — combat integration is partial. Full implementation in Unity.
-- Item system may have old references to "gold" instead of "Veil Essence" in some UI strings
+- Boss fights are deterministic at fixed team composition (no crit/dodge/random targeting in story
+  boss kits) — sim reports 0%/100% only; tuned for close fights instead (see BALANCE-REPORT.md)
+- 3 Time Trial pars remain unbeatable at reference power (acceptable — they're stretch goals)
+- Hero skill nodes: a handful of APPROXIMATED effects where the engine lacks primitives
+  (documented inline in heroes.js, tagged APPROXIMATED)
