@@ -61,9 +61,9 @@ var STAGES = [
         description: 'Stronger creatures guard the ancient bridge. Cost-2 enemies appear for the first time.',
         requiredLevel: 2, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
+            { budget: 3, maxCost: 2, count: 2 },
             { budget: 5, maxCost: 2, count: 3 },
-            { budget: 7, maxCost: 2, count: 3 },
-            { budget: 8, maxCost: 2, count: 4 }
+            { budget: 5, maxCost: 2, count: 3 }
         ],
         rewards: { ve: 200, xp: 80, unitDrops: 2 },
         dropWeights: { t1: 70, t2: 30 }
@@ -73,9 +73,9 @@ var STAGES = [
         description: 'Element-biased enemies test your positioning. First exposure to element matchups.',
         requiredLevel: 2, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 6, maxCost: 2, count: 3, elementBias: 'fire' },
-            { budget: 7, maxCost: 2, count: 3, elementBias: 'water' },
-            { budget: 8, maxCost: 2, count: 4 }
+            { budget: 4, maxCost: 2, count: 2, elementBias: 'fire' },
+            { budget: 5, maxCost: 2, count: 3, elementBias: 'water' },
+            { budget: 5, maxCost: 2, count: 3 }
         ],
         rewards: { ve: 200, xp: 80, unitDrops: 2 },
         dropWeights: { t1: 70, t2: 30 }
@@ -85,9 +85,9 @@ var STAGES = [
         description: 'Voidspawn attack the camp at night. Tests what the player has learned so far.',
         requiredLevel: 3, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 6, maxCost: 2, count: 3 },
-            { budget: 7, maxCost: 2, count: 4 },
-            { budget: 8, maxCost: 2, count: 4 }
+            { budget: 4, maxCost: 2, count: 2 },
+            { budget: 5, maxCost: 2, count: 3 },
+            { budget: 5, maxCost: 2, count: 3 }
         ],
         rewards: { ve: 200, xp: 80, unitDrops: 2 },
         dropWeights: { t1: 70, t2: 30 }
@@ -97,9 +97,9 @@ var STAGES = [
         description: 'A frontier family refuses to evacuate. Clear the patrol route to keep them safe.',
         requiredLevel: 3, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 7, maxCost: 2, count: 3 },
-            { budget: 8, maxCost: 2, count: 4 },
-            { budget: 8, maxCost: 2, count: 4 }
+            { budget: 3, maxCost: 2, count: 2 },
+            { budget: 4, maxCost: 2, count: 2 },
+            { budget: 4, maxCost: 2, count: 3 }
         ],
         rewards: { ve: 200, xp: 80, unitDrops: 2 },
         dropWeights: { t1: 70, t2: 30 }
@@ -109,9 +109,9 @@ var STAGES = [
         description: 'Voidspawn emergence near the Veilborn quarter. Clue #1 — the precision of the attacks.',
         requiredLevel: 3, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 7, maxCost: 2, count: 3 },
-            { budget: 8, maxCost: 2, count: 4 },
-            { budget: 8, maxCost: 2, count: 4 }
+            { budget: 5, maxCost: 2, count: 3 },
+            { budget: 6, maxCost: 2, count: 3 },
+            { budget: 6, maxCost: 2, count: 3 }
         ],
         rewards: { ve: 200, xp: 80, unitDrops: 2 },
         dropWeights: { t1: 70, t2: 30 }
@@ -121,9 +121,9 @@ var STAGES = [
         description: 'Mixed creatures with elemental affinities. Pre-boss difficulty — element matchups matter.',
         requiredLevel: 4, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 7, maxCost: 2, count: 3, elementBias: 'fire' },
-            { budget: 8, maxCost: 2, count: 4, elementBias: 'water' },
-            { budget: 8, maxCost: 2, count: 4 }
+            { budget: 4, maxCost: 2, count: 2, elementBias: 'fire' },
+            { budget: 5, maxCost: 2, count: 3, elementBias: 'water' },
+            { budget: 5, maxCost: 2, count: 3 }
         ],
         rewards: { ve: 200, xp: 80, unitDrops: 2 },
         dropWeights: { t1: 70, t2: 30 }
@@ -156,9 +156,9 @@ var STAGES = [
         requiredLevel: 5, lock: { type: 'archetype', value: 'guardian', count: 2 },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 6, maxCost: 2, count: 3, synergyBias: 'duelist' },
-            { budget: 8, maxCost: 2, count: 4, synergyBias: 'predator' },
-            { budget: 10, maxCost: 3, count: 4, synergyBias: 'duelist' }
+            { budget: 5, maxCost: 2, count: 3, synergyBias: 'duelist' },
+            { budget: 6, maxCost: 2, count: 3, synergyBias: 'predator' },
+            { budget: 8, maxCost: 3, count: 4, synergyBias: 'duelist' }
         ],
         rewards: { ve: 350, xp: 130, unitDrops: 2 },
         dropWeights: { t1: 50, t2: 40, t3: 10 }
@@ -169,9 +169,9 @@ var STAGES = [
         requiredLevel: 6, lock: { type: 'archetype', value: 'ranger', count: 2 },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 8, maxCost: 2, count: 3, synergyBias: 'guardian' },
-            { budget: 10, maxCost: 3, count: 4, synergyBias: 'guardian' },
-            { budget: 12, maxCost: 3, count: 5, synergyBias: 'guardian' }
+            { budget: 4, maxCost: 2, count: 3, synergyBias: 'guardian' },
+            { budget: 5, maxCost: 3, count: 3, synergyBias: 'guardian' },
+            { budget: 6, maxCost: 3, count: 3, synergyBias: 'guardian' }
         ],
         rewards: { ve: 350, xp: 130, unitDrops: 2 },
         dropWeights: { t1: 50, t2: 40, t3: 10 }
@@ -182,9 +182,9 @@ var STAGES = [
         requiredLevel: 6, lock: { type: 'archetype_or', value: ['sorcerer', 'mystic'], count: 2 },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 8, maxCost: 2, count: 4, synergyBias: 'sage' },
-            { budget: 10, maxCost: 3, count: 5 },
-            { budget: 13, maxCost: 3, count: 5, synergyBias: 'sage' }
+            { budget: 5, maxCost: 2, count: 3, synergyBias: 'sage' },
+            { budget: 6, maxCost: 3, count: 3 },
+            { budget: 8, maxCost: 3, count: 4, synergyBias: 'sage' }
         ],
         rewards: { ve: 350, xp: 130, unitDrops: 2 },
         dropWeights: { t1: 50, t2: 40, t3: 10 }
@@ -195,9 +195,9 @@ var STAGES = [
         requiredLevel: 7, lock: { type: 'archetype_or', value: ['predator', 'duelist'], count: 2 },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 10, maxCost: 3, count: 4, synergyBias: 'guardian' },
-            { budget: 12, maxCost: 3, count: 5, synergyBias: 'guardian' },
-            { budget: 13, maxCost: 3, count: 5, synergyBias: 'ranger' }
+            { budget: 5, maxCost: 3, count: 3, synergyBias: 'guardian' },
+            { budget: 6, maxCost: 3, count: 3, synergyBias: 'guardian' },
+            { budget: 6, maxCost: 3, count: 3, synergyBias: 'ranger' }
         ],
         rewards: { ve: 350, xp: 130, unitDrops: 2 },
         dropWeights: { t1: 50, t2: 40, t3: 10 }
@@ -208,9 +208,9 @@ var STAGES = [
         requiredLevel: 7, lock: { type: 'archetype', value: 'sage', count: 2 },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
+            { budget: 6, maxCost: 2, count: 3 },
             { budget: 8, maxCost: 2, count: 3 },
-            { budget: 10, maxCost: 2, count: 4 },
-            { budget: 10, maxCost: 3, count: 4 }
+            { budget: 8, maxCost: 3, count: 4 }
         ],
         rewards: { ve: 350, xp: 130, unitDrops: 2 },
         dropWeights: { t1: 50, t2: 40, t3: 10 }
@@ -220,8 +220,8 @@ var STAGES = [
         description: 'Voidspawn incursion near the archive. Clue #2 — the Wellspring reference.',
         requiredLevel: 8, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 10, maxCost: 3, count: 4 },
-            { budget: 12, maxCost: 3, count: 5 }
+            { budget: 6, maxCost: 3, count: 3 },
+            { budget: 7, maxCost: 3, count: 3 }
         ],
         rewards: { ve: 350, xp: 130, unitDrops: 2 },
         dropWeights: { t1: 50, t2: 40, t3: 10 }
@@ -231,10 +231,10 @@ var STAGES = [
         description: 'Final training exercise. Extended endurance — sustain across many waves.',
         requiredLevel: 8, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 8, maxCost: 2, count: 3 },
-            { budget: 10, maxCost: 2, count: 4 },
-            { budget: 10, maxCost: 3, count: 4 },
-            { budget: 12, maxCost: 3, count: 5 }
+            { budget: 5, maxCost: 2, count: 3 },
+            { budget: 6, maxCost: 2, count: 3 },
+            { budget: 6, maxCost: 3, count: 3 },
+            { budget: 7, maxCost: 3, count: 3 }
         ],
         rewards: { ve: 350, xp: 130, unitDrops: 2 },
         dropWeights: { t1: 50, t2: 40, t3: 10 }
@@ -255,9 +255,9 @@ var STAGES = [
         requiredLevel: 9, lock: { constraints: [{ type: 'archetype', value: 'guardian', count: 2 }, { type: 'archetype', value: 'predator', count: 2 }] },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 8, maxCost: 3, count: 4 },
-            { budget: 10, maxCost: 3, count: 4 },
-            { budget: 13, maxCost: 3, count: 5 }
+            { budget: 9, maxCost: 3, count: 4 },
+            { budget: 12, maxCost: 3, count: 4 },
+            { budget: 15, maxCost: 3, count: 5 }
         ],
         rewards: { ve: 550, xp: 200, unitDrops: 2 },
         dropWeights: { t1: 30, t2: 35, t3: 35 }
@@ -319,9 +319,9 @@ var STAGES = [
         requiredLevel: 11, lock: { type: 'element_count', count: 2 },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 12, maxCost: 3, count: 5 },
-            { budget: 14, maxCost: 4, count: 5 },
-            { budget: 16, maxCost: 4, count: 6 }
+            { budget: 8, maxCost: 3, count: 3 },
+            { budget: 9, maxCost: 4, count: 4 },
+            { budget: 10, maxCost: 4, count: 4 }
         ],
         rewards: { ve: 550, xp: 200, unitDrops: 2 },
         dropWeights: { t1: 30, t2: 35, t3: 35 }
@@ -344,9 +344,9 @@ var STAGES = [
         description: 'Final sweep before the boss. The Sovereign is sighted for the first time.',
         requiredLevel: 12, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 13, maxCost: 4, count: 5 },
-            { budget: 15, maxCost: 4, count: 5 },
-            { budget: 16, maxCost: 4, count: 6 }
+            { budget: 11, maxCost: 4, count: 4 },
+            { budget: 12, maxCost: 4, count: 5 },
+            { budget: 13, maxCost: 4, count: 5 }
         ],
         rewards: { ve: 550, xp: 200, unitDrops: 2 },
         dropWeights: { t1: 30, t2: 35, t3: 35 }
@@ -600,9 +600,9 @@ var STAGES = [
         requiredLevel: 21, lock: { type: 'element_min', count: 4 },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 14, maxCost: 4, count: 5 },
-            { budget: 18, maxCost: 4, count: 6 },
-            { budget: 22, maxCost: 5, count: 6 }
+            { budget: 24, maxCost: 4, count: 5 },
+            { budget: 30, maxCost: 4, count: 6 },
+            { budget: 37, maxCost: 5, count: 6 }
         ],
         rewards: { ve: 1300, xp: 500, unitDrops: 3 },
         dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
@@ -613,9 +613,9 @@ var STAGES = [
         requiredLevel: 21, lock: { type: 'element_min', count: 4 },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 16, maxCost: 4, count: 5, elementBias: 'fire', enemySynergies: true },
-            { budget: 20, maxCost: 5, count: 6, elementBias: 'earth', enemySynergies: true },
-            { budget: 24, maxCost: 5, count: 6, elementBias: 'fire', enemySynergies: true, captain: 'pyra' }
+            { budget: 20, maxCost: 4, count: 5, elementBias: 'fire', enemySynergies: true },
+            { budget: 25, maxCost: 5, count: 6, elementBias: 'earth', enemySynergies: true },
+            { budget: 30, maxCost: 5, count: 6, elementBias: 'fire', enemySynergies: true, captain: 'pyra' }
         ],
         rewards: { ve: 1300, xp: 500, unitDrops: 3 },
         dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
@@ -626,9 +626,9 @@ var STAGES = [
         requiredLevel: 22, lock: { type: 'element_min', count: 4 },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 18, maxCost: 4, count: 5, elementBias: 'water', enemySynergies: true },
-            { budget: 22, maxCost: 5, count: 6, elementBias: 'wind', enemySynergies: true },
-            { budget: 26, maxCost: 5, count: 7, enemySynergies: true }
+            { budget: 23, maxCost: 4, count: 5, elementBias: 'water', enemySynergies: true },
+            { budget: 28, maxCost: 5, count: 6, elementBias: 'wind', enemySynergies: true },
+            { budget: 33, maxCost: 5, count: 7, enemySynergies: true }
         ],
         rewards: { ve: 1300, xp: 500, unitDrops: 3 },
         dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
@@ -639,9 +639,9 @@ var STAGES = [
         requiredLevel: 22, lock: { type: 'element_min', count: 4 },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 20, maxCost: 4, count: 5, elementBias: 'lightning', enemySynergies: true },
-            { budget: 24, maxCost: 5, count: 6, elementBias: 'force', enemySynergies: true },
-            { budget: 26, maxCost: 5, count: 7, elementBias: 'lightning', enemySynergies: true }
+            { budget: 25, maxCost: 4, count: 5, elementBias: 'lightning', enemySynergies: true },
+            { budget: 30, maxCost: 5, count: 6, elementBias: 'force', enemySynergies: true },
+            { budget: 33, maxCost: 5, count: 7, elementBias: 'lightning', enemySynergies: true }
         ],
         rewards: { ve: 1300, xp: 500, unitDrops: 3 },
         dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
@@ -652,9 +652,9 @@ var STAGES = [
         requiredLevel: 23, lock: { type: 'element_min', count: 4 },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 22, maxCost: 4, count: 5, elementBias: 'lightning', enemySynergies: true },
-            { budget: 26, maxCost: 5, count: 6, elementBias: 'force', enemySynergies: true },
-            { budget: 30, maxCost: 5, count: 7, elementBias: 'lightning', enemySynergies: true, captain: 'gorath' }
+            { budget: 28, maxCost: 4, count: 5, elementBias: 'lightning', enemySynergies: true },
+            { budget: 33, maxCost: 5, count: 6, elementBias: 'force', enemySynergies: true },
+            { budget: 38, maxCost: 5, count: 7, elementBias: 'lightning', enemySynergies: true, captain: 'gorath' }
         ],
         rewards: { ve: 1300, xp: 500, unitDrops: 3 },
         dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
@@ -665,9 +665,9 @@ var STAGES = [
         requiredLevel: 23, lock: { type: 'element_min', count: 4 },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 24, maxCost: 5, count: 6, enemySynergies: true },
-            { budget: 28, maxCost: 5, count: 6, enemySynergies: true },
-            { budget: 30, maxCost: 5, count: 7, enemySynergies: true }
+            { budget: 30, maxCost: 5, count: 6, enemySynergies: true },
+            { budget: 35, maxCost: 5, count: 6, enemySynergies: true },
+            { budget: 38, maxCost: 5, count: 7, enemySynergies: true }
         ],
         rewards: { ve: 1300, xp: 500, unitDrops: 3 },
         dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
@@ -678,9 +678,9 @@ var STAGES = [
         requiredLevel: 24, lock: { type: 'element_min', count: 4 },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 26, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+            { budget: 33, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 38, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 38, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
         ],
         rewards: { ve: 1300, xp: 500, unitDrops: 3 },
         dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
@@ -691,9 +691,9 @@ var STAGES = [
         requiredLevel: 24, lock: { type: 'element_min', count: 4 },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 28, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+            { budget: 35, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 38, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 38, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
         ],
         rewards: { ve: 1300, xp: 500, unitDrops: 3 },
         dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
@@ -704,9 +704,9 @@ var STAGES = [
         requiredLevel: 24, lock: { type: 'element_min', count: 4 },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 28, maxCost: 5, count: 6, enemySynergies: true },
-            { budget: 30, maxCost: 5, count: 7, enemySynergies: true },
-            { budget: 30, maxCost: 5, count: 7, enemySynergies: true }
+            { budget: 35, maxCost: 5, count: 6, enemySynergies: true },
+            { budget: 38, maxCost: 5, count: 7, enemySynergies: true },
+            { budget: 38, maxCost: 5, count: 7, enemySynergies: true }
         ],
         rewards: { ve: 1300, xp: 500, unitDrops: 3 },
         dropWeights: { t1: 5, t2: 10, t3: 30, t4: 40, t5: 15 }
@@ -727,9 +727,9 @@ var STAGES = [
         requiredLevel: 25, lock: { type: 'archetype', value: 'sage', count: 3 },
         encounterMechanic: 'escalating_threat', isBoss: false, canRetry: true,
         waves: [
-            { budget: 16, maxCost: 4, count: 5 },
-            { budget: 20, maxCost: 5, count: 6 },
-            { budget: 24, maxCost: 5, count: 6 }
+            { budget: 27, maxCost: 4, count: 5 },
+            { budget: 34, maxCost: 5, count: 6 },
+            { budget: 39, maxCost: 5, count: 6 }
         ],
         rewards: { ve: 1600, xp: 650, unitDrops: 3 },
         dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
@@ -740,9 +740,9 @@ var STAGES = [
         requiredLevel: 25, lock: { type: 'no_element_synergy' },
         encounterMechanic: 'reinforcement_pressure', isBoss: false, canRetry: true,
         waves: [
-            { budget: 18, maxCost: 4, count: 5 },
-            { budget: 22, maxCost: 5, count: 6 },
-            { budget: 28, maxCost: 5, count: 7, captain: 'sylph' }
+            { budget: 30, maxCost: 4, count: 5 },
+            { budget: 37, maxCost: 5, count: 6 },
+            { budget: 46, maxCost: 5, count: 7, captain: 'sylph' }
         ],
         rewards: { ve: 1600, xp: 650, unitDrops: 3 },
         dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
@@ -753,9 +753,9 @@ var STAGES = [
         requiredLevel: 26, lock: { constraints: [{ type: 'archetype', value: 'predator', count: 2 }, { type: 'archetype', value: 'guardian', count: 2 }] },
         encounterMechanic: 'protect_objective', isBoss: false, canRetry: true,
         waves: [
-            { budget: 20, maxCost: 5, count: 5 },
-            { budget: 24, maxCost: 5, count: 6 },
-            { budget: 28, maxCost: 5, count: 7 }
+            { budget: 25, maxCost: 5, count: 5 },
+            { budget: 30, maxCost: 5, count: 6 },
+            { budget: 35, maxCost: 5, count: 7 }
         ],
         rewards: { ve: 1600, xp: 650, unitDrops: 3 },
         dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
@@ -766,9 +766,9 @@ var STAGES = [
         requiredLevel: 26, lock: { type: 'element_min', count: 3 },
         encounterMechanic: 'split_formation', isBoss: false, canRetry: true,
         waves: [
-            { budget: 22, maxCost: 5, count: 5 },
-            { budget: 26, maxCost: 5, count: 6 },
-            { budget: 28, maxCost: 5, count: 7 }
+            { budget: 37, maxCost: 5, count: 5 },
+            { budget: 44, maxCost: 5, count: 6 },
+            { budget: 46, maxCost: 5, count: 7 }
         ],
         rewards: { ve: 1600, xp: 650, unitDrops: 3 },
         dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
@@ -779,9 +779,9 @@ var STAGES = [
         requiredLevel: 27, lock: { type: 'no_element_synergy' },
         encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 24, maxCost: 5, count: 6 },
-            { budget: 28, maxCost: 5, count: 6 },
-            { budget: 28, maxCost: 5, count: 7 }
+            { budget: 39, maxCost: 5, count: 6 },
+            { budget: 46, maxCost: 5, count: 6 },
+            { budget: 46, maxCost: 5, count: 7 }
         ],
         rewards: { ve: 1600, xp: 650, unitDrops: 3 },
         dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
@@ -792,9 +792,9 @@ var STAGES = [
         requiredLevel: 27, lock: null,
         encounterMechanic: ['vip_target', 'countdown'], isBoss: false, canRetry: true,
         waves: [
-            { budget: 24, maxCost: 5, count: 6 },
-            { budget: 28, maxCost: 5, count: 7 },
-            { budget: 28, maxCost: 5, count: 7 }
+            { budget: 39, maxCost: 5, count: 6 },
+            { budget: 46, maxCost: 5, count: 7 },
+            { budget: 46, maxCost: 5, count: 7 }
         ],
         rewards: { ve: 1600, xp: 650, unitDrops: 3 },
         dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
@@ -805,9 +805,9 @@ var STAGES = [
         requiredLevel: 27, lock: { type: 'element_min', count: 3 },
         encounterMechanic: 'split_formation', isBoss: false, canRetry: true,
         waves: [
-            { budget: 26, maxCost: 5, count: 5 },
-            { budget: 28, maxCost: 5, count: 6 },
-            { budget: 32, maxCost: 5, count: 7 }
+            { budget: 44, maxCost: 5, count: 5 },
+            { budget: 46, maxCost: 5, count: 6 },
+            { budget: 53, maxCost: 5, count: 7 }
         ],
         rewards: { ve: 1600, xp: 650, unitDrops: 3 },
         dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
@@ -818,9 +818,9 @@ var STAGES = [
         requiredLevel: 28, lock: { type: 'archetype_deep', count: 4 },
         encounterMechanic: ['countdown', 'vip_target'], isBoss: false, canRetry: true,
         waves: [
-            { budget: 28, maxCost: 5, count: 6 },
-            { budget: 32, maxCost: 5, count: 7 },
-            { budget: 32, maxCost: 5, count: 7, captain: 'arbiter' }
+            { budget: 35, maxCost: 5, count: 6 },
+            { budget: 40, maxCost: 5, count: 7 },
+            { budget: 40, maxCost: 5, count: 7, captain: 'arbiter' }
         ],
         rewards: { ve: 1600, xp: 650, unitDrops: 3 },
         dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
@@ -830,9 +830,9 @@ var STAGES = [
         description: 'Kael presents the seal plan to both factions. Pre-boss stage.',
         requiredLevel: 28, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 28, maxCost: 5, count: 6 },
-            { budget: 32, maxCost: 5, count: 7 },
-            { budget: 32, maxCost: 5, count: 7 }
+            { budget: 46, maxCost: 5, count: 6 },
+            { budget: 53, maxCost: 5, count: 7 },
+            { budget: 53, maxCost: 5, count: 7 }
         ],
         rewards: { ve: 1600, xp: 650, unitDrops: 3 },
         dropWeights: { t2: 5, t3: 20, t4: 45, t5: 30 }
@@ -852,10 +852,10 @@ var STAGES = [
         description: 'The last morning. Mira writes in her notebook. Maximum difficulty enemies.',
         requiredLevel: 29, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 18, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 22, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 26, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+            { budget: 30, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 37, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 44, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 50, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
         ],
         rewards: { ve: 2000, xp: 800, unitDrops: 4 },
         dropWeights: { t3: 15, t4: 45, t5: 40 }
@@ -866,10 +866,10 @@ var STAGES = [
         requiredLevel: 29, lock: null,
         encounterMechanic: ['reinforcement_pressure', 'escalating_threat'], isBoss: false, canRetry: true,
         waves: [
-            { budget: 20, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 24, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 25, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
             { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 34, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+            { budget: 38, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 43, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
         ],
         rewards: { ve: 2000, xp: 800, unitDrops: 4 },
         dropWeights: { t3: 15, t4: 45, t5: 40 }
@@ -880,10 +880,10 @@ var STAGES = [
         requiredLevel: 29, lock: null,
         encounterMechanic: ['split_formation', 'vip_target'], isBoss: false, canRetry: true,
         waves: [
-            { budget: 22, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 26, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 34, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+            { budget: 28, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 33, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 38, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 43, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
         ],
         rewards: { ve: 2000, xp: 800, unitDrops: 4 },
         dropWeights: { t3: 15, t4: 45, t5: 40 }
@@ -894,10 +894,10 @@ var STAGES = [
         requiredLevel: 29, lock: null,
         encounterMechanic: ['countdown', 'protect_objective'], isBoss: false, canRetry: true,
         waves: [
-            { budget: 24, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 28, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 34, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+            { budget: 30, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 35, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 38, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 43, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
         ],
         rewards: { ve: 2000, xp: 800, unitDrops: 4 },
         dropWeights: { t3: 15, t4: 45, t5: 40 }
@@ -907,10 +907,10 @@ var STAGES = [
         description: 'Maximum non-boss difficulty. Full synergies, evolved champions, 4 waves.',
         requiredLevel: 29, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 26, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 34, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true, captain: 'voidborn_champion' }
+            { budget: 33, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 38, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 38, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 43, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true, captain: 'voidborn_champion' }
         ],
         rewards: { ve: 2000, xp: 800, unitDrops: 4 },
         dropWeights: { t3: 15, t4: 45, t5: 40 }
@@ -920,10 +920,10 @@ var STAGES = [
         description: 'Void-element enemies negate element advantages. Win on raw team quality alone.',
         requiredLevel: 29, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 28, maxCost: 5, count: 6, elementBias: 'force', enemySynergies: true, enemyEvolutions: true },
-            { budget: 30, maxCost: 5, count: 7, elementBias: 'force', enemySynergies: true, enemyEvolutions: true },
-            { budget: 34, maxCost: 5, count: 7, elementBias: 'force', enemySynergies: true, enemyEvolutions: true },
-            { budget: 34, maxCost: 5, count: 7, elementBias: 'force', enemySynergies: true, enemyEvolutions: true }
+            { budget: 35, maxCost: 5, count: 6, elementBias: 'force', enemySynergies: true, enemyEvolutions: true },
+            { budget: 38, maxCost: 5, count: 7, elementBias: 'force', enemySynergies: true, enemyEvolutions: true },
+            { budget: 43, maxCost: 5, count: 7, elementBias: 'force', enemySynergies: true, enemyEvolutions: true },
+            { budget: 43, maxCost: 5, count: 7, elementBias: 'force', enemySynergies: true, enemyEvolutions: true }
         ],
         rewards: { ve: 2000, xp: 800, unitDrops: 4 },
         dropWeights: { t3: 15, t4: 45, t5: 40 }
@@ -933,10 +933,10 @@ var STAGES = [
         description: 'The final camp. Senna attunes everyone one last time. Hard but manageable.',
         requiredLevel: 29, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
         waves: [
-            { budget: 28, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 34, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 34, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+            { budget: 35, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
+            { budget: 38, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 43, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
+            { budget: 43, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
         ],
         rewards: { ve: 2000, xp: 800, unitDrops: 4 },
         dropWeights: { t3: 15, t4: 45, t5: 40 }
