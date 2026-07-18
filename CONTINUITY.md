@@ -4,6 +4,18 @@
 > **DIRECTION (2026-07-18): See `MASTERPLAN.md`** — the authoritative roadmap to TFT-grade
 > presentation. Platform decision: **Web + PixiJS**; the Unity port is parked (kept, not resumed).
 > Worker conventions: `CLAUDE.md`. New prompts number from 58.
+>
+> **Masterplan progress (2026-07-18):**
+> - Phase 0 DONE (`v0.6.0-foundation`): monoliths split into 17 system files, V1 pruned (prompt 58)
+> - Phase 1 DONE (`v0.6.1-harness`): headless test suite (`node tests/run.js`, 85 cases, seeded/
+>   deterministic, golden combat scenarios) + GitHub Actions CI (prompt 59)
+> - Phase 2 IN PROGRESS: audit in `PHASE2-AUDIT.md`. Done: region reward payouts + achievement stat
+>   wiring + dead-code cleanup (prompt 61), combat event bus (`js/combat-events.js`) + all 108 hero
+>   skill nodes + synergy-count fix (prompt 60). Remaining: encounter mechanics, combat-driven
+>   achievement stats, endless mode, challenge modes, lore delivery, balance pass.
+> - Dev server for verification: `node scripts/serve.js` → http://localhost:8123 (no-cache headers;
+>   file:// caching serves stale js — don't verify via file://). NOTE: `alert()`/`confirm()` freeze
+>   the embedded browser pane — shim them before driving the UI programmatically.
 
 ## Git Branch Conventions
 
