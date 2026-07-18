@@ -251,6 +251,83 @@ function startMissionCombat(playerBoard, enemies) {
     });
 }
 
+// ---- Prompt 62: Encounter mechanic banner + live HUD readout ----
+// Reuses the wave-transition visual language (a small overlay banner) rather
+// than introducing new UI chrome. No-ops when the stage has no
+// encounterMechanic (banner/HUD elements are simply hidden).
+
+function renderEncounterMechanicBanner() {
+    var banner = document.getElementById('encounter-mechanic-banner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'encounter-mechanic-banner';
+        banner.style.cssText = 'position:absolute; top:8px; left:50%; transform:translateX(-50%); ' +
+            'background:rgba(20,20,30,0.9); border:1px solid #e2b714; border-radius:8px; ' +
+            'padding:6px 14px; font-size:12px; color:#eee; z-index:20; text-align:center; max-width:80%;';
+        var boardEl = document.getElementById('combat-board');
+        if (boardEl && boardEl.appendChild) boardEl.appendChild(banner);
+    }
+
+    var mechanics = (combatState && combatState.encounterMechanics) || [];
+    if (mechanics.length === 0 || typeof COMBAT_ENCOUNTER_INFO === 'undefined') {
+        banner.style.display = 'none';
+        return;
+    }
+
+    var html = '';
+    for (var i = 0; i < mechanics.length; i++) {
+        var info = COMBAT_ENCOUNTER_INFO[mechanics[i]];
+        if (!info) continue;
+        if (html) html += '<br>';
+        html += '<b>' + info.icon + ' ' + info.name + '</b> — ' + info.desc;
+    }
+    banner.innerHTML = html;
+    banner.style.display = html ? 'block' : 'none';
+}
+
+// Called every render frame from renderCombatBoard(): keeps the countdown
+// timer and escalation stack count visible during the fight.
+function updateEncounterMechanicHud() {
+    var hud = document.getElementById('encounter-mechanic-hud');
+    if (!combatState || !combatState.encounterState) {
+        if (hud) hud.style.display = 'none';
+        return;
+    }
+
+    var parts = [];
+    var es = combatState.encounterState;
+    if (es.countdown && !es.countdown.fired) {
+        parts.push('⏳ ' + Math.max(0, Math.ceil(es.countdown.timer)) + 's');
+    }
+    if (es.escalatingThreat) {
+        parts.push('📈 Stacks: ' + es.escalatingThreat.stacks);
+    }
+    if (es.reinforcementPressure) {
+        parts.push('🌊 Reinforcements: ' + es.reinforcementPressure.totalSpawned + '/' + es.reinforcementPressure.maxTotalSpawns);
+    }
+    if (es.protectObjective && es.protectObjective.npc) {
+        var npc = es.protectObjective.npc;
+        parts.push('🛡️ Objective: ' + Math.max(0, npc.hp) + '/' + npc.maxHp);
+    }
+
+    if (parts.length === 0) {
+        if (hud) hud.style.display = 'none';
+        return;
+    }
+
+    if (!hud) {
+        hud = document.createElement('div');
+        hud.id = 'encounter-mechanic-hud';
+        hud.style.cssText = 'position:absolute; top:40px; left:50%; transform:translateX(-50%); ' +
+            'background:rgba(20,20,30,0.85); border-radius:6px; padding:4px 10px; ' +
+            'font-size:11px; color:#e2b714; z-index:20; text-align:center;';
+        var boardEl2 = document.getElementById('combat-board');
+        if (boardEl2 && boardEl2.appendChild) boardEl2.appendChild(hud);
+    }
+    hud.style.display = 'block';
+    hud.textContent = parts.join('   ');
+}
+
 var COMBAT_TICK_MS = 50; // 20 fps
 var COMBAT_DT = COMBAT_TICK_MS / 1000;
 var COMBAT_SPEED = 1; // 1, 2, or 4
@@ -972,6 +1049,13 @@ function renderCombatBoard() {
         unitLayer.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:4;';
         boardEl.appendChild(unitLayer);
     }
+
+    // Prompt 62: encounter mechanic banner + live HUD readout. Called every
+    // frame (like unitLayer above) because boardEl.innerHTML = gridHtml just
+    // wiped #combat-board's children in a real browser -- these have to be
+    // recreated/reappended every render, not just once at wave start.
+    if (typeof renderEncounterMechanicBanner === 'function') renderEncounterMechanicBanner();
+    if (typeof updateEncounterMechanicHud === 'function') updateEncounterMechanicHud();
 
     // Create/update unit elements
     var allUnits = combatState.playerUnits.concat(combatState.enemyUnits);
