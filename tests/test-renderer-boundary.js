@@ -153,5 +153,99 @@ module.exports = [
             assert.ok(events.unitDamaged > 0, 'the stub renderer should have observed at least one unitDamaged event');
             assert.ok(events.unitKilled > 0, 'the stub renderer should have observed at least one unitKilled event (the low-HP enemy should die)');
         }
+    },
+
+    // ---------------------------------------------------------------
+    // Prompt 68 (PixiJS renderer bootstrap) acceptance tests.
+    // ---------------------------------------------------------------
+    {
+        name: 'renderer boundary: RENDERERS.pixi registers when a fake PIXI global stub is present',
+        fn: function() {
+            const h = createHarness({ seed: 3 });
+            // js/render-pixi.js's registration guard (`typeof PIXI !== 'undefined'`)
+            // is checked once, at script-load time -- so the fake stub must be
+            // set on the sandbox BEFORE loadScripts() runs js/render-pixi.js,
+            // not after. tests/harness.js's getScriptLoadOrder() skips the real
+            // js/vendor/pixi.min.js (browser-only blob), so PIXI is normally
+            // undefined here; this stub stands in for it.
+            h.context.PIXI = {};
+            h.loadScripts();
+            h.freshSave();
+
+            assert.ok(h.context.RENDERERS && h.context.RENDERERS.pixi, 'RENDERERS.pixi should be registered once a PIXI global exists at script-load time');
+            const pixi = h.context.RENDERERS.pixi;
+            assert.equal(typeof pixi.init, 'function', 'RENDER_PIXI.init should be a function');
+            assert.equal(typeof pixi.frame, 'function', 'RENDER_PIXI.frame should be a function');
+            assert.equal(typeof pixi.destroy, 'function', 'RENDER_PIXI.destroy should be a function');
+        }
+    },
+
+    // ---------------------------------------------------------------
+    {
+        name: 'renderer boundary: RENDERERS.pixi is absent when no PIXI global exists (the real vendor file is never loaded headlessly)',
+        fn: function() {
+            const h = createHarness({ seed: 4 });
+            h.loadScripts();
+            h.freshSave();
+
+            assert.equal(typeof h.context.PIXI, 'undefined', 'PIXI should be undefined in the headless harness -- js/vendor/pixi.min.js must be skipped by getScriptLoadOrder()');
+            assert.ok(!h.context.RENDERERS.pixi, 'RENDERERS.pixi should not be registered when PIXI was never defined');
+        }
+    },
+
+    // ---------------------------------------------------------------
+    {
+        name: 'renderer boundary: js/render-pixi.js never calls a function defined in js/combat-*.js',
+        fn: function() {
+            const combatFiles = fs.readdirSync(JS_DIR).filter(function(f) {
+                return /^combat-.*\.js$/.test(f);
+            });
+            assert.ok(combatFiles.length > 0, 'expected to find at least one js/combat-*.js file to scan');
+
+            // Collect every top-level `function name(` declared anywhere under
+            // js/combat-*.js.
+            const combatFnNames = [];
+            for (let i = 0; i < combatFiles.length; i++) {
+                const text = fs.readFileSync(path.join(JS_DIR, combatFiles[i]), 'utf8');
+                const re = /function\s+([A-Za-z_$][\w$]*)\s*\(/g;
+                let m;
+                while ((m = re.exec(text))) {
+                    if (combatFnNames.indexOf(m[1]) < 0) combatFnNames.push(m[1]);
+                }
+            }
+
+            const pixiPath = path.join(JS_DIR, 'render-pixi.js');
+            assert.ok(fs.existsSync(pixiPath), 'expected js/render-pixi.js to exist (Prompt 68)');
+            let pixiSrc = fs.readFileSync(pixiPath, 'utf8');
+            // Strip comments first -- this file's own prose (explaining WHY it
+            // avoids calling into combat-*.js) legitimately mentions those
+            // function names by name (e.g. "moveUnit()", "initCombat()"); only
+            // actual call sites in live code should fail this check.
+            pixiSrc = pixiSrc.replace(/\/\*[\s\S]*?\*\//g, ' ');
+            pixiSrc = pixiSrc.replace(/\/\/[^\n]*/g, ' ');
+
+            const offenders = [];
+            for (let i = 0; i < combatFnNames.length; i++) {
+                const name = combatFnNames[i];
+                // combatEvents/combatState/COMBAT_SPEED etc. are data/bus
+                // access, not function calls into combat-*.js, and aren't
+                // matched by this pattern anyway (it requires a literal `(`
+                // immediately after the identifier, word-boundaried).
+                const callRe = new RegExp('\\b' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\(');
+                if (callRe.test(pixiSrc)) offenders.push(name);
+            }
+
+            assert.deepEqual(offenders, [], 'js/render-pixi.js must never call a function defined in js/combat-*.js (found calls to: ' + offenders.join(', ') + ') -- it may only read combatState/combatEvents per the documented renderer interface');
+        }
+    },
+
+    // ---------------------------------------------------------------
+    {
+        name: 'renderer boundary: js/render-pixi.js registration is guarded behind typeof PIXI !== \'undefined\'',
+        fn: function() {
+            const pixiPath = path.join(JS_DIR, 'render-pixi.js');
+            const text = fs.readFileSync(pixiPath, 'utf8');
+            assert.ok(/typeof\s+PIXI\s*!==?\s*['"]undefined['"]/.test(text), 'js/render-pixi.js should guard its registerRenderer(\'pixi\', ...) call behind typeof PIXI !== \'undefined\'');
+        }
     }
 ];
