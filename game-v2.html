@@ -193,22 +193,82 @@ body {
 .mission-card .m-reward { color: #6bcb77; font-size: 12px; }
 .grind-section { margin-top: 20px; }
 
-/* === Combat Screen === */
+/* === Combat Screen (Prompt 70: Phase 3.4 canvas-first arena presentation) ===
+   #combat-area is now the single tall presentation surface -- the arena canvas
+   (#combat-arena-frame > .combat-board) is centered and sized to dominate it;
+   every other panel is an absolutely-positioned overlay/drawer docked to an
+   edge, layered by z-index (backdrop 0 < arena 1 < chrome drawers 2 <
+   floating controls 3 < wave-start/transition overlays 5 < results/phase-
+   flash 10). None of this changes element IDs or what JS reads/writes on
+   them -- see the file's Prompt 70 HTML comment. */
 #combat-area {
-    position: relative; min-height: 400px;
-    background: #0d1117; border-radius: 8px; padding: 10px;
+    position: relative;
+    /* TUNABLE: combat screen is the one screen that wants to dominate the
+       viewport rather than sit inside the page's normal document flow --
+       85vh leaves room for #top-bar above it while still making the arena
+       the clear visual hero, responsive down to the ~800px breakpoint below. */
+    height: 85vh;
+    min-height: 460px;
+    max-height: 900px;
+    background: #0d1117;
+    border-radius: 8px;
+    overflow: hidden;
 }
-.wave-info {
-    text-align: center; padding: 6px; background: #16213e;
-    border-radius: 6px; margin-bottom: 8px; font-size: 14px; font-weight: bold;
+
+/* ---- Layer 0: procedural region backdrop (Task 3) -- see buildArenaBackdrop()
+   in js/ui-combat.js. Renderer-agnostic: painted behind both the DOM and Pixi
+   boards, so ?renderer=dom still gets region theming. ---- */
+#arena-backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #0d1117; }
+.arena-bd-horizon { position: absolute; inset: 0; }
+.arena-bd-hexfield { position: absolute; inset: 0; opacity: 0.5; background-size: 84px 84px; }
+.arena-bd-blob { position: absolute; border-radius: 50%; filter: blur(40px); opacity: 0.55; }
+.arena-bd-blob-a { width: 42%; height: 34%; left: -10%; bottom: -8%; }
+.arena-bd-blob-b { width: 34%; height: 26%; right: -8%; bottom: 0%; }
+.arena-bd-blob-c { width: 24%; height: 20%; left: 34%; bottom: -12%; }
+.arena-bd-vignette { position: absolute; inset: 0; box-shadow: inset 0 0 140px 40px rgba(0,0,0,0.75); pointer-events: none; }
+
+/* ---- Layer 1: the arena itself, centered and letterboxed ---- */
+#combat-main {
+    position: absolute; inset: 0; z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    padding: 44px 12px 12px; /* leaves room for the floating top controls */
+}
+#combat-arena-frame {
+    position: relative;
+    height: 100%;
+    /* TUNABLE: board footprint is (COLS+0.5) x ((ROWS-1)*0.75+1) cells wide/tall
+       (grid.js's cellToPixel/pixiSizeBoard packed-hex math) -- ~7.5:6.25, i.e.
+       1.2:1 -- for square cells. aspect-ratio keeps the frame (and therefore
+       #damage-numbers, which is a sibling absolutely positioned to match it
+       pixel-for-pixel) locked to that shape at any height. */
+    aspect-ratio: 6 / 5;
+    max-width: 100%;
+    /* "fills the available center, min ~60% viewport width on desktop" (spec) --
+       measured against #combat-area's own box (the game shell caps at 960px;
+       see the Prompt 70 report for why this reads relative to the panel, not
+       the raw browser viewport). */
+    min-width: min(60vw, 100%);
 }
 .combat-board {
-    display: grid; grid-template-columns: repeat(7, 1fr);
-    gap: 2px; flex: 1; min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-rows: repeat(8, minmax(0, 1fr));
+    gap: 2px;
+    width: 100%; height: 100%;
     position: relative; overflow: hidden;
 }
+/* Sibling of .combat-board (not a child!) inside #combat-arena-frame -- both
+   fill the identical box, so js/render-dom.js's domSpawnDamageNumber() (which
+   computes x/y from #combat-board's own offsetWidth/offsetHeight) lines up
+   pixel-for-pixel without needing to be nested inside a node that render-dom.js
+   wipes via innerHTML every frame. */
+#damage-numbers { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 2; }
 .combat-cell {
-    min-height: 36px; min-width: 0;
+    /* Prompt 70: rows/cols are explicit grid tracks on .combat-board now (both
+       repeat(N, minmax(0,1fr))), so cells no longer need to self-size via
+       min-height -- the aspect-ratio-locked #combat-arena-frame gives the
+       whole grid a definite height and the tracks split it evenly. */
+    min-height: 0; min-width: 0;
     display: flex; align-items: center; justify-content: center;
     font-size: 9px; border-radius: 3px; padding: 1px;
 }
@@ -293,19 +353,88 @@ body {
 .wave-transition .wave-text { font-size: 24px; font-weight: bold; color: #e2b714; }
 .wave-transition .wave-subtext { color: #aaa; margin-top: 6px; }
 
-/* === Combat Log === */
-#combat-log {
-    background: #0d1117; border-radius: 6px; padding: 8px;
-    max-height: 120px; overflow-y: auto; font-size: 12px;
-    margin-top: 6px;
+/* === Combat Controls (wave banner + speed) -- floats over the top corners
+   of the arena (Task 1) === */
+#combat-controls {
+    position: absolute; top: 8px; left: 8px; right: 8px; z-index: 3;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 8px; pointer-events: none; /* re-enabled per-child below */
 }
+#combat-controls > * { pointer-events: auto; }
+.wave-info {
+    text-align: center; padding: 5px 12px; background: rgba(22,33,62,0.85);
+    border-radius: 6px; font-size: 13px; font-weight: bold;
+    backdrop-filter: blur(2px);
+}
+#combat-controls-right { display: flex; align-items: center; gap: 8px; }
+#enrage-timer { color: #ff6644; font-size: 11px; }
+
+/* === Combat Synergy Bar -- slim overlay drawer, top-center under the wave
+   banner (collapsible: js/ui-combat.js's toggleCombatSynergyBar()) === */
+#combat-synergy-bar {
+    position: absolute; top: 40px; left: 8px; max-width: 46%; z-index: 2;
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 8px;
+    background: rgba(22,33,62,0.8); border-radius: 6px; font-size: 12px;
+    max-height: 40%; overflow-y: auto;
+}
+#combat-synergy-bar.collapsed .arena-drawer-body { display: none; }
+
+/* === Combat Scoreboard + per-side synergy sidebars -- collapsible overlay
+   drawers flanking the arena (Task 1). #synergy-sidebar-left/right are
+   created at runtime by js/ui-combat.js's renderCombatSynergySidebar(); this
+   ID-selector styling is what actually docks/collapses them (their inline
+   style only sets background/padding/font, not position) === */
+.combat-scoreboard, #synergy-sidebar-left, #synergy-sidebar-right {
+    position: absolute; z-index: 2;
+    max-height: 70%; overflow-y: auto;
+    transition: width 0.15s ease, opacity 0.15s ease;
+}
+.combat-scoreboard { top: 40px; right: 8px; width: 170px; }
+#synergy-sidebar-right { top: calc(40% + 8px); right: 8px; width: 96px; }
+#synergy-sidebar-left { top: 40px; left: 8px; width: 96px; }
+.combat-scoreboard.collapsed, #synergy-sidebar-left.collapsed, #synergy-sidebar-right.collapsed {
+    width: 22px; overflow: hidden; opacity: 0.55;
+}
+.combat-scoreboard.collapsed .sb-unit, #synergy-sidebar-left.collapsed > div:not(:first-child),
+#synergy-sidebar-right.collapsed > div:not(:first-child) { display: none; }
+.combat-scoreboard .sb-header, #synergy-sidebar-left > div:first-child, #synergy-sidebar-right > div:first-child {
+    cursor: pointer; user-select: none;
+}
+
+/* === Combat Log -- compact overlay strip (last 3 entries, fading), bottom
+   of the arena; click to expand into a full scrollable panel (Task 1) === */
+#combat-log {
+    position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 2;
+    background: rgba(13,17,23,0.85); border-radius: 6px; padding: 6px 8px;
+    font-size: 12px; cursor: pointer;
+    max-height: 30%; overflow: hidden;
+}
+#combat-log.expanded { max-height: 50%; overflow-y: auto; background: rgba(13,17,23,0.95); }
 #combat-log .log-entry { padding: 1px 0; }
+/* Collapsed (default): only the last 3 entries are shown, fading toward the
+   oldest of the three. Pure CSS (:nth-last-child), no JS bookkeeping needed. */
+#combat-log:not(.expanded) .log-entry { display: none; }
+#combat-log:not(.expanded) .log-entry:nth-last-child(-n+3) { display: block; }
+#combat-log:not(.expanded) .log-entry:nth-last-child(3) { opacity: 0.45; }
+#combat-log:not(.expanded) .log-entry:nth-last-child(2) { opacity: 0.7; }
+#combat-log:not(.expanded) .log-entry:nth-last-child(1) { opacity: 1; }
 .log-info { color: #8bbcff; }
 .log-damage { color: #ff6b6b; }
 .log-heal { color: #6bcb77; }
 .log-kill { color: #ffd93d; }
 .log-combat { color: #ccc; }
 .log-warning { color: #ff8844; }
+
+/* Responsive breakpoint (spec: "responsive down to ~800px") -- drawers lose
+   their fixed pixel widths and the arena's forced 60vw minimum relaxes so
+   nothing overflows a narrow viewport. */
+@media (max-width: 800px) {
+    #combat-arena-frame { min-width: 0; width: 100%; }
+    .combat-scoreboard, #synergy-sidebar-left, #synergy-sidebar-right { width: 84px; font-size: 10px; }
+    .combat-scoreboard { top: 64px; }
+    #synergy-sidebar-right { top: calc(45% + 8px); }
+    #combat-synergy-bar { max-width: 60%; }
+}
 
 /* === Utility === */
 .btn-row { display: flex; gap: 8px; margin: 8px 0; }
@@ -454,11 +583,10 @@ body {
     margin-top: 4px;
 }
 
-/* === Combat Scoreboard === */
+/* === Combat Scoreboard ===
+   Position/width/max-height/collapse are set by the drawer rules earlier in
+   this stylesheet (Task 1); only cosmetic fill/border/spacing lives here. */
 .combat-scoreboard {
-    width: 180px;
-    min-width: 180px;
-    max-height: 400px;
     overflow-y: auto;
     background: #0d1b2a;
     border: 1px solid #1b2838;
@@ -598,7 +726,6 @@ body {
 .speed-btn:hover { background: #2a3848; }
 
 /* Damage numbers */
-#combat-main { position: relative; }
 .dmg-number {
     position: absolute;
     font-weight: bold;
@@ -838,21 +965,35 @@ body {
         </div>
 
         <!-- ============ COMBAT SCREEN ============ -->
+        <!-- Prompt 70 (Phase 3.4 arena presentation): the arena canvas is now the
+             hero of this screen -- #combat-area is a single tall presentation
+             surface; every other panel (wave banner/speed, synergy bar, scoreboard,
+             per-side synergy sidebars, combat log) is an absolutely-positioned
+             overlay/drawer docked to its edges via CSS (see the "Combat Screen"
+             CSS block), NOT a flex sibling pushing the board around anymore. IDs
+             are unchanged from pre-Prompt-70 -- every js/ui-combat.js and
+             js/render-*.js getElementById() call site keeps working untouched;
+             only layout/CSS + a handful of new chrome-only toggle functions
+             changed. #arena-backdrop and #combat-arena-frame are new elements. -->
         <div id="screen-combat" class="screen">
-            <div id="combat-controls" style="display:flex; justify-content:space-between; align-items:center; padding:4px 8px; background:#16213e; border-radius:6px; margin-bottom:6px;">
-                <div class="wave-info" id="wave-info" style="margin-bottom:0;">Wave 1 / 1</div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span id="enrage-timer" style="color:#ff6644; font-size:11px;"></span>
-                    <button id="speed-btn" class="speed-btn" onclick="toggleCombatSpeed()">1×</button>
-                </div>
-            </div>
-            <div id="combat-synergy-bar" style="display:flex; flex-wrap:wrap; gap:6px; padding:4px 8px; background:#16213e; border-radius:6px; margin-bottom:6px; font-size:12px; min-height:20px;"></div>
             <div id="combat-area">
-                <div id="combat-main" style="display:flex; gap:8px;">
-                    <div class="combat-board" id="combat-board"></div>
-                    <div id="damage-numbers" style="position:absolute; top:0; left:0; right:0; bottom:0; pointer-events:none; overflow:hidden;"></div>
-                    <div id="combat-scoreboard" class="combat-scoreboard"></div>
+                <div id="arena-backdrop"></div>
+                <div id="combat-controls">
+                    <div class="wave-info" id="wave-info">Wave 1 / 1</div>
+                    <div id="combat-controls-right">
+                        <span id="enrage-timer"></span>
+                        <button id="speed-btn" class="speed-btn" onclick="toggleCombatSpeed()">1×</button>
+                    </div>
                 </div>
+                <div id="combat-synergy-bar"></div>
+                <div id="combat-main">
+                    <div id="combat-arena-frame">
+                        <div class="combat-board" id="combat-board"></div>
+                        <div id="damage-numbers"></div>
+                    </div>
+                </div>
+                <div id="combat-scoreboard" class="combat-scoreboard"></div>
+                <div id="combat-log" onclick="toggleCombatLogExpand()"></div>
                 <div class="combat-results" id="combat-results">
                     <div class="results-title" id="results-title">Victory!</div>
                     <div class="results-stars" id="results-stars"></div>
@@ -872,7 +1013,6 @@ body {
                     <button class="btn-primary mt-md" onclick="uiNextWave()">Start Next Wave</button>
                 </div>
             </div>
-            <div id="combat-log"></div>
         </div>
     </div>
 
