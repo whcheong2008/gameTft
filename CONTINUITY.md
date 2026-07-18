@@ -14,7 +14,13 @@
 >   encounter mechanics, lore Codex, endless mode (The Abyss), 4 challenge modes, balance pass
 >   (`tests/balance-sim.js` + `BALANCE-REPORT.md`), bond fix (bonds NEVER worked before — BUGS #6/#7),
 >   minion-spawn crash fix, region star scaling, boss difficulty pass. Suite: 139 cases green.
-> - Phase 3 IN PROGRESS: renderer abstraction → PixiJS arena (prompts 67+).
+> - Phase 3 DONE (`v0.8.0-arena`, prompts 67-71): combat logic fully DOM-decoupled behind a renderer
+>   interface; PixiJS v8 renderer (vendored `js/vendor/pixi.min.js`) is the ONLY renderer (DOM
+>   renderer deleted; WebGL required); hex grid migration (`js/grid.js` owns all spatial math);
+>   angled TFT-style camera + per-region procedural backdrops; canvas-first combat layout;
+>   team builder + wave repositioning happen on the Pixi arena. Suite: 168 cases green.
+> - Phase 4 IN PROGRESS: VFX framework + spectacle (prompts 72+). Phase 5 art pipeline starting in
+>   parallel (ComfyUI on this machine, anchors → portraits → rigs per MASTERPLAN).
 > - Dev server for verification: `node scripts/serve.js` → http://localhost:8123 (no-cache headers;
 >   file:// caching serves stale js — don't verify via file://). NOTE: `alert()`/`confirm()` freeze
 >   the embedded browser pane — shim them before driving the UI programmatically.
