@@ -1736,7 +1736,46 @@ function applySynergyBonuses(units, synergies, combatState) {
     }
 }
 
+// =============================================================================
+// Prompt 67: renderer event-emitting shims.
+//
+// Before this refactor these three functions WERE the DOM-drawing code
+// (defined in ui-combat.js) and every combat-*.js call site invoked them
+// directly -- logic reaching straight into the DOM. They now live here in
+// the logic layer as thin combatEvents emitters with the exact same names
+// and call signatures, so every existing call site throughout combat-
+// abilities.js / combat-legendary.js / combat-damage.js / combat-status.js /
+// combat-boss.js / combat-encounters.js needed ZERO changes. The real DOM
+// implementations moved to js/render-dom.js under different internal names
+// (domSpawnDamageNumber / domFlashAbilityCells) and are wired up as
+// combatEvents listeners by the DOM renderer's init() -- see RENDER_DOM in
+// render-dom.js. addLogEntry (the #combat-log DOM writer) stays in
+// ui-combat.js as screen chrome; it now runs off a 'logMessage' listener
+// instead of being called directly from here.
+//
+// combatEvents.emit() is a no-op when nothing is listening (see
+// combat-events.js), so this is exactly as headless-safe as the old
+// `typeof spawnDamageNumber === 'function'` guards the call sites used to
+// carry -- no renderer needs to be registered for combat to run.
+// =============================================================================
+
+function spawnDamageNumber(row, col, text, type) {
+    if (combatState && combatState.autoBattle) return;
+    if (typeof combatEvents !== 'undefined') {
+        combatEvents.emit('floatingText', { row: row, col: col, text: text, type: type });
+    }
+}
+
+function flashAbilityCells(cells, color, duration) {
+    if (combatState && combatState.autoBattle) return;
+    if (typeof combatEvents !== 'undefined') {
+        combatEvents.emit('abilityFlash', { cells: cells, color: color, duration: duration });
+    }
+}
+
 // Bridge for combat.js log
 function addCombatLog(msg) {
-    addLogEntry(msg, 'combat');
+    if (typeof combatEvents !== 'undefined') {
+        combatEvents.emit('logMessage', { text: msg, cls: 'combat' });
+    }
 }

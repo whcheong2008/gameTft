@@ -179,31 +179,13 @@ function runFullBenchmark() {
     return results;
 }
 
-function renderBenchmarkTable(results, containerId) {
-    var container = document.getElementById(containerId);
-    if (!container) return;
-
-    var html = '<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse; width:100%; font-size:13px;">';
-    html += '<tr style="background:#333; color:#fff;"><th>#</th><th>Unit</th><th>Tier</th><th>Archetype</th><th>Element</th><th>Single DPS</th><th>AoE DPS</th><th>Survival</th><th>Power Rating</th><th>Combat Rating</th><th>Healing</th></tr>';
-
-    for (var i = 0; i < results.length; i++) {
-        var r = results[i];
-        var bg = i % 2 === 0 ? '#1a1a2e' : '#16213e';
-        html += '<tr style="background:' + bg + ';">';
-        html += '<td>' + (i + 1) + '</td>';
-        html += '<td>' + r.unitName + '</td>';
-        html += '<td>' + r.tier + '</td>';
-        html += '<td>' + r.archetype + '</td>';
-        html += '<td>' + r.element + '</td>';
-        html += '<td>' + r.singleDPS + '</td>';
-        html += '<td>' + (r.aoeDPS || '-') + '</td>';
-        html += '<td>' + r.survivalTime + 's</td>';
-        html += '<td>' + r.powerRating + '</td>';
-        html += '<td style="font-weight:bold;">' + r.combatRating + '</td>';
-        html += '<td>' + (r.healingDone > 0 ? r.healingDone : '-') + '</td>';
-        html += '</tr>';
-    }
-
-    html += '</table>';
-    container.innerHTML = html;
-}
+// Prompt 67 (combat renderer abstraction) audit: renderBenchmarkTable() used
+// to live here, but it was a DOM-table renderer (getElementById + innerHTML)
+// for the standalone benchmark.html dev tool -- the source-scan acceptance
+// test added by this refactor (tests/test-renderer-boundary.js) requires
+// zero references to the global DOM object anywhere under js/combat-*.js,
+// and this file matches that glob even though it isn't part of the game's
+// combat engine (it isn't loaded by game-v2.html at all -- see the file
+// header comment). Moved verbatim, unchanged, into benchmark.html's own
+// inline <script> block so this file stays pure data/calculation, matching
+// every other combat-*.js file.
