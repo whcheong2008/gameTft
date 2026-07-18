@@ -144,27 +144,14 @@ function tickCombatEncounterMechanics(cs, dt) {
 // ==================== Shared helpers ====================
 
 // Bounded BFS for an empty cell within [rowMin, rowMax] (inclusive), so
-// injected units stay on the correct side of the board.
+// injected units stay on the correct side of the board. Prompt 69 hex
+// migration: this used to be its own 4-dir square BFS copy (identical in
+// shape to combat-core.js's now-deleted findEmptyCellNear() body); both are
+// now the single grid.js findEmptyCellNear(row,col,grid,rowMin,rowMax),
+// which walks hexNeighbors() instead of a fixed 4-dir offset table. Kept as
+// a thin same-name wrapper so every call site in this file is unchanged.
 function findEmptyCellInRows(row, col, grid, rowMin, rowMax) {
-    var visited = {};
-    var queue = [{ r: row, c: col }];
-    visited[row + ',' + col] = true;
-    while (queue.length > 0) {
-        var cell = queue.shift();
-        if (cell.r >= rowMin && cell.r <= rowMax && cell.c >= 0 && cell.c < 7) {
-            if (!grid[cell.r][cell.c]) return { row: cell.r, col: cell.c };
-        }
-        var dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]];
-        for (var d = 0; d < dirs.length; d++) {
-            var nr = cell.r + dirs[d][0], nc = cell.c + dirs[d][1];
-            var key = nr + ',' + nc;
-            if (!visited[key] && nr >= rowMin && nr <= rowMax && nc >= 0 && nc < 7) {
-                visited[key] = true;
-                queue.push({ r: nr, c: nc });
-            }
-        }
-    }
-    return null;
+    return findEmptyCellNear(row, col, grid, rowMin, rowMax);
 }
 
 // Minimal init for a synthetic (non-templated) combat entity -- structures

@@ -148,21 +148,46 @@ function pixiMaybeRebuildGrid() {
     pixiBuildGrid();
 }
 
+// Pointy-top hexagon vertex offsets from a cell's center, sized to the
+// cellW x cellH bounding box cellToPixel() spaces cells at (flat left/right
+// edges at x=+-cellW/2 for the E/W neighbors, vertex points at y=+-cellH/2
+// for the N/S-less top/bottom). Not necessarily a perfectly regular hexagon
+// (cellW/cellH aren't forced into the sqrt(3)/2 ratio a true regular hex
+// needs -- they're independently derived from the container's pixel
+// dimensions) but it tiles edge-to-edge correctly under cellToPixel()'s
+// spacing, which is what actually matters for Phase 3.3 placeholder art
+// (real hex tile art is a Phase 3.4 concern per MASTERPLAN.md).
+function pixiHexPoints(cx, cy, cellW, cellH) {
+    var hw = cellW / 2, qh = cellH / 4, hh = cellH / 2;
+    return [
+        cx, cy - hh,
+        cx + hw, cy - qh,
+        cx + hw, cy + qh,
+        cx, cy + hh,
+        cx - hw, cy + qh,
+        cx - hw, cy - qh
+    ];
+}
+
 function pixiBuildGrid() {
     pixiDestroyAllChildren(PIXI_R.gridLayer);
     var g = new PIXI.Graphics();
     for (var r = 0; r < PIXI_ROWS; r++) {
         for (var c = 0; c < PIXI_COLS; c++) {
-            var x = c * PIXI_R.cellW;
-            var y = r * PIXI_R.cellH;
+            var topLeft = cellToPixel(r, c, PIXI_R.cellW, PIXI_R.cellH);
+            var cx = topLeft.x + PIXI_R.cellW / 2;
+            var cy = topLeft.y + PIXI_R.cellH / 2;
             var fill = r <= 3 ? 0x1a0a0a : 0x0a1628;
-            g.rect(x + 1, y + 1, PIXI_R.cellW - 2, PIXI_R.cellH - 2)
+            g.poly(pixiHexPoints(cx, cy, PIXI_R.cellW * 0.92, PIXI_R.cellH * 0.92))
                 .fill({ color: fill, alpha: 0.6 })
                 .stroke({ width: 1, color: 0x333333, alpha: 0.5 });
         }
     }
     // Row 4 divider (enemy/player split), matching render-dom.js's border-top.
-    g.rect(0, 4 * PIXI_R.cellH - 1, PIXI_COLS * PIXI_R.cellW, 2).fill({ color: 0x555555, alpha: 0.8 });
+    // Spans the full packed hex board width/height rather than the old
+    // square PIXI_COLS*cellW (odd rows extend cellW/2 further right).
+    var dividerY = cellToPixel(4, 0, PIXI_R.cellW, PIXI_R.cellH).y - 1;
+    g.rect(0, dividerY, PIXI_COLS * PIXI_R.cellW + PIXI_R.cellW / 2, 2).fill({ color: 0x555555, alpha: 0.8 });
     PIXI_R.gridLayer.addChild(g);
 }
 
@@ -189,8 +214,9 @@ function pixiDrawDeathMarkers(combatState) {
             style: { fontSize: Math.floor(PIXI_R.cellH * 0.5), fill: 0xffffff }
         });
         t.alpha = 0.2;
-        t.x = c * PIXI_R.cellW + PIXI_R.cellW / 2;
-        t.y = r * PIXI_R.cellH + PIXI_R.cellH / 2;
+        var markerPos = cellToPixel(r, c, PIXI_R.cellW, PIXI_R.cellH);
+        t.x = markerPos.x + PIXI_R.cellW / 2;
+        t.y = markerPos.y + PIXI_R.cellH / 2;
         PIXI_R.markerLayer.addChild(t);
     }
 }
@@ -318,10 +344,24 @@ function pixiUpdateMovement(vis, unit, dtMs) {
             vis.row = vis.segRowT;
             vis.col = vis.segColT;
             vis.segDuration = 0;
+            vis._lerpPx = null;
         } else {
-            vis.row = pixiLerp(vis.segRow0, vis.segRowT, t);
-            vis.col = pixiLerp(vis.segCol0, vis.segColT, t);
+            // Prompt 69 hex migration: lerp in PIXEL space (via cellToPixel()
+            // at the two integer endpoints), not raw fractional row/col.
+            // odd-r's per-row x-offset is a step function of row parity, so
+            // lerping fractional row/col and converting afterward would snap
+            // sideways mid-transition on any move crossing an odd/even row
+            // boundary -- lerping the already-converted pixel endpoints
+            // avoids that entirely. vis.row/vis.col are left at their
+            // pre-segment (start) values during the transition; they only
+            // matter as jump-distance inputs above, not for positioning.
+            var segP0 = cellToPixel(vis.segRow0, vis.segCol0, PIXI_R.cellW, PIXI_R.cellH);
+            var segPT = cellToPixel(vis.segRowT, vis.segColT, PIXI_R.cellW, PIXI_R.cellH);
+            vis._lerpPx = pixiLerp(segP0.x, segPT.x, t);
+            vis._lerpPy = pixiLerp(segP0.y, segPT.y, t);
         }
+    } else {
+        vis._lerpPx = null;
     }
 }
 
@@ -337,8 +377,27 @@ function pixiRedrawToken(vis, unit, dtMs) {
     vis.container.visible = alive;
     if (!alive) return;
 
-    vis.container.x = vis.col * PIXI_R.cellW + (PIXI_R.cellW * span) / 2;
-    vis.container.y = vis.row * PIXI_R.cellH + (PIXI_R.cellH * span) / 2;
+    if (unit.isBoss) {
+        // Center over the boss's 4 grid.js-canonical bossCells() (a hex
+        // rhombus, not a square 2x2 block) by averaging their cell centers --
+        // bosses don't move mid-combat in this engine (no dash/knockback
+        // path targets isBoss units), so vis.row/vis.col are always the
+        // boss's exact anchor cell, no lerp needed here.
+        var bCells = bossCells(vis.row, vis.col);
+        var sumX = 0, sumY = 0;
+        for (var bci = 0; bci < bCells.length; bci++) {
+            var bp = cellToPixel(bCells[bci].row, bCells[bci].col, PIXI_R.cellW, PIXI_R.cellH);
+            sumX += bp.x + PIXI_R.cellW / 2;
+            sumY += bp.y + PIXI_R.cellH / 2;
+        }
+        vis.container.x = sumX / bCells.length;
+        vis.container.y = sumY / bCells.length;
+    } else {
+        var pos = (vis._lerpPx !== null && vis._lerpPx !== undefined) ?
+            { x: vis._lerpPx, y: vis._lerpPy } : cellToPixel(vis.row, vis.col, PIXI_R.cellW, PIXI_R.cellH);
+        vis.container.x = pos.x + PIXI_R.cellW / 2;
+        vis.container.y = pos.y + PIXI_R.cellH / 2;
+    }
     // Painter's order tie-break: per the Prompt 68 spec, lower rows draw
     // above higher rows -- larger zIndex wins in Pixi's sortableChildren.
     vis.container.zIndex = 1000 - unit.gridRow;
@@ -454,8 +513,9 @@ function pixiSpawnFloatingText(payload) {
         anchor: 0.5,
         style: { fontSize: big ? 16 : 12, fill: color, fontWeight: 'bold', stroke: { color: 0x000000, width: 2 } }
     });
-    t.x = payload.col * PIXI_R.cellW + PIXI_R.cellW / 2 + (pixiRngNext() - 0.5) * PIXI_R.cellW * 0.4;
-    t.y = payload.row * PIXI_R.cellH + PIXI_R.cellH / 2;
+    var floatPos = cellToPixel(payload.row, payload.col, PIXI_R.cellW, PIXI_R.cellH);
+    t.x = floatPos.x + PIXI_R.cellW / 2 + (pixiRngNext() - 0.5) * PIXI_R.cellW * 0.4;
+    t.y = floatPos.y + PIXI_R.cellH / 2;
     t._pixiFloatAge = 0;
     PIXI_R.floatLayer.addChild(t);
 }
@@ -484,7 +544,9 @@ function pixiFlashCells(payload) {
     var g = new PIXI.Graphics();
     for (var i = 0; i < payload.cells.length; i++) {
         var cell = payload.cells[i];
-        g.rect(cell.col * PIXI_R.cellW + 1, cell.row * PIXI_R.cellH + 1, PIXI_R.cellW - 2, PIXI_R.cellH - 2)
+        var flashTopLeft = cellToPixel(cell.row, cell.col, PIXI_R.cellW, PIXI_R.cellH);
+        var fcx = flashTopLeft.x + PIXI_R.cellW / 2, fcy = flashTopLeft.y + PIXI_R.cellH / 2;
+        g.poly(pixiHexPoints(fcx, fcy, PIXI_R.cellW * 0.9, PIXI_R.cellH * 0.9))
             .fill({ color: pixiColorStringToHex(payload.color), alpha: 0.35 });
     }
     PIXI_R.fxLayer.addChild(g);
@@ -583,8 +645,16 @@ function pixiSizeBoard() {
     var boardEl = PIXI_R.boardEl;
     var w = boardEl.clientWidth || boardEl.offsetWidth || 490;
     var h = boardEl.clientHeight || boardEl.offsetHeight || 320;
-    PIXI_R.cellW = w / PIXI_COLS;
-    PIXI_R.cellH = h / PIXI_ROWS;
+    // Prompt 69 hex migration: a packed hex board's actual content footprint
+    // is NOT PIXI_COLS*cellW x PIXI_ROWS*cellH like the old square grid --
+    // odd rows extend an extra cellW/2 to the right (odd-r offset), and rows
+    // pack at 0.75*cellH vertically (cellToPixel()'s row spacing), so the
+    // full board is (COLS+0.5) cells wide and ((ROWS-1)*0.75 + 1) cells tall.
+    // Dividing by those instead of the raw col/row counts sizes cells so the
+    // packed hex board actually fills the container, instead of leaving a
+    // dead gap at the right/bottom the way a naive w/COLS, h/ROWS would.
+    PIXI_R.cellW = w / (PIXI_COLS + 0.5);
+    PIXI_R.cellH = h / ((PIXI_ROWS - 1) * 0.75 + 1);
 }
 
 function pixiEnsureApp() {

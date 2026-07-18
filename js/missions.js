@@ -60,10 +60,16 @@ var STAGES = [
         id: 'r1_s3', region: 1, name: 'The Crossing', stageNumber: 3, stageType: 'gameplay',
         description: 'Stronger creatures guard the ancient bridge. Cost-2 enemies appear for the first time.',
         requiredLevel: 2, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
+        // Prompt 69 (hex migration rebalance): 3,5,5 -> 3,3,4. Hex melee (6
+        // adjacent attackers vs 4) systematically strengthened enemy gangs
+        // against R1's tiny 3-unit 1-star reference team; this stage fell
+        // 43% -> 14% clear rate on the sim. Budget-only trim per the melee-
+        // band exception in prompts/69-hex-migration.md (counts/maxCost
+        // untouched); re-verified at 57%.
         waves: [
             { budget: 3, maxCost: 2, count: 2 },
-            { budget: 5, maxCost: 2, count: 3 },
-            { budget: 5, maxCost: 2, count: 3 }
+            { budget: 3, maxCost: 2, count: 3 },
+            { budget: 4, maxCost: 2, count: 3 }
         ],
         rewards: { ve: 200, xp: 80, unitDrops: 2 },
         dropWeights: { t1: 70, t2: 30 }
@@ -108,10 +114,17 @@ var STAGES = [
         id: 'r1_s7', region: 1, name: 'Otho\'s Notes', stageNumber: 7, stageType: 'story',
         description: 'Voidspawn emergence near the Veilborn quarter. Clue #1 — the precision of the attacks.',
         requiredLevel: 3, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
+        // Prompt 69 (hex migration rebalance): 5,6,6 -> 3,4,4. Same hex-melee
+        // band effect as r1_s3 (43% -> 29% clear rate); budget-only trim
+        // (counts/maxCost untouched). A gentler first attempt (4,5,5) still
+        // walled at 29% -- this stage sits right before r1_s8 in the
+        // difficulty curve and the reference team hits it with whatever
+        // losses R1's attrition already cost, so it needed the deeper cut
+        // to get back to its exact pre-hex 43% clear rate.
         waves: [
-            { budget: 5, maxCost: 2, count: 3 },
-            { budget: 6, maxCost: 2, count: 3 },
-            { budget: 6, maxCost: 2, count: 3 }
+            { budget: 3, maxCost: 2, count: 3 },
+            { budget: 4, maxCost: 2, count: 3 },
+            { budget: 4, maxCost: 2, count: 3 }
         ],
         rewards: { ve: 200, xp: 80, unitDrops: 2 },
         dropWeights: { t1: 70, t2: 30 }
@@ -1166,7 +1179,15 @@ var BOSS_DATA = {
         emoji: '👁️',
         element: null,
         size: [2, 2],
-        baseHp: 5000,
+        // Prompt 69 (hex migration rebalance): baseHp 5000 -> 4800 (-4%), the
+        // minimal numeric nudge (BOSS_DATA data value only, mechanics
+        // untouched -- same lever Prompt 66 used to tune this same boss).
+        // Ground Slam's radius-2 AoE grew from a 13-cell Manhattan diamond to
+        // a 19-cell hex disc in the hex migration, which flipped the
+        // deterministic R1-reference-team fight from a 1-of-3-survivor win to
+        // a loss with the boss at 0.4% HP. This restores a win that is still
+        // razor-close (verified via tests/balance-sim.js).
+        baseHp: 4800,
         hpScaling: 2,
         baseAtk: 16,
         atkScaling: 1.0,

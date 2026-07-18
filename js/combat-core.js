@@ -627,7 +627,7 @@ function applyEnemyElementBonuses(enemies, elemCounts) {
 function getUnitsInRadius(centerRow, centerCol, radius, pool) {
     var result = [];
     for (var i = 0; i < pool.length; i++) {
-        if (pool[i].hp > 0 && getManhattanDist(centerRow, centerCol, pool[i].gridRow, pool[i].gridCol) <= radius) {
+        if (pool[i].hp > 0 && hexDistance(centerRow, centerCol, pool[i].gridRow, pool[i].gridCol) <= radius) {
             result.push(pool[i]);
         }
     }
@@ -669,7 +669,7 @@ function getFurthestEnemy(caster, pool) {
     var best = null, bestDist = -1;
     for (var i = 0; i < pool.length; i++) {
         if (pool[i].hp > 0) {
-            var d = getManhattanDist(caster.gridRow, caster.gridCol, pool[i].gridRow, pool[i].gridCol);
+            var d = hexDistance(caster.gridRow, caster.gridCol, pool[i].gridRow, pool[i].gridCol);
             if (d > bestDist) { bestDist = d; best = pool[i]; }
         }
     }
@@ -685,13 +685,15 @@ function getLowestHpEnemy(pool) {
 }
 
 function moveUnitToCell(unit, row, col, grid) {
-    // Clear old position(s)
+    // Clear old position(s). Boss cells are the grid.js-canonical 4-cell
+    // rhombus (bossCells()) rather than a bossSize[0]x[1] square loop -- see
+    // grid.js's bossCells() comment for why this is "define once, use
+    // everywhere" for a boss's occupied cells on the hex board.
     if (unit.isBoss && unit.bossSize) {
-        for (var br = 0; br < unit.bossSize[0]; br++) {
-            for (var bc = 0; bc < unit.bossSize[1]; bc++) {
-                var or = unit.gridRow + br, oc = unit.gridCol + bc;
-                if (grid[or] && grid[or][oc] === unit) grid[or][oc] = null;
-            }
+        var oldCells = bossCells(unit.gridRow, unit.gridCol);
+        for (var oi = 0; oi < oldCells.length; oi++) {
+            var oc = oldCells[oi];
+            if (grid[oc.row] && grid[oc.row][oc.col] === unit) grid[oc.row][oc.col] = null;
         }
     } else {
         if (grid[unit.gridRow] && grid[unit.gridRow][unit.gridCol] === unit) {
@@ -701,50 +703,25 @@ function moveUnitToCell(unit, row, col, grid) {
     unit.gridRow = row;
     unit.gridCol = col;
     if (unit.isBoss && unit.bossSize) {
-        for (var br = 0; br < unit.bossSize[0]; br++) {
-            for (var bc = 0; bc < unit.bossSize[1]; bc++) {
-                if (grid[row + br]) grid[row + br][col + bc] = unit;
-            }
+        var newCells = bossCells(row, col);
+        for (var ni = 0; ni < newCells.length; ni++) {
+            var nc = newCells[ni];
+            if (grid[nc.row]) grid[nc.row][nc.col] = unit;
         }
     } else {
         if (grid[row]) grid[row][col] = unit;
     }
 }
 
-function findEmptyCellNear(row, col, grid) {
-    var visited = {};
-    var queue = [{r: row, c: col}];
-    visited[row + ',' + col] = true;
-    while (queue.length > 0) {
-        var cell = queue.shift();
-        if (cell.r >= 0 && cell.r < 8 && cell.c >= 0 && cell.c < 7) {
-            if (!grid[cell.r][cell.c]) return {row: cell.r, col: cell.c};
-        }
-        var dirs = [[0,1],[0,-1],[1,0],[-1,0]];
-        for (var d = 0; d < dirs.length; d++) {
-            var nr = cell.r + dirs[d][0], nc = cell.c + dirs[d][1];
-            var key = nr + ',' + nc;
-            if (!visited[key] && nr >= 0 && nr < 8 && nc >= 0 && nc < 7) {
-                visited[key] = true;
-                queue.push({r: nr, c: nc});
-            }
-        }
-    }
-    return null;
-}
+// findEmptyCellNear() is now defined once in grid.js (BFS via hexNeighbors(),
+// same {row,col,grid,rowMin,rowMax} contract every call site here already
+// used) -- no wrapper needed; every existing call site in this file keeps
+// calling findEmptyCellNear(row, col, grid) unmodified.
 
 // ---- Boss Combat AI ----
 
 function getCellsInRadius(centerRow, centerCol, radius) {
-    var cells = [];
-    for (var r = centerRow - radius; r <= centerRow + radius; r++) {
-        for (var c = centerCol - radius; c <= centerCol + radius; c++) {
-            if (r >= 0 && r < 8 && c >= 0 && c < 7 && getManhattanDist(centerRow, centerCol, r, c) <= radius) {
-                cells.push({row: r, col: c});
-            }
-        }
-    }
-    return cells;
+    return cellsInRange(centerRow, centerCol, radius);
 }
 
 function getHighestAtkUnits(pool, count) {
@@ -789,7 +766,7 @@ function findNearestAlly(unit, allies) {
     var best = null, bestDist = 999;
     for (var i = 0; i < allies.length; i++) {
         if (allies[i] !== unit && allies[i].hp > 0) {
-            var d = getManhattanDist(unit.gridRow, unit.gridCol, allies[i].gridRow, allies[i].gridCol);
+            var d = hexDistance(unit.gridRow, unit.gridCol, allies[i].gridRow, allies[i].gridCol);
             if (d < bestDist) { bestDist = d; best = allies[i]; }
         }
     }
@@ -798,11 +775,10 @@ function findNearestAlly(unit, allies) {
 
 function getDistToBoss(unit, boss) {
     var minDist = 999;
-    for (var br = 0; br < boss.bossSize[0]; br++) {
-        for (var bc = 0; bc < boss.bossSize[1]; bc++) {
-            var d = getManhattanDist(unit.gridRow, unit.gridCol, boss.gridRow + br, boss.gridCol + bc);
-            if (d < minDist) minDist = d;
-        }
+    var cells = bossCells(boss.gridRow, boss.gridCol);
+    for (var i = 0; i < cells.length; i++) {
+        var d = hexDistance(unit.gridRow, unit.gridCol, cells[i].row, cells[i].col);
+        if (d < minDist) minDist = d;
     }
     return minDist;
 }
@@ -840,12 +816,11 @@ function combatTick(dt) {
                 combatState.deathMarkers[du.gridRow + ',' + du.gridCol] = '\ud83d\udc80';
                 // Remove from grid
                 if (du.isBoss && du.bossSize) {
-                    for (var dbr = 0; dbr < du.bossSize[0]; dbr++) {
-                        for (var dbc = 0; dbc < du.bossSize[1]; dbc++) {
-                            var ddr = du.gridRow + dbr, ddc = du.gridCol + dbc;
-                            if (combatState.grid[ddr] && combatState.grid[ddr][ddc] === du) {
-                                combatState.grid[ddr][ddc] = null;
-                            }
+                    var deathCells = bossCells(du.gridRow, du.gridCol);
+                    for (var dci = 0; dci < deathCells.length; dci++) {
+                        var ddc2 = deathCells[dci];
+                        if (combatState.grid[ddc2.row] && combatState.grid[ddc2.row][ddc2.col] === du) {
+                            combatState.grid[ddc2.row][ddc2.col] = null;
                         }
                     }
                 } else if (combatState.grid[du.gridRow] && combatState.grid[du.gridRow][du.gridCol] === du) {
@@ -1225,12 +1200,11 @@ function combatTick(dt) {
         var cu = allUnits[ck];
         if (cu.hp <= 0 && cu.deathComplete) {
             if (cu.isBoss && cu.bossSize) {
-                for (var br = 0; br < cu.bossSize[0]; br++) {
-                    for (var bc = 0; bc < cu.bossSize[1]; bc++) {
-                        var ddr2 = cu.gridRow + br, ddc2 = cu.gridCol + bc;
-                        if (combatState.grid[ddr2] && combatState.grid[ddr2][ddc2] === cu) {
-                            combatState.grid[ddr2][ddc2] = null;
-                        }
+                var cleanupCells = bossCells(cu.gridRow, cu.gridCol);
+                for (var cci = 0; cci < cleanupCells.length; cci++) {
+                    var ccc = cleanupCells[cci];
+                    if (combatState.grid[ccc.row] && combatState.grid[ccc.row][ccc.col] === cu) {
+                        combatState.grid[ccc.row][ccc.col] = null;
                     }
                 }
             } else if (combatState.grid[cu.gridRow] && combatState.grid[cu.gridRow][cu.gridCol] === cu) {
@@ -1287,7 +1261,7 @@ function findTarget(unit, enemies) {
         return findClosestByGrid(unit, alive);
     }
 
-    // Default: closest enemy by Manhattan distance
+    // Default: closest enemy by hex distance
     return findClosestByGrid(unit, alive);
 }
 
@@ -1296,7 +1270,7 @@ function findClosestByGrid(unit, targets) {
     var bestDist = 999;
     for (var i = 0; i < targets.length; i++) {
         var t = targets[i];
-        var dist = (t.isBoss && t.bossSize) ? getDistToBoss(unit, t) : getManhattanDist(unit.gridRow, unit.gridCol, t.gridRow, t.gridCol);
+        var dist = (t.isBoss && t.bossSize) ? getDistToBoss(unit, t) : hexDistance(unit.gridRow, unit.gridCol, t.gridRow, t.gridCol);
         if (dist < bestDist || (dist === bestDist && best && (t.gridRow < best.gridRow || (t.gridRow === best.gridRow && t.gridCol < best.gridCol)))) {
             bestDist = dist;
             best = t;
@@ -1329,86 +1303,24 @@ function getMoveSpeed(unit) {
     return base;
 }
 
-function getManhattanDist(r1, c1, r2, c2) {
-    return Math.abs(r1 - r2) + Math.abs(c1 - c2);
-}
-
 function isInRange(attacker, target) {
     var range = getAttackRange(attacker);
     if (target.isBoss && target.bossSize) {
         return getDistToBoss(attacker, target) <= range;
     }
-    var dist = getManhattanDist(attacker.gridRow, attacker.gridCol, target.gridRow, target.gridCol);
+    var dist = hexDistance(attacker.gridRow, attacker.gridCol, target.gridRow, target.gridCol);
     return dist <= range;
 }
 
+// findPathNextStep() is now a thin wrapper over grid.js's findPathBFS() (BFS
+// via hexNeighbors(), same "destination is reachable even if occupied by the
+// target, next-step return contract" this function always had) -- kept under
+// its original name since every call site (moveUnit() below, and the golden/
+// test-grid.js suites) already calls it that way.
 function findPathNextStep(grid, fromRow, fromCol, toRow, toCol) {
-    // BFS on 8x7 grid, returns {row, col} of next step or null
-    if (fromRow === toRow && fromCol === toCol) return null;
-
-    var rows = 8, cols = 7;
-    var visited = [];
-    for (var r = 0; r < rows; r++) {
-        visited[r] = [];
-        for (var c = 0; c < cols; c++) {
-            visited[r][c] = false;
-        }
-    }
-
-    // parent[r][c] = {row, col} of the cell we came from
-    var parent = [];
-    for (var r2 = 0; r2 < rows; r2++) {
-        parent[r2] = [];
-        for (var c2 = 0; c2 < cols; c2++) {
-            parent[r2][c2] = null;
-        }
-    }
-
-    var queue = [{row: fromRow, col: fromCol}];
-    visited[fromRow][fromCol] = true;
-
-    var dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]]; // right, left, down, up
-
-    while (queue.length > 0) {
-        var cur = queue.shift();
-
-        for (var d = 0; d < dirs.length; d++) {
-            var nr = cur.row + dirs[d][0];
-            var nc = cur.col + dirs[d][1];
-
-            if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
-            if (visited[nr][nc]) continue;
-
-            // Destination cell is allowed even if occupied (by the target)
-            if (nr === toRow && nc === toCol) {
-                // Trace back to find first step
-                var path = {row: nr, col: nc};
-                var prev = cur;
-                while (prev.row !== fromRow || prev.col !== fromCol) {
-                    path = {row: prev.row, col: prev.col};
-                    prev = parent[prev.row][prev.col];
-                }
-                // path is now the first step from start
-                if (path.row === toRow && path.col === toCol) {
-                    // Target cell is adjacent — only move there if it's not occupied by someone else
-                    if (grid[nr][nc] && grid[nr][nc].hp > 0) {
-                        // Can't move into an occupied destination; return the step before
-                        return null; // already adjacent, no move needed
-                    }
-                }
-                return path;
-            }
-
-            // Cell must be empty to pass through
-            if (grid[nr][nc] && grid[nr][nc].hp > 0) continue;
-
-            visited[nr][nc] = true;
-            parent[nr][nc] = cur;
-            queue.push({row: nr, col: nc});
-        }
-    }
-
-    return null; // No path found
+    return findPathBFS(fromRow, fromCol, toRow, toCol, function(r, c) {
+        return !!(grid[r] && grid[r][c] && grid[r][c].hp > 0);
+    });
 }
 
 function moveUnit(unit, grid) {
@@ -1451,24 +1363,23 @@ function performAssassinDash(unit, grid, enemyPool) {
         var bestDist = 999;
         for (var j = 0; j < enemyPool.length; j++) {
             if (enemyPool[j].hp <= 0) continue;
-            var d = getManhattanDist(unit.gridRow, unit.gridCol, enemyPool[j].gridRow, enemyPool[j].gridCol);
+            var d = hexDistance(unit.gridRow, unit.gridCol, enemyPool[j].gridRow, enemyPool[j].gridCol);
             if (d < bestDist) { bestDist = d; target = enemyPool[j]; }
         }
     }
 
     if (!target) return;
 
-    // Find empty cell adjacent to target, prefer closest to unit's starting position
-    var dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+    // Find empty cell adjacent to target (hexNeighbors -- 6-neighborhood),
+    // prefer closest to unit's starting position.
+    var candidates = hexNeighbors(target.gridRow, target.gridCol);
     var bestCell = null;
     var bestCellDist = 999;
 
-    for (var d = 0; d < dirs.length; d++) {
-        var ar = target.gridRow + dirs[d][0];
-        var ac = target.gridCol + dirs[d][1];
-        if (ar < 0 || ar >= 8 || ac < 0 || ac >= 7) continue;
+    for (var d = 0; d < candidates.length; d++) {
+        var ar = candidates[d].row, ac = candidates[d].col;
         if (grid[ar][ac] && grid[ar][ac].hp > 0) continue; // occupied
-        var distFromStart = getManhattanDist(unit.gridRow, unit.gridCol, ar, ac);
+        var distFromStart = hexDistance(unit.gridRow, unit.gridCol, ar, ac);
         if (distFromStart < bestCellDist) {
             bestCellDist = distFromStart;
             bestCell = {row: ar, col: ac};
@@ -1510,15 +1421,10 @@ function buildCombatGrid(playerUnits, enemyUnits) {
         var eu = enemyUnits[e];
         if (eu.hp > 0) {
             if (eu.isBoss && eu.bossSize) {
-                // Place 2x2 boss across all occupied cells
-                for (var br = 0; br < eu.bossSize[0]; br++) {
-                    for (var bc = 0; bc < eu.bossSize[1]; bc++) {
-                        var bRow = eu.gridRow + br;
-                        var bCol = eu.gridCol + bc;
-                        if (bRow >= 0 && bRow < 8 && bCol >= 0 && bCol < 7) {
-                            grid[bRow][bCol] = eu;
-                        }
-                    }
+                // Place the boss across its 4 grid.js-canonical cells (bossCells()).
+                var placeCells = bossCells(eu.gridRow, eu.gridCol);
+                for (var pci = 0; pci < placeCells.length; pci++) {
+                    grid[placeCells[pci].row][placeCells[pci].col] = eu;
                 }
             } else {
                 grid[eu.gridRow][eu.gridCol] = eu;

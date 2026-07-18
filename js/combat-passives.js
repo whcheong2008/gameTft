@@ -1,5 +1,20 @@
 // combat-passives.js -- innate passive framework + execution (split from main-v2.js)
 
+// Random hex neighbor for "teleport 1 cell in a random direction" passives
+// (void_wyrm, dimensional_dragon -- Prompt 69 hex migration judgment call:
+// the old square version picked from 8 directions incl. diagonals; hex has
+// exactly 6 neighbors, so this picks uniformly among hexNeighbors(row,col)
+// that are actually empty, rather than picking a direction blind and then
+// checking emptiness (the square version's dirs8 array included off-board/
+// occupied directions it just silently no-op'd on -- picking only from
+// already-empty neighbors keeps these passives from becoming no-ops more
+// often on hex, which has fewer neighbor slots to begin with).
+function passiveRandomEmptyNeighbor(row, col, grid) {
+    var candidates = hexNeighbors(row, col).filter(function(c) { return !grid[c.row][c.col]; });
+    if (candidates.length === 0) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
 // ---- Innate Passive Framework ----
 
 function getPassiveData(unit) {
@@ -314,7 +329,7 @@ function executeOnAttackPassive(attacker, target, passiveData, allUnits) {
             var nearestDist = 999;
             for (var j = 0; j < enemies.length; j++) {
                 if (enemies[j].hp > 0) {
-                    var d = getManhattanDist(attacker.gridRow, attacker.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                    var d = hexDistance(attacker.gridRow, attacker.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                     if (d < nearestDist) { nearestDist = d; nearestEnemy = enemies[j]; }
                 }
             }
@@ -344,7 +359,7 @@ function executeOnAttackPassive(attacker, target, passiveData, allUnits) {
         var hasLightningAlly = false;
         for (var j = 0; j < allies.length; j++) {
             if (allies[j] !== attacker && allies[j].hp > 0 && allies[j].element === 'lightning') {
-                var dist = getManhattanDist(attacker.gridRow, attacker.gridCol, allies[j].gridRow, allies[j].gridCol);
+                var dist = hexDistance(attacker.gridRow, attacker.gridCol, allies[j].gridRow, allies[j].gridCol);
                 if (dist <= 3) { hasLightningAlly = true; break; }
             }
         }
@@ -354,7 +369,7 @@ function executeOnAttackPassive(attacker, target, passiveData, allUnits) {
             // Chain 60 flat damage to 1 nearby enemy
             for (var j = 0; j < enemies.length; j++) {
                 if (enemies[j] !== target && enemies[j].hp > 0) {
-                    var cd = getManhattanDist(target.gridRow, target.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                    var cd = hexDistance(target.gridRow, target.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                     if (cd <= 2) {
                         dealDamage(attacker, enemies[j], 60, {isTrueDamage: true, canCrit: false, canDodge: false, applyElement: false, triggerOnHit: false});
                         break;
@@ -378,7 +393,7 @@ function executeOnAttackPassive(attacker, target, passiveData, allUnits) {
             // Chain to 1 nearby enemy
             for (var j = 0; j < enemies.length; j++) {
                 if (enemies[j] !== target && enemies[j].hp > 0) {
-                    var cd2 = getManhattanDist(target.gridRow, target.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                    var cd2 = hexDistance(target.gridRow, target.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                     if (cd2 <= 3) {
                         dealDamage(attacker, enemies[j], Math.floor(attacker.attack * 0.40), {isTrueDamage: true, canCrit: false, canDodge: false, applyElement: false, triggerOnHit: false});
                         break;
@@ -423,7 +438,7 @@ function executeOnAttackPassive(attacker, target, passiveData, allUnits) {
             var nearestDist2 = 999;
             for (var j = 0; j < enemies.length; j++) {
                 if (enemies[j].hp > 0) {
-                    var d2 = getManhattanDist(attacker.gridRow, attacker.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                    var d2 = hexDistance(attacker.gridRow, attacker.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                     if (d2 < nearestDist2) { nearestDist2 = d2; nearestEnemy2 = enemies[j]; }
                 }
             }
@@ -458,7 +473,7 @@ function executeOnAttackPassive(attacker, target, passiveData, allUnits) {
         for (var j = 0; j < allies.length; j++) {
             if (allies[j] !== attacker && allies[j].hp > 0 && allies[j].element === 'lightning') {
                 lightningAllyCount++;
-                var dist2 = getManhattanDist(attacker.gridRow, attacker.gridCol, allies[j].gridRow, allies[j].gridCol);
+                var dist2 = hexDistance(attacker.gridRow, attacker.gridCol, allies[j].gridRow, allies[j].gridCol);
                 if (dist2 <= 3) hasNearbyLightning = true;
             }
         }
@@ -482,7 +497,7 @@ function executeOnAttackPassive(attacker, target, passiveData, allUnits) {
             var chainCount = 0;
             for (var j = 0; j < enemies.length; j++) {
                 if (enemies[j] !== target && enemies[j].hp > 0 && chainCount < 2) {
-                    var cd3 = getManhattanDist(target.gridRow, target.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                    var cd3 = hexDistance(target.gridRow, target.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                     if (cd3 <= 3) {
                         dealDamage(attacker, enemies[j], Math.floor(attacker.attack * 0.60), {isTrueDamage: true, canCrit: false, canDodge: false, applyElement: false, triggerOnHit: false});
                         chainCount++;
@@ -534,7 +549,7 @@ function executeOnAttackPassive(attacker, target, passiveData, allUnits) {
         if (Math.random() < 0.18 && target && target.hp > 0) {
             for (var j = 0; j < enemies.length; j++) {
                 if (enemies[j] !== target && enemies[j].hp > 0) {
-                    var cd4 = getManhattanDist(target.gridRow, target.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                    var cd4 = hexDistance(target.gridRow, target.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                     if (cd4 <= 3) {
                         dealDamage(attacker, enemies[j], Math.floor(attacker.attack * 0.50), {isTrueDamage: true, canCrit: false, canDodge: false, applyElement: false, triggerOnHit: false});
                         break;
@@ -599,7 +614,7 @@ function executeOnAttackPassive(attacker, target, passiveData, allUnits) {
             var tmChainCount = 0;
             for (var j = 0; j < enemies.length; j++) {
                 if (enemies[j] !== target && enemies[j].hp > 0 && tmChainCount < 2) {
-                    var cd5 = getManhattanDist(target.gridRow, target.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                    var cd5 = hexDistance(target.gridRow, target.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                     if (cd5 <= 3) {
                         dealDamage(attacker, enemies[j], Math.floor(attacker.attack * 0.60), {isTrueDamage: true, canCrit: false, canDodge: false, applyElement: false, triggerOnHit: false});
                         tmChainCount++;
@@ -642,7 +657,7 @@ function executeOnAttackPassive(attacker, target, passiveData, allUnits) {
             var tsNearestDist = 999;
             for (var j = 0; j < enemies.length; j++) {
                 if (enemies[j].hp > 0) {
-                    var tsd = getManhattanDist(attacker.gridRow, attacker.gridCol, enemies[j].gridRow, enemies[j].gridCol);
+                    var tsd = hexDistance(attacker.gridRow, attacker.gridCol, enemies[j].gridRow, enemies[j].gridCol);
                     if (tsd < tsNearestDist) { tsNearestDist = tsd; tsNearestEnemy = enemies[j]; }
                 }
             }
@@ -690,13 +705,8 @@ function executeOnAttackPassive(attacker, target, passiveData, allUnits) {
             if (!attacker.passiveState.customData.teleportCooldowns) attacker.passiveState.customData.teleportCooldowns = {};
             var targetId = target.id || (target.gridRow + '_' + target.gridCol);
             if (!attacker.passiveState.customData.teleportCooldowns[targetId] || attacker.passiveState.customData.teleportCooldowns[targetId] <= 0) {
-                var dirs8 = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
-                var randDir = dirs8[Math.floor(Math.random() * dirs8.length)];
-                var newRow = target.gridRow + randDir[0];
-                var newCol = target.gridCol + randDir[1];
-                if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 7 && !combatState.grid[newRow][newCol]) {
-                    moveUnitToCell(target, newRow, newCol, combatState.grid);
-                }
+                var voidWyrmDest = passiveRandomEmptyNeighbor(target.gridRow, target.gridCol, combatState.grid);
+                if (voidWyrmDest) moveUnitToCell(target, voidWyrmDest.row, voidWyrmDest.col, combatState.grid);
                 attacker.passiveState.customData.teleportCooldowns[targetId] = 3;
             }
         }
@@ -735,7 +745,7 @@ function executeOnAttackPassive(attacker, target, passiveData, allUnits) {
             var stoSorted = [];
             for (var j = 0; j < enemies.length; j++) {
                 if (enemies[j].hp > 0) {
-                    stoSorted.push({unit: enemies[j], dist: getManhattanDist(attacker.gridRow, attacker.gridCol, enemies[j].gridRow, enemies[j].gridCol)});
+                    stoSorted.push({unit: enemies[j], dist: hexDistance(attacker.gridRow, attacker.gridCol, enemies[j].gridRow, enemies[j].gridCol)});
                 }
             }
             stoSorted.sort(function(a, b) { return a.dist - b.dist; });
@@ -831,13 +841,14 @@ function executeOnAttackPassive(attacker, target, passiveData, allUnits) {
             if (!attacker.passiveState.customData.teleportCooldowns) attacker.passiveState.customData.teleportCooldowns = {};
             var ddTargetId = target.id || (target.gridRow + '_' + target.gridCol);
             if (!attacker.passiveState.customData.teleportCooldowns[ddTargetId] || attacker.passiveState.customData.teleportCooldowns[ddTargetId] <= 0) {
-                var ddDirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
-                var ddDir = ddDirs[Math.floor(Math.random() * ddDirs.length)];
+                // Random hex direction (0-5), try the 2-cell destination first,
+                // then fall back to 1-cell -- same "furthest reachable step in
+                // one random direction" contract the old 8-dir version had.
+                var ddDirIndex = Math.floor(Math.random() * 6);
                 for (var ddStep = 2; ddStep >= 1; ddStep--) {
-                    var ddRow = target.gridRow + ddDir[0] * ddStep;
-                    var ddCol = target.gridCol + ddDir[1] * ddStep;
-                    if (ddRow >= 0 && ddRow < 8 && ddCol >= 0 && ddCol < 7 && !combatState.grid[ddRow][ddCol]) {
-                        moveUnitToCell(target, ddRow, ddCol, combatState.grid);
+                    var ddCell = hexStep(target.gridRow, target.gridCol, ddDirIndex, ddStep);
+                    if (ddCell && !combatState.grid[ddCell.row][ddCell.col]) {
+                        moveUnitToCell(target, ddCell.row, ddCell.col, combatState.grid);
                         break;
                     }
                 }
@@ -880,7 +891,7 @@ function executeOnHitPassive(defender, attacker, damage, passiveData, allUnits) 
     case 'bramble_knight':
         // Melee attackers take 12 damage
         if (attacker && attacker.hp > 0) {
-            var dist = getManhattanDist(defender.gridRow, defender.gridCol, attacker.gridRow, attacker.gridCol);
+            var dist = hexDistance(defender.gridRow, defender.gridCol, attacker.gridRow, attacker.gridCol);
             if (dist <= 1) {
                 dealDamage(defender, attacker, 12, {isTrueDamage: true, canCrit: false, canDodge: false, applyElement: false, triggerOnHit: false});
             }
@@ -900,7 +911,7 @@ function executeOnHitPassive(defender, attacker, damage, passiveData, allUnits) 
     case 'ironwood_sentinel':
         // Melee attackers take 12-25 damage based on missing HP
         if (attacker && attacker.hp > 0) {
-            var dist2 = getManhattanDist(defender.gridRow, defender.gridCol, attacker.gridRow, attacker.gridCol);
+            var dist2 = hexDistance(defender.gridRow, defender.gridCol, attacker.gridRow, attacker.gridCol);
             if (dist2 <= 1) {
                 var missingHpPct = 1 - (defender.hp / defender.maxHp);
                 var thornDmg = Math.floor(12 + (13 * missingHpPct)); // 12-25
@@ -913,7 +924,7 @@ function executeOnHitPassive(defender, attacker, damage, passiveData, allUnits) 
     case 'magma_knight':
         // When hit by melee, deal 15 fire damage back
         if (attacker && attacker.hp > 0) {
-            var dist3 = getManhattanDist(defender.gridRow, defender.gridCol, attacker.gridRow, attacker.gridCol);
+            var dist3 = hexDistance(defender.gridRow, defender.gridCol, attacker.gridRow, attacker.gridCol);
             if (dist3 <= 1) {
                 dealDamage(defender, attacker, 15, {isTrueDamage: true, canCrit: false, canDodge: false, applyElement: false, triggerOnHit: false});
             }
@@ -946,7 +957,7 @@ function executeOnHitPassive(defender, attacker, damage, passiveData, allUnits) 
     case 'tesla_knight':
         // Enemies hitting within 1 cell gain +15% damage taken 3s
         if (attacker && attacker.hp > 0) {
-            var dist4 = getManhattanDist(defender.gridRow, defender.gridCol, attacker.gridRow, attacker.gridCol);
+            var dist4 = hexDistance(defender.gridRow, defender.gridCol, attacker.gridRow, attacker.gridCol);
             if (dist4 <= 1) {
                 addStatus(attacker, 'vulnerability', 3, 0.15, defender);
             }
@@ -957,7 +968,7 @@ function executeOnHitPassive(defender, attacker, damage, passiveData, allUnits) 
     case 'volcano_titan':
         // Melee attackers take 25 damage + lava pool (30 DPS, 3s)
         if (attacker && attacker.hp > 0) {
-            var dist5 = getManhattanDist(defender.gridRow, defender.gridCol, attacker.gridRow, attacker.gridCol);
+            var dist5 = hexDistance(defender.gridRow, defender.gridCol, attacker.gridRow, attacker.gridCol);
             if (dist5 <= 1) {
                 dealDamage(defender, attacker, 25, {isTrueDamage: true, canCrit: false, canDodge: false, applyElement: false, triggerOnHit: false});
                 addStatus(attacker, 'burn', 3, 30, defender);
@@ -991,7 +1002,7 @@ function executeOnHitPassive(defender, attacker, damage, passiveData, allUnits) 
     case 'storm_bastion':
         // Enemies within 2 cells gain +15% damage taken 3s, reflect 40%
         if (attacker && attacker.hp > 0) {
-            var dist6 = getManhattanDist(defender.gridRow, defender.gridCol, attacker.gridRow, attacker.gridCol);
+            var dist6 = hexDistance(defender.gridRow, defender.gridCol, attacker.gridRow, attacker.gridCol);
             if (dist6 <= 2) {
                 addStatus(attacker, 'vulnerability', 3, 0.15, defender);
                 var reflDmg = Math.floor(damage * 0.40);

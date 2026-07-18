@@ -102,7 +102,11 @@ function startBossTelegraph(boss, ability, abilityIndex) {
         break;
 
     case 'cone':
-        var startRow = boss.gridRow + boss.bossSize[0];
+        // Row band immediately below the boss's occupied cells (bossCells(),
+        // grid.js -- "the row after the boss's 2 rows" holds regardless of
+        // hex/square since bossCells() always spans exactly 2 rows).
+        var bossRows = bossCells(boss.gridRow, boss.gridCol).map(function(c){ return c.row; });
+        var startRow = Math.max.apply(null, bossRows) + 1;
         for (var r = startRow; r < startRow + (ability.coneRows || 2) && r < 8; r++) {
             for (var ci = 0; ci < ability.coneColumns.length; ci++) {
                 var col = ability.coneColumns[ci];
@@ -112,33 +116,31 @@ function startBossTelegraph(boss, ability, abilityIndex) {
         break;
 
     case 'melee_range':
-        for (var br = 0; br < boss.bossSize[0]; br++) {
-            for (var bc = 0; bc < boss.bossSize[1]; bc++) {
-                var adjCells = getCellsInRadius(boss.gridRow + br, boss.gridCol + bc, ability.aoeRadius || 1);
-                for (var ac = 0; ac < adjCells.length; ac++) {
-                    if (adjCells[ac].row >= 4) {
-                        var exists = false;
-                        for (var ec = 0; ec < cells.length; ec++) {
-                            if (cells[ec].row === adjCells[ac].row && cells[ec].col === adjCells[ac].col) { exists = true; break; }
-                        }
-                        if (!exists) cells.push(adjCells[ac]);
+        var meleeAnchorCells = bossCells(boss.gridRow, boss.gridCol);
+        for (var mi = 0; mi < meleeAnchorCells.length; mi++) {
+            var adjCells = getCellsInRadius(meleeAnchorCells[mi].row, meleeAnchorCells[mi].col, ability.aoeRadius || 1);
+            for (var ac = 0; ac < adjCells.length; ac++) {
+                if (adjCells[ac].row >= 4) {
+                    var exists = false;
+                    for (var ec = 0; ec < cells.length; ec++) {
+                        if (cells[ec].row === adjCells[ac].row && cells[ec].col === adjCells[ac].col) { exists = true; break; }
                     }
+                    if (!exists) cells.push(adjCells[ac]);
                 }
             }
         }
         break;
 
     case 'aoe_around_self':
-        for (var br = 0; br < boss.bossSize[0]; br++) {
-            for (var bc = 0; bc < boss.bossSize[1]; bc++) {
-                var selfCells = getCellsInRadius(boss.gridRow + br, boss.gridCol + bc, ability.aoeRadius || 2);
-                for (var sc = 0; sc < selfCells.length; sc++) {
-                    var dup = false;
-                    for (var dc = 0; dc < cells.length; dc++) {
-                        if (cells[dc].row === selfCells[sc].row && cells[dc].col === selfCells[sc].col) { dup = true; break; }
-                    }
-                    if (!dup) cells.push(selfCells[sc]);
+        var selfAnchorCells = bossCells(boss.gridRow, boss.gridCol);
+        for (var si = 0; si < selfAnchorCells.length; si++) {
+            var selfCells = getCellsInRadius(selfAnchorCells[si].row, selfAnchorCells[si].col, ability.aoeRadius || 2);
+            for (var sc = 0; sc < selfCells.length; sc++) {
+                var dup = false;
+                for (var dc = 0; dc < cells.length; dc++) {
+                    if (cells[dc].row === selfCells[sc].row && cells[dc].col === selfCells[sc].col) { dup = true; break; }
                 }
+                if (!dup) cells.push(selfCells[sc]);
             }
         }
         break;
@@ -164,13 +166,16 @@ function startBossTelegraph(boss, ability, abilityIndex) {
         break;
 
     case 'aoe_pull':
+        // Prompt 69 hex migration: was a (2*halfSize+1)^2 square box (9 cells
+        // at the default aoeSize 2); now cellsInRange radius halfSize (7 cells
+        // at radius 1) clipped to the player half -- the nearest-smaller hex
+        // AoE (see the Prompt 69 report's judgment-call table).
         var centerR = 5 + Math.floor(Math.random() * 2);
         var centerC = 1 + Math.floor(Math.random() * 5);
         var halfSize = Math.floor((ability.aoeSize || 2) / 2);
-        for (var r = centerR - halfSize; r <= centerR + halfSize; r++) {
-            for (var c = centerC - halfSize; c <= centerC + halfSize; c++) {
-                if (r >= 4 && r < 8 && c >= 0 && c < 7) cells.push({row: r, col: c});
-            }
+        var pullCells = cellsInRange(centerR, centerC, halfSize);
+        for (var pc = 0; pc < pullCells.length; pc++) {
+            if (pullCells[pc].row >= 4) cells.push(pullCells[pc]);
         }
         ability._pullCenter = {row: centerR, col: centerC};
         break;
@@ -276,35 +281,41 @@ function executeBossAbility(boss, ability, telegraph) {
         }
     }
 
-    // Knockback
+    // Knockback: push directly away from the boss, one hex step per
+    // knockback point, along the direction from the nearest occupied boss
+    // cell (bossCells(), grid.js) to the unit -- computed once per unit
+    // (matching the old code's "one dr/dc for the whole knockback distance"
+    // behavior) via hexDirectionIndex(), then walked with hexStep().
     if (ability.knockback && ability.knockback > 0) {
         for (var h = 0; h < hitUnits.length; h++) {
             var unit = hitUnits[h];
             if (unit.hp <= 0) continue;
-            var bossCenter = { row: boss.gridRow + 0.5, col: boss.gridCol + 0.5 };
-            var dr = unit.gridRow > bossCenter.row ? 1 : -1;
-            var dc = unit.gridCol > bossCenter.col ? 1 : (unit.gridCol < bossCenter.col ? -1 : 0);
+            var nearestBossCell = boss.gridRow, nearestBossCellCol = boss.gridCol, nearestBossDist = 999;
+            var kbAnchorCells = bossCells(boss.gridRow, boss.gridCol);
+            for (var kai = 0; kai < kbAnchorCells.length; kai++) {
+                var kad = hexDistance(unit.gridRow, unit.gridCol, kbAnchorCells[kai].row, kbAnchorCells[kai].col);
+                if (kad < nearestBossDist) { nearestBossDist = kad; nearestBossCell = kbAnchorCells[kai].row; nearestBossCellCol = kbAnchorCells[kai].col; }
+            }
+            var kbDir = hexDirectionIndex(nearestBossCell, nearestBossCellCol, unit.gridRow, unit.gridCol);
             for (var kb = 0; kb < ability.knockback; kb++) {
-                var newR = unit.gridRow + dr;
-                var newC = unit.gridCol + dc;
-                if (newR >= 4 && newR < 8 && newC >= 0 && newC < 7 && !grid[newR][newC]) {
-                    moveUnitToCell(unit, newR, newC, grid);
+                var kbCell = hexStep(unit.gridRow, unit.gridCol, kbDir, 1);
+                if (kbCell && kbCell.row >= 4 && kbCell.row < 8 && !grid[kbCell.row][kbCell.col]) {
+                    moveUnitToCell(unit, kbCell.row, kbCell.col, grid);
                 }
             }
         }
     }
 
-    // Pull toward center (Whirlpool)
+    // Pull toward center (Whirlpool): one hex step toward ability._pullCenter,
+    // direction via hexDirectionIndex()/hexStep() instead of square dr/dc sign.
     if (ability.pullStrength && ability._pullCenter) {
         for (var h = 0; h < hitUnits.length; h++) {
             var unit = hitUnits[h];
             if (unit.hp <= 0) continue;
-            var pullDr = ability._pullCenter.row > unit.gridRow ? 1 : (ability._pullCenter.row < unit.gridRow ? -1 : 0);
-            var pullDc = ability._pullCenter.col > unit.gridCol ? 1 : (ability._pullCenter.col < unit.gridCol ? -1 : 0);
-            var newR = unit.gridRow + pullDr;
-            var newC = unit.gridCol + pullDc;
-            if (newR >= 4 && newR < 8 && newC >= 0 && newC < 7 && (!grid[newR][newC] || grid[newR][newC] === unit)) {
-                moveUnitToCell(unit, newR, newC, grid);
+            var pullDir = hexDirectionIndex(unit.gridRow, unit.gridCol, ability._pullCenter.row, ability._pullCenter.col);
+            var pullCell = hexStep(unit.gridRow, unit.gridCol, pullDir, 1);
+            if (pullCell && pullCell.row >= 4 && pullCell.row < 8 && (!grid[pullCell.row][pullCell.col] || grid[pullCell.row][pullCell.col] === unit)) {
+                moveUnitToCell(unit, pullCell.row, pullCell.col, grid);
             }
         }
     }
