@@ -78,6 +78,44 @@ function renderRegionMapScreen() {
             uiClaimRegionReward(rNum);
         });
     }
+
+    renderEndlessChallengesEntryCards(sd, storyEl);
+}
+
+// Prompt 64: entry cards for endless mode (The Abyss) + challenge modes,
+// appended after the region list so post-story players have a natural
+// endgame destination alongside the campaign. Mirrors the hub's nav-button
+// entry point (ui-hub.js's renderEndlessChallengesNav) -- both call the same
+// showEndlessScreen()/showChallengesScreen() overlays from js/endless.js /
+// js/challenges.js.
+function renderEndlessChallengesEntryCards(sd, storyEl) {
+    var endlessOn = (typeof isEndlessUnlocked === 'function') && isEndlessUnlocked(sd);
+    var challengesOn = (typeof isChallengesUnlocked === 'function') && isChallengesUnlocked(sd);
+    var endlessBest = (typeof getEndlessSaveData === 'function') ? getEndlessSaveData(sd).bestFloor : 0;
+
+    var endlessDiv = document.createElement('div');
+    endlessDiv.className = 'mission-card' + (!endlessOn ? ' locked' : '');
+    endlessDiv.style.borderColor = '#7a3ab8';
+    endlessDiv.innerHTML =
+        '<div><div class="m-name">🕳️ The Abyss (Endless)' + (!endlessOn ? ' 🔒' : '') + '</div>' +
+        '<div class="m-desc">' + (endlessOn ? 'Infinite floors. Your best: Floor ' + endlessBest + '.' : 'Unlocks after clearing the Eternal Throne (Region 8 boss).') + '</div></div>';
+    if (endlessOn) {
+        endlessDiv.style.cursor = 'pointer';
+        endlessDiv.onclick = function() { if (typeof showEndlessScreen === 'function') showEndlessScreen(); };
+    }
+    storyEl.appendChild(endlessDiv);
+
+    var challengesDiv = document.createElement('div');
+    challengesDiv.className = 'mission-card' + (!challengesOn ? ' locked' : '');
+    challengesDiv.style.borderColor = '#4488cc';
+    challengesDiv.innerHTML =
+        '<div><div class="m-name">🏆 Challenges' + (!challengesOn ? ' 🔒' : '') + '</div>' +
+        '<div class="m-desc">' + (challengesOn ? 'Time Trial, Survival, Restricted Roster, and the 4 Element Bosses.' : 'Unlocks after clearing the Shattered Colossus (Region 4 boss).') + '</div></div>';
+    if (challengesOn) {
+        challengesDiv.style.cursor = 'pointer';
+        challengesDiv.onclick = function() { if (typeof showChallengesScreen === 'function') showChallengesScreen(); };
+    }
+    storyEl.appendChild(challengesDiv);
 }
 
 function uiClaimRegionReward(regionNum) {
