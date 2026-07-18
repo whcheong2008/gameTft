@@ -141,6 +141,16 @@ function addStatus(unit, type, duration, value, source) {
         combatEvents.emit('ccApplied', { source: source, target: unit, type: type });
     }
 
+    // Prompt 72 (VFX framework): a broader status-application event for
+    // COSMETIC listeners only -- fires for every status type (not just the
+    // hardCC subset ccApplied above is deliberately restricted to), so
+    // js/vfx.js can play a small per-type effect (stun/freeze/burn/root/
+    // silence). Nothing pre-existing listens to this event name, so adding
+    // it cannot change hero-skill/balance behavior -- it is pure event DATA.
+    if (typeof combatEvents !== 'undefined') {
+        combatEvents.emit('statusApplied', { source: source, target: unit, type: type, duration: duration, value: value });
+    }
+
     // --- Combat Log for notable status effects ---
     if (type === 'stun') addCombatLog(unit.name + ' is Stunned!');
     if (type === 'freeze') addCombatLog(unit.name + ' is Frozen!');

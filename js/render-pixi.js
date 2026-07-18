@@ -1390,6 +1390,15 @@ var RENDER_PIXI = {
         pixiTickFloatingText(dtMs);
         pixiTickFlashCells(dtMs);
 
+        // Prompt 72 (VFX framework): ticked AFTER the per-unit redraw loop
+        // above so js/vfx.js's `shake` primitive (the one primitive that
+        // jitters an EXISTING token's container.x/y rather than drawing its
+        // own display object) lands on top of this frame's already-computed
+        // "true" position instead of being overwritten by it. Guarded --
+        // js/vfx.js loads after this file but is still an optional add-on
+        // (e.g. a future headless caller of RENDER_PIXI.frame() without it loaded).
+        if (typeof VFX !== 'undefined' && typeof VFX.frame === 'function') VFX.frame(dtMs);
+
         if (typeof renderEncounterMechanicBanner === 'function') renderEncounterMechanicBanner();
         if (typeof updateEncounterMechanicHud === 'function') updateEncounterMechanicHud();
         pixiUpdateEnrageTimer(combatState);
@@ -1404,6 +1413,15 @@ var RENDER_PIXI = {
     },
 
     destroy: function() {
+        // Prompt 72 (VFX framework): retire every live VFX instance before
+        // the stage tree goes away -- app.destroy() below recursively
+        // destroys VFX_R.decalLayer/particleLayer (mounted as children of
+        // app.stage by js/vfx.js's vfxEnsureLayers()) either way, but this
+        // also clears VFX_R.active/liveParticles bookkeeping and drops the
+        // stale attachedApp reference so the NEXT combat screen's first
+        // VFX.play() re-mounts fresh layers onto the next Application.
+        if (typeof VFX !== 'undefined' && typeof VFX.reset === 'function') VFX.reset();
+
         // app.destroy(..., {children:true, texture:true, ...}) recursively
         // destroys the whole stage tree (every layer and everything in it)
         // in one pass -- no need to walk the layers manually first (doing

@@ -282,10 +282,17 @@ function dealDamage(source, target, rawDamage, options) {
     if (source.combatStats) source.combatStats.damageDealt += (dmg + shieldAbsorbed);
 
     // Prompt 60: combat event hook for hero skill listeners.
+    // Prompt 72 (VFX framework): isAutoAttack/isAbility/shieldAbsorbed are
+    // additive event DATA only (no gameplay read of `options` here changes),
+    // consumed by js/vfx.js to pick projectile-vs-slash / shieldPop cosmetics
+    // -- existing hero-skill listeners on this event ignore fields they don't
+    // read, so this cannot alter combat outcomes or goldens.
     if (typeof combatEvents !== 'undefined' && (dmg + shieldAbsorbed) > 0) {
         combatEvents.emit('unitDamaged', {
             source: source, target: target, amount: dmg + shieldAbsorbed,
-            isCrit: wasCrit, shieldBroke: shieldBroke
+            isCrit: wasCrit, shieldBroke: shieldBroke,
+            isAutoAttack: isAutoAttack, isAbility: !!options.isAbility,
+            shieldAbsorbed: shieldAbsorbed
         });
     }
 
