@@ -146,36 +146,60 @@ body {
 }
 .sell-btn:hover { background: #3a3a5e; }
 
-/* === Team Builder Screen === */
-.team-builder-layout { display: flex; gap: 12px; margin-top: 10px; }
-.team-roster-panel { flex: 0 0 200px; max-height: 500px; overflow-y: auto; }
-.team-board-panel { flex: 1; }
+/* === Team Builder Screen (Prompt 71, Phase 3.5, Task 1) ===
+   Top row: the arena (left, flexes) + synergy sidebar (right, fixed width).
+   Bottom: the bench strip, full width, horizontally scrollable. */
+.team-builder-layout { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.team-board-panel { display: flex; flex-direction: column; gap: 8px; }
+.team-synergy-preview {
+    background: #16213e; padding: 8px 12px; border-radius: 6px;
+    font-size: 13px; flex: 0 0 240px; max-height: 420px; overflow-y: auto;
+}
+@media (min-width: 700px) {
+    .team-builder-layout { flex-direction: row; flex-wrap: wrap; }
+    .team-board-panel { flex: 1 1 60%; min-width: 320px; }
+}
+
+/* Bench strip: existing .team-roster-item chip visual language, laid out as
+   a horizontal scrollable strip below the arena instead of a vertical list. */
+.team-roster-panel.team-bench-strip {
+    display: flex; flex-direction: column; gap: 6px;
+    max-height: none;
+}
+.team-bench-strip .tb-bench-chips {
+    display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto; padding-bottom: 4px;
+}
 .team-roster-item {
     background: #16213e; border: 1px solid #2a3a5e; border-radius: 6px;
-    padding: 6px 8px; margin-bottom: 4px; cursor: pointer; font-size: 12px;
-    transition: background 0.15s;
+    padding: 6px 8px; cursor: pointer; font-size: 12px;
+    transition: background 0.15s; flex: 0 0 auto; width: 150px;
 }
 .team-roster-item:hover { background: #1e2d50; }
 .team-roster-item.on-team { border-color: #6bcb77; background: #1a3328; }
-.team-synergy-preview {
-    background: #16213e; padding: 8px 12px; border-radius: 6px; margin-top: 8px;
-    font-size: 13px;
-}
+.team-roster-item.held { border-color: #e2b714; box-shadow: 0 0 8px rgba(226,183,20,0.5); }
 
-/* Board grid */
-.board-grid {
-    display: grid; grid-template-columns: repeat(7, 1fr);
-    gap: 3px; margin-top: 6px;
+/* ---- Builder arena: same layer/CSS shape as the combat arena (#combat-area
+   above) so the Pixi projection reads identically -- backdrop, then a
+   centered/letterboxed canvas frame. js/ui-builder.js's PIXI_BUILDER_R mounts
+   its own PIXI.Application into #builder-board (a second, independent
+   instance from combat's PIXI_R -- see the Prompt 71 report for why a
+   separate app rather than reusing PIXI_R was simplest: the two screens are
+   never visible at once, but each needs its own sized/backdropped canvas). */
+#builder-arena {
+    position: relative; height: 58vh; min-height: 360px; max-height: 640px;
+    background: #0d1117; border-radius: 8px; overflow: hidden;
 }
-.board-cell {
-    aspect-ratio: 1; background: #0a0a1a; border: 1px solid #2a3a5e;
-    border-radius: 4px; display: flex; align-items: center; justify-content: center;
-    font-size: 11px; cursor: pointer; min-height: 52px;
-    transition: background 0.15s;
+#builder-backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #0d1117; }
+#builder-board-frame {
+    position: absolute; inset: 0; z-index: 1;
+    display: flex; align-items: center; justify-content: center; padding: 12px;
 }
-.board-cell:hover { background: #1a1a3e; }
-.board-cell.occupied { background: #162840; border-color: #3a6a9e; }
-.board-cell .cell-unit { text-align: center; font-size: 10px; line-height: 1.3; }
+#builder-board {
+    position: relative; height: 100%;
+    aspect-ratio: 6 / 5; max-width: 100%; min-width: min(60vw, 100%);
+}
+#team-builder-deploy { display: flex; justify-content: center; }
+#team-builder-deploy .btn-primary:disabled { background: #555; color: #999; cursor: not-allowed; }
 
 /* === Mission Select Screen === */
 .mission-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
@@ -216,8 +240,9 @@ body {
 }
 
 /* ---- Layer 0: procedural region backdrop (Task 3) -- see buildArenaBackdrop()
-   in js/ui-combat.js. Renderer-agnostic: painted behind both the DOM and Pixi
-   boards, so ?renderer=dom still gets region theming. ---- */
+   in js/ui-combat.js, reused by js/ui-builder.js's team-builder arena against
+   its own #builder-backdrop element (Prompt 71). Plain DOM/CSS, no Pixi
+   involved -- painted behind the canvas either way. ---- */
 #arena-backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #0d1117; }
 .arena-bd-horizon { position: absolute; inset: 0; }
 .arena-bd-hexfield { position: absolute; inset: 0; opacity: 0.5; background-size: 84px 84px; }
@@ -238,9 +263,8 @@ body {
     height: 100%;
     /* TUNABLE: board footprint is (COLS+0.5) x ((ROWS-1)*0.75+1) cells wide/tall
        (grid.js's cellToPixel/pixiSizeBoard packed-hex math) -- ~7.5:6.25, i.e.
-       1.2:1 -- for square cells. aspect-ratio keeps the frame (and therefore
-       #damage-numbers, which is a sibling absolutely positioned to match it
-       pixel-for-pixel) locked to that shape at any height. */
+       1.2:1 -- for square cells. aspect-ratio keeps the frame locked to that
+       shape at any height. */
     aspect-ratio: 6 / 5;
     max-width: 100%;
     /* "fills the available center, min ~60% viewport width on desktop" (spec) --
@@ -249,69 +273,30 @@ body {
        the raw browser viewport). */
     min-width: min(60vw, 100%);
 }
+/* Prompt 71 (Phase 3.5, Task 3): .combat-board is now purely a mount point --
+   js/render-pixi.js appends a single absolutely-positioned <canvas> into it
+   (see pixiEnsureApp()) and draws the whole board/token/HP-bar/status-icon
+   presentation itself. The old DOM-cell-grid CSS this used to need
+   (.combat-cell/.player-row/.enemy-row/.combat-unit + its hp-bar/mana-bar/
+   status-icons children, and the now-elementless #damage-numbers sibling
+   js/render-dom.js's domSpawnDamageNumber() used to position against) is
+   deleted along with js/render-dom.js -- Pixi draws its own floating combat
+   text directly on canvas (js/render-pixi.js's pixiSpawnFloatingText). */
 .combat-board {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    grid-template-rows: repeat(8, minmax(0, 1fr));
-    gap: 2px;
+    position: relative;
     width: 100%; height: 100%;
-    position: relative; overflow: hidden;
-}
-/* Sibling of .combat-board (not a child!) inside #combat-arena-frame -- both
-   fill the identical box, so js/render-dom.js's domSpawnDamageNumber() (which
-   computes x/y from #combat-board's own offsetWidth/offsetHeight) lines up
-   pixel-for-pixel without needing to be nested inside a node that render-dom.js
-   wipes via innerHTML every frame. */
-#damage-numbers { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 2; }
-.combat-cell {
-    /* Prompt 70: rows/cols are explicit grid tracks on .combat-board now (both
-       repeat(N, minmax(0,1fr))), so cells no longer need to self-size via
-       min-height -- the aspect-ratio-locked #combat-arena-frame gives the
-       whole grid a definite height and the tracks split it evenly. */
-    min-height: 0; min-width: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 9px; border-radius: 3px; padding: 1px;
-}
-.player-row { background: #0a1628; }
-.enemy-row { background: #1a0a0a; }
-.combat-unit { text-align: center; line-height: 1.1; }
-.combat-unit .hp-bar {
-    width: 28px; height: 3px; background: #333; border-radius: 2px;
-    margin: 1px auto 0; overflow: hidden;
-}
-.combat-unit .hp-fill { height: 100%; background: #6bcb77; transition: width 0.2s; }
-.combat-unit .hp-fill.low { background: #ff6b6b; }
-.combat-unit .mana-bar {
-    width: 28px; height: 3px; background: #1a1a3a; border-radius: 1px;
-    margin: 1px auto 0; overflow: hidden;
-}
-.combat-unit .mana-fill {
-    height: 100%; background: #4488ff; border-radius: 1px;
-    transition: width 0.05s linear;
-}
-.status-icons {
-    display: flex;
-    justify-content: center;
-    gap: 1px;
-    font-size: 8px;
-    line-height: 1;
-    margin-top: 1px;
-    height: 12px;
     overflow: hidden;
 }
-.status-icon {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    text-align: center;
-    font-size: 9px;
-    line-height: 12px;
+/* WebGL-unavailable notice (Task 3): pixiShowWebGLRequiredNotice() replaces
+   #combat-board's contents with this instead of leaving a dead canvas. */
+.webgl-required-notice {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    padding: 24px; gap: 8px; background: #0d1117;
 }
-.status-overflow {
-    font-size: 7px;
-    color: #888;
-    line-height: 12px;
-}
+.webgl-required-icon { font-size: 36px; }
+.webgl-required-title { font-size: 18px; font-weight: bold; color: #e2b714; }
+.webgl-required-desc { font-size: 13px; color: #aaa; max-width: 360px; }
 
 /* Results overlay */
 .combat-results {
@@ -633,69 +618,14 @@ body {
 .combat-scoreboard .sb-stats .taken { color: #ef5350; }
 .combat-scoreboard .sb-stats .heal { color: #66bb6a; }
 
-/* Boss unit */
-.boss-unit {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(circle, #2a0a0a 0%, #1a0a0a 100%);
-    border: 2px solid #ff4444;
-    border-radius: 6px;
-    padding: 4px;
-    z-index: 2;
-}
-.boss-emoji { font-size: 28px; line-height: 1; }
-.boss-name { font-size: 11px; font-weight: bold; color: #ff6666; }
-.boss-phase { font-size: 9px; color: #ff9999; }
-.boss-hp-bar {
-    width: 90%;
-    height: 6px;
-    background: #333;
-    border-radius: 3px;
-    overflow: hidden;
-    margin-top: 2px;
-}
-.boss-hp-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #ff2222 0%, #ff6644 100%);
-    transition: width 0.1s;
-}
-.boss-shield-bar {
-    width: 90%;
-    height: 3px;
-    background: #1a1a3a;
-    border-radius: 1px;
-    overflow: hidden;
-}
-.boss-shield-fill { height: 100%; background: #4488ff; }
-.boss-enrage {
-    font-size: 8px;
-    color: #ff0000;
-    font-weight: bold;
-    animation: pulse 0.5s infinite;
-}
-.boss-occupied {
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 0, 0, 0.05);
-    border: 1px dashed rgba(255, 68, 68, 0.3);
-}
-
-/* Telegraph danger zones */
-.danger-zone {
-    background: rgba(255, 0, 0, 0.25) !important;
-    border: 1px solid rgba(255, 0, 0, 0.6) !important;
-    animation: dangerPulse 0.5s infinite;
-}
-@keyframes dangerPulse {
-    0%, 100% { background: rgba(255, 0, 0, 0.15); }
-    50% { background: rgba(255, 0, 0, 0.35); }
-}
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
+/* Prompt 71 (Phase 3.5, Task 3): the DOM boss-cell chrome (.boss-unit and its
+   children, .boss-occupied) and the DOM telegraph danger-zone highlight
+   (.danger-zone/dangerPulse) were js/render-dom.js's buildUnitCellHtml()/
+   renderCombatBoard() output -- both deleted along with that file. Pixi
+   draws its own boss token (js/render-pixi.js's pixiRedrawToken, `unit.
+   isBoss` branch) directly on canvas; boss telegraph danger-zone visuals
+   were never ported to Pixi (a pre-existing gap noted in the Prompt 71
+   report, out of this prompt's scope). */
 
 /* Phase transition flash */
 .phase-transition-overlay {
@@ -725,54 +655,14 @@ body {
 }
 .speed-btn:hover { background: #2a3848; }
 
-/* Damage numbers */
-.dmg-number {
-    position: absolute;
-    font-weight: bold;
-    font-size: 13px;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-    pointer-events: none;
-    animation: floatUp 0.8s ease-out forwards;
-    z-index: 20;
-    white-space: nowrap;
-}
-.dmg-normal { color: #ffffff; }
-.dmg-crit { color: #ffdd00; font-size: 16px; }
-.dmg-dot { color: #ff6633; font-size: 11px; }
-.dmg-heal { color: #44ee44; }
-.dmg-shield { color: #4488ff; font-size: 11px; }
-.dmg-dodge { color: #999999; font-style: italic; font-size: 11px; }
-.dmg-ability { color: #ff88ff; }
-.dmg-boss { color: #ff4444; font-size: 15px; }
-@keyframes floatUp {
-    0% { transform: translateY(0) scale(1); opacity: 1; }
-    20% { transform: translateY(-8px) scale(1.1); opacity: 1; }
-    100% { transform: translateY(-30px) scale(0.8); opacity: 0; }
-}
-
-/* Death markers */
-.death-marker {
-    font-size: 10px;
-    opacity: 0.2;
-    text-align: center;
-    line-height: 36px;
-}
-
-/* Unit overlay layer */
-.combat-unit-overlay {
-    position: absolute;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    transition: left 0.15s ease-out, top 0.15s ease-out, opacity 0.3s, transform 0.3s;
-    pointer-events: none;
-    z-index: 5;
-    font-size: 10px;
-    text-align: center;
-    padding: 1px;
-    box-sizing: border-box;
-}
+/* Prompt 71 (Phase 3.5, Task 3): floating damage numbers (.dmg-number and its
+   type variants + the floatUp keyframe), death markers (.death-marker), and
+   the unit overlay layer (.combat-unit-overlay) were all js/render-dom.js
+   output -- deleted along with that file. Pixi draws its own floating combat
+   text (js/render-pixi.js's pixiSpawnFloatingText, on canvas) and death
+   markers (pixiDrawDeathMarkers) directly; there is no more DOM unit-overlay
+   layer to style (js/render-pixi.js's pixiRedrawToken draws unit tokens on
+   canvas too). */
 
 /* Combat start text */
 .combat-start-text {
@@ -862,7 +752,7 @@ body {
                 <div class="hub-nav-btn" onclick="showScreen('roster')">
                     <span class="nav-emoji">📋</span> Collection
                 </div>
-                <div class="hub-nav-btn" onclick="showScreen('team-builder')">
+                <div class="hub-nav-btn" onclick="uiOpenTeamBuilderStandalone()">
                     <span class="nav-emoji">⚔️</span> Team Builder
                 </div>
                 <div class="hub-nav-btn" onclick="uiToggleItemBench()">
@@ -946,15 +836,32 @@ body {
         </div>
 
         <!-- ============ TEAM BUILDER SCREEN ============ -->
+        <!-- Prompt 71 (Phase 3.5, Task 1): team building now happens ON the same
+             angled hex arena combat uses -- js/ui-builder.js mounts its own Pixi
+             Application into #builder-board (a second instance, PIXI_BUILDER_R,
+             separate from combat's PIXI_R since both screens can't be visible at
+             once but each needs its own sized canvas). #builder-backdrop reuses
+             js/ui-combat.js's buildArenaBackdrop() for region theming.
+             #team-bench-strip is the roster/bench DOM strip below the arena
+             (existing .team-roster-item chip visual language, now horizontal).
+             #team-builder-deploy hosts the "Deploy" button shown only when this
+             screen was entered from stage/region select (js/ui-missions.js sets
+             teamBuilderEntryStage before navigating here). -->
         <div id="screen-team-builder" class="screen">
             <div class="screen-title">⚔️ Team Builder</div>
             <div id="team-info" class="text-muted" style="font-size:13px;"></div>
             <div class="team-builder-layout">
-                <div class="team-roster-panel" id="team-roster-panel"></div>
                 <div class="team-board-panel">
-                    <div class="board-grid" id="team-board"></div>
-                    <div class="team-synergy-preview" id="team-synergy-preview"></div>
+                    <div id="builder-arena">
+                        <div id="builder-backdrop"></div>
+                        <div id="builder-board-frame">
+                            <div id="builder-board"></div>
+                        </div>
+                    </div>
+                    <div id="team-builder-deploy"></div>
+                    <div id="team-roster-panel" class="team-roster-panel team-bench-strip"></div>
                 </div>
+                <div class="team-synergy-preview" id="team-synergy-preview"></div>
             </div>
         </div>
 
@@ -989,7 +896,6 @@ body {
                 <div id="combat-main">
                     <div id="combat-arena-frame">
                         <div class="combat-board" id="combat-board"></div>
-                        <div id="damage-numbers"></div>
                     </div>
                 </div>
                 <div id="combat-scoreboard" class="combat-scoreboard"></div>
@@ -1048,8 +954,8 @@ body {
     <script src="js/lore-data.js"></script>
     <!-- V2 uses simplified combat in these files, not V1 combat.js. Split from main-v2.js (Prompt 58). -->
     <!-- grid.js: single source of truth for ALL spatial math (Prompt 69: hex grid
-         migration). Loads before every combat-*.js file and before the renderers
-         (render-dom.js/render-pixi.js) and ui-builder.js, all of which call into it. -->
+         migration). Loads before every combat-*.js file and before the pixi renderer
+         and ui-builder.js (its builder-mode arena, Prompt 71), both of which call into it. -->
     <script src="js/grid.js"></script>
     <!-- combat-events.js: minimal event bus for hero skill combat hooks (Prompt 60). Must load first. -->
     <script src="js/combat-events.js"></script>
@@ -1082,16 +988,16 @@ body {
     <script src="js/ui-missions.js"></script>
     <script src="js/ui-combat.js"></script>
     <script src="js/ui-items.js"></script>
-    <!-- render-dom.js: the DOM combat renderer (Prompt 67). Loads after all ui-*.js
-         files (depends on ui-combat.js's COMBAT_SPEED/addLogEntry) and registers
-         itself with render-interface.js's registry. -->
-    <script src="js/render-dom.js"></script>
     <!-- render-pixi.js: the PixiJS combat renderer bootstrap (Prompt 68,
-         Phase 3.2). Loads after render-dom.js (reuses its chrome-only
-         renderEncounterMechanicBanner/updateEncounterMechanicHud globals)
-         and ui-combat.js (reads COMBAT_SPEED). Registration is guarded
-         behind `typeof PIXI !== 'undefined'`, so this is a safe no-op
-         wherever js/vendor/pixi.min.js didn't load/execute. -->
+         Phase 3.2) and, since Prompt 71 (Phase 3.5), the ONLY registered
+         renderer -- js/render-dom.js (the DOM combat renderer) was deleted;
+         renderEncounterMechanicBanner/updateEncounterMechanicHud/
+         showCombatStartText relocated to js/ui-combat.js (chrome, called
+         regardless of which renderer is active). Loads after ui-combat.js
+         (reads COMBAT_SPEED, calls those relocated chrome functions).
+         Registration is guarded behind `typeof PIXI !== 'undefined'`, so
+         this is a safe no-op wherever js/vendor/pixi.min.js didn't load/
+         execute -- see js/render-pixi.js's pixiShowWebGLRequiredNotice(). -->
     <script src="js/render-pixi.js"></script>
     <script src="js/main-v2.js"></script>
 </body>

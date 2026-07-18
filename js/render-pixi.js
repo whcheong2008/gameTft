@@ -94,8 +94,20 @@ var PIXI_R = {
     drawnMarkers: null,   // {row,col key -> true} for markerLayer, reset per wave
     cellW: 0,
     cellH: 0,
+    lastGridW: -1,         // Prompt 71: per-instance grid-rebuild-needed tracker (was a module var)
+    lastGridH: -1,
     clock: 0,             // Task 4: accumulated combat-speed-scaled seconds, drives idle bob phase
-    hoveredUnit: null      // Task 4: unit currently under the pointer (DOM tooltip + selection ring)
+    hoveredUnit: null,     // Task 4: unit currently under the pointer (DOM tooltip + selection ring)
+    // Prompt 71 (Phase 3.5, Task 2): wave-transition reposition-on-arena mode.
+    // See pixiEnterRepositionMode()/pixiExitRepositionMode() below -- reuses
+    // this exact combat render state/token set rather than a second Pixi
+    // instance, since the combat arena is already mounted and frozen on the
+    // last frame when the wave-transition overlay shows.
+    repositionMode: false,
+    repositionSelectedUnit: null,
+    repositionClickCallback: null, // function(row, col) -- js/ui-combat.js's onWaveRepositionClick
+    tileHitLayer: null,
+    repositionHighlightLayer: null
 };
 
 // ---- Task 2 (Prompt 70, Phase 3.4): angled TFT-style camera projection ----
@@ -125,15 +137,25 @@ function pixiRowDepthScale(row) {
 // Full unsquashed board pixel height (matches pixiSizeBoard()'s packed-hex
 // math) -- used to keep the squashed board vertically centered in its box
 // rather than collapsing toward the top.
-function pixiFullBoardHeight() {
-    return ((PIXI_ROWS - 1) * 0.75 + 1) * PIXI_R.cellH;
+//
+// Prompt 71 (Phase 3.5): both parameters now take an explicit render-state
+// object (`rs` -- the same shape as PIXI_R: needs .cellW/.cellH) instead of
+// reading the combat-only PIXI_R global directly, so js/ui-builder.js's
+// builder-mode arena (its own PIXI_BUILDER_R state, a separate mounted Pixi
+// Application) can reuse this exact projection math instead of duplicating
+// it. `rs` defaults to PIXI_R when omitted so every pre-existing combat call
+// site below (which never passed a second argument) keeps working unchanged.
+function pixiFullBoardHeight(rs) {
+    rs = rs || PIXI_R;
+    return ((PIXI_ROWS - 1) * 0.75 + 1) * rs.cellH;
 }
 
-function boardToScreen(row, col) {
-    var p = cellToPixel(row, col, PIXI_R.cellW, PIXI_R.cellH);
-    var centerXRaw = p.x + PIXI_R.cellW / 2;
-    var centerYRaw = p.y + PIXI_R.cellH / 2;
-    var fullH = pixiFullBoardHeight();
+function boardToScreen(row, col, rs) {
+    rs = rs || PIXI_R;
+    var p = cellToPixel(row, col, rs.cellW, rs.cellH);
+    var centerXRaw = p.x + rs.cellW / 2;
+    var centerYRaw = p.y + rs.cellH / 2;
+    var fullH = pixiFullBoardHeight(rs);
     var squashedH = fullH * PIXI_CAM_Y_SQUASH;
     var yOffset = (fullH - squashedH) / 2;
     return {
@@ -186,15 +208,19 @@ function pixiUnitEmoji(unit) {
 // window resize mid-combat) -- NOT every frame. See pixiDrawDeathMarkers'
 // comment for why a fresh Graphics/Text set every frame is a leak risk.
 
-var pixiLastGridW = -1;
-var pixiLastGridH = -1;
-
-function pixiMaybeRebuildGrid() {
-    if (PIXI_R.cellW === pixiLastGridW && PIXI_R.cellH === pixiLastGridH) return;
-    pixiLastGridW = PIXI_R.cellW;
-    pixiLastGridH = PIXI_R.cellH;
-    pixiBuildPlatform();
-    pixiBuildGrid();
+// Prompt 71: the "have the cell dimensions actually changed" tracker now
+// lives ON the render-state object itself (rs.lastGridW/rs.lastGridH)
+// instead of a pair of module-level vars, so a second concurrent Pixi
+// instance (js/ui-builder.js's PIXI_BUILDER_R) tracks its own board size
+// independently of combat's PIXI_R. init()/destroy() below (re)set these on
+// PIXI_R exactly like the old module vars were reset.
+function pixiMaybeRebuildGrid(rs) {
+    rs = rs || PIXI_R;
+    if (rs.cellW === rs.lastGridW && rs.cellH === rs.lastGridH) return;
+    rs.lastGridW = rs.cellW;
+    rs.lastGridH = rs.cellH;
+    pixiBuildPlatform(rs);
+    pixiBuildGrid(rs);
 }
 
 // Pointy-top hexagon vertex offsets from a cell's center, sized to the
@@ -224,17 +250,18 @@ function pixiHexPoints(cx, cy, cellW, cellH) {
 // child order (see pixiEnsureApp). Placeholder-art era: a soft rounded slab
 // rather than a true hex silhouette (still reads as "the board has a base"
 // without needing real platform art -- Phase 5 replaces this).
-function pixiBuildPlatform() {
-    if (!PIXI_R.platformLayer) return;
-    pixiDestroyAllChildren(PIXI_R.platformLayer);
+function pixiBuildPlatform(rs) {
+    rs = rs || PIXI_R;
+    if (!rs.platformLayer) return;
+    pixiDestroyAllChildren(rs.platformLayer);
 
     // Bounding box of the four board corners in screen space (post-squash) --
     // row 7 (bottom, odd) is shifted +cellW/2 in x by cellToPixel()'s odd-r
     // offset, so the true corners (not just row/col extremes) must go through
-    // boardToScreen() rather than being assumed from PIXI_R.cellW/H alone.
+    // boardToScreen() rather than being assumed from rs.cellW/H alone.
     var corners = [
-        boardToScreen(0, 0), boardToScreen(0, PIXI_COLS - 1),
-        boardToScreen(PIXI_ROWS - 1, 0), boardToScreen(PIXI_ROWS - 1, PIXI_COLS - 1)
+        boardToScreen(0, 0, rs), boardToScreen(0, PIXI_COLS - 1, rs),
+        boardToScreen(PIXI_ROWS - 1, 0, rs), boardToScreen(PIXI_ROWS - 1, PIXI_COLS - 1, rs)
     ];
     var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (var i = 0; i < corners.length; i++) {
@@ -243,8 +270,8 @@ function pixiBuildPlatform() {
         minY = Math.min(minY, corners[i].y);
         maxY = Math.max(maxY, corners[i].y);
     }
-    var marginX = PIXI_R.cellW * 0.55, marginY = PIXI_R.cellH * PIXI_CAM_Y_SQUASH * 0.5;
-    var plinthDepth = PIXI_R.cellH * PIXI_CAM_Y_SQUASH * 0.22; // TUNABLE: how "thick" the platform reads
+    var marginX = rs.cellW * 0.55, marginY = rs.cellH * PIXI_CAM_Y_SQUASH * 0.5;
+    var plinthDepth = rs.cellH * PIXI_CAM_Y_SQUASH * 0.22; // TUNABLE: how "thick" the platform reads
 
     var x0 = minX - marginX, x1 = maxX + marginX;
     var y0 = minY - marginY, y1 = maxY + marginY;
@@ -259,22 +286,23 @@ function pixiBuildPlatform() {
     g.roundRect(x0, y0, x1 - x0, (y1 - y0), radius)
         .fill({ color: 0x0f1a2c, alpha: 0.85 })
         .stroke({ width: 1.5, color: 0x2a3a5e, alpha: 0.6 });
-    PIXI_R.platformLayer.addChild(g);
+    rs.platformLayer.addChild(g);
 }
 
-function pixiBuildGrid() {
-    pixiDestroyAllChildren(PIXI_R.gridLayer);
+function pixiBuildGrid(rs) {
+    rs = rs || PIXI_R;
+    pixiDestroyAllChildren(rs.gridLayer);
     var g = new PIXI.Graphics();
-    var hexW = PIXI_R.cellW * 0.92;
-    var hexH = PIXI_R.cellH * PIXI_CAM_Y_SQUASH * 0.92; // Task 2: tile height squashed with the board plane
-    var lipDepth = PIXI_R.cellH * PIXI_CAM_Y_SQUASH * 0.16; // TUNABLE
+    var hexW = rs.cellW * 0.92;
+    var hexH = rs.cellH * PIXI_CAM_Y_SQUASH * 0.92; // Task 2: tile height squashed with the board plane
+    var lipDepth = rs.cellH * PIXI_CAM_Y_SQUASH * 0.16; // TUNABLE
 
     // Pass 1: darker bottom-edge "lip" under every tile (Task 2 elevation
     // illusion) -- drawn first so every real tile face (pass 2) paints over
     // any lip poking up from the row below it.
     for (var lr = 0; lr < PIXI_ROWS; lr++) {
         for (var lc = 0; lc < PIXI_COLS; lc++) {
-            var lipCenter = boardToScreen(lr, lc);
+            var lipCenter = boardToScreen(lr, lc, rs);
             var lhw = hexW / 2, lhh = hexH / 2;
             var lipFill = lr <= 3 ? 0x0d0505 : 0x05080f;
             g.poly([
@@ -289,7 +317,7 @@ function pixiBuildGrid() {
     // Pass 2: the tile faces themselves.
     for (var r = 0; r < PIXI_ROWS; r++) {
         for (var c = 0; c < PIXI_COLS; c++) {
-            var center = boardToScreen(r, c);
+            var center = boardToScreen(r, c, rs);
             var fill = r <= 3 ? 0x1a0a0a : 0x0a1628;
             g.poly(pixiHexPoints(center.x, center.y, hexW, hexH))
                 .fill({ color: fill, alpha: 0.6 })
@@ -299,12 +327,12 @@ function pixiBuildGrid() {
     // Row 4 divider (enemy/player split), matching render-dom.js's border-top.
     // Positioned at the squashed midpoint between row 3 and row 4 (Task 2 --
     // every board-plane element routes through boardToScreen()/the squash).
-    var dividerCenter3 = boardToScreen(3, 0), dividerCenter4 = boardToScreen(4, 0);
+    var dividerCenter3 = boardToScreen(3, 0, rs), dividerCenter4 = boardToScreen(4, 0, rs);
     var dividerY = (dividerCenter3.y + dividerCenter4.y) / 2;
-    var dividerX0 = boardToScreen(0, 0).x - PIXI_R.cellW / 2;
-    var dividerW = PIXI_R.cellW * (PIXI_COLS + 0.5);
+    var dividerX0 = boardToScreen(0, 0, rs).x - rs.cellW / 2;
+    var dividerW = rs.cellW * (PIXI_COLS + 0.5);
     g.rect(dividerX0, dividerY - 1, dividerW, 2).fill({ color: 0x555555, alpha: 0.8 });
-    PIXI_R.gridLayer.addChild(g);
+    rs.gridLayer.addChild(g);
 }
 
 // Death markers are added incrementally (once per cell key, the first frame
@@ -406,27 +434,169 @@ function pixiHideUnitTooltip() {
     if (el) el.style.display = 'none';
 }
 
-// ---- per-unit visual token ----
-
-function pixiCreateVisual(unit) {
+// ---- unit-token factory (Prompt 71, Phase 3.5: reusable outside combat) ----
+//
+// pixiCreateTokenBase() builds the visual chrome every token needs regardless
+// of context -- background box, element emoji, unit-name label, a hover-ring
+// Graphics, and the hitArea/hover-tooltip/tap wiring -- against an explicit
+// render-state object (`rs`: needs .hoveredUnit, matching the PIXI_R shape)
+// and destination layer, rather than assuming PIXI_R.unitLayer. Two callers
+// build on top of it:
+//   pixiCreateVisual(unit)              combat tokens: adds hp/mana bars,
+//                                        status icons, star pips, boss flags.
+//   pixiCreateBuilderToken(...)         js/ui-builder.js's builder-mode arena
+//                                        (team builder + wave-transition
+//                                        reposition): adds a star-pip row and
+//                                        an item-icon chip, no hp/mana bars.
+// `onTap` (optional) is wired to Pixi's 'pointertap' -- combat tokens use it
+// for reposition-mode clicks (see pixiEnterRepositionMode below); builder
+// tokens use it for the pick-up/swap/move click model.
+function pixiCreateTokenBase(unitLike, layer, rs, onTap) {
     var container = new PIXI.Container();
 
     var base = new PIXI.Graphics();
     container.addChild(base);
 
     var emojiText = new PIXI.Text({
-        text: pixiUnitEmoji(unit),
+        text: pixiUnitEmoji(unitLike),
         anchor: 0.5,
         style: { fontSize: 14, fill: 0xffffff }
     });
     container.addChild(emojiText);
 
     var nameText = new PIXI.Text({
-        text: (unit.name || '').split(' ')[0],
+        text: (unitLike.name || '').split(' ')[0],
         anchor: { x: 0.5, y: 0 },
-        style: { fontSize: 8, fill: unit.side === 'enemy' ? 0xff6b6b : 0xdddddd }
+        style: { fontSize: 8, fill: unitLike.side === 'enemy' ? 0xff6b6b : 0xdddddd }
     });
     container.addChild(nameText);
+
+    // Element-colored selection ring, drawn under everything else added
+    // above -- addChildAt(0) so hover highlighting never occludes the
+    // token's own art/bars/text.
+    var ring = new PIXI.Graphics();
+    ring.visible = false;
+    container.addChildAt(ring, 0);
+
+    // Hover inspection -- Pixi pointer events drive a DOM tooltip
+    // (pixiShowUnitTooltip/pixiHideUnitTooltip below) and this same ring.
+    // hitArea is (re)sized every redraw (token size changes with depth
+    // scale/boss span), so it starts as a small placeholder rect here.
+    container.eventMode = 'static';
+    container.cursor = 'pointer';
+    container.hitArea = new PIXI.Rectangle(-10, -10, 20, 20);
+    if (rs) {
+        container.on('pointerover', function(e) { rs.hoveredUnit = unitLike; pixiShowUnitTooltip(unitLike, e); });
+        container.on('pointermove', function(e) { if (rs.hoveredUnit === unitLike) pixiPositionUnitTooltip(e); });
+        container.on('pointerout', function() { if (rs.hoveredUnit === unitLike) { rs.hoveredUnit = null; pixiHideUnitTooltip(); } });
+    }
+    if (typeof onTap === 'function') {
+        container.on('pointertap', function() { onTap(unitLike); });
+    }
+
+    layer.addChild(container);
+
+    return { container: container, base: base, ring: ring, emojiText: emojiText, nameText: nameText };
+}
+
+// Builder-mode token (Task 1/Task 2): name/stars/items chip, no hp/mana bars.
+// `layer`/`rs` are the caller's own render state (js/ui-builder.js's
+// PIXI_BUILDER_R for the team-builder screen, or PIXI_R itself when reused
+// for wave-transition reposition -- see pixiEnterRepositionMode). `unitLike`
+// only needs .name/.element/.evolved/.stars/.combatItems/.side (a roster
+// entry's derived stats object, or a live combat unit both satisfy this).
+function pixiCreateBuilderToken(unitLike, layer, rs, onTap) {
+    var t = pixiCreateTokenBase(unitLike, layer, rs, onTap);
+
+    var starsText = new PIXI.Text({
+        text: unitLike.stars ? new Array(unitLike.stars + 1).join('★') : '',
+        anchor: { x: 0.5, y: 0 },
+        style: { fontSize: 8, fill: 0xe2b714 }
+    });
+    t.container.addChild(starsText);
+    t.starsText = starsText;
+
+    var itemsText = new PIXI.Text({
+        text: (unitLike.combatItems && unitLike.combatItems.length) ? unitLike.combatItems.join('') : '',
+        anchor: { x: 0.5, y: 1 },
+        style: { fontSize: 9, fill: 0xffffff }
+    });
+    t.container.addChild(itemsText);
+    t.itemsText = itemsText;
+
+    return t;
+}
+
+// Redraws a builder-mode token created above into cell (row,col) of the
+// given render state `rs` -- shared by js/ui-builder.js's team-builder
+// screen AND this file's own wave-transition reposition mode (Task 2), which
+// draws its picked-up-for-swap selection the same way. `opts.dimmed` (enemy
+// zone preview) and `opts.selected` (picked-up/held) toggle presentation
+// only; the token's cell placement always comes from (row,col) via
+// boardToScreen(), never from a lerp/animation (builder-mode tokens snap).
+function pixiRedrawBuilderToken(vis, unitLike, row, col, rs, opts) {
+    opts = opts || {};
+    var pos = boardToScreen(row, col, rs);
+    var w = rs.cellW - 6, h = rs.cellH * PIXI_CAM_Y_SQUASH - 6;
+
+    vis.container.x = pos.x;
+    vis.container.y = pos.y;
+    vis.container.zIndex = 1000 - row;
+    vis.container.scale.set(pos.depthScale, pos.depthScale);
+    vis.container.alpha = opts.dimmed ? 0.35 : 1;
+
+    var tint = pixiUnitElementColor(unitLike);
+    vis.base.clear();
+    vis.base.roundRect(-w / 2, -h / 2, w, h, 4).fill({ color: tint, alpha: 0.85 });
+    if (unitLike.evolved) {
+        vis.base.roundRect(-w / 2, -h / 2, w, h, 4).stroke({ width: 1.5, color: 0xe2b714, alpha: 0.9 });
+    }
+    if (opts.selected) {
+        vis.base.roundRect(-w / 2 - 2, -h / 2 - 2, w + 4, h + 4, 5).stroke({ width: 2.5, color: 0xffffff, alpha: 0.95 });
+    }
+
+    vis.emojiText.text = pixiUnitEmoji(unitLike);
+    vis.emojiText.style.fontSize = Math.floor(h * 0.4);
+    vis.emojiText.y = -h * 0.12;
+
+    vis.nameText.text = (unitLike.name || '').split(' ')[0];
+    vis.nameText.y = h * 0.02;
+
+    if (vis.starsText) {
+        vis.starsText.text = unitLike.stars ? new Array(unitLike.stars + 1).join('★') : '';
+        vis.starsText.y = h / 2 + 1;
+    }
+    if (vis.itemsText) {
+        vis.itemsText.text = (unitLike.combatItems && unitLike.combatItems.length) ? unitLike.combatItems.join('') : '';
+        vis.itemsText.y = -h / 2 - 2;
+    }
+
+    vis.ring.clear();
+    if (opts.selected || (rs && rs.hoveredUnit === unitLike)) {
+        vis.ring.visible = true;
+        var ringColor = opts.selected ? 0xffffff : pixiUnitElementColor(unitLike);
+        vis.ring.roundRect(-w / 2 - 4, -h / 2 - 4, w + 8, h + 8, 6).stroke({ width: opts.selected ? 3 : 2, color: ringColor, alpha: 0.95 });
+    } else {
+        vis.ring.visible = false;
+    }
+    pixiUpdateHitArea(vis, w, h);
+}
+
+// ---- per-unit visual token (combat) ----
+
+function pixiCreateVisual(unit) {
+    var base0 = pixiCreateTokenBase(unit, PIXI_R.unitLayer, PIXI_R, function(u) {
+        // Prompt 71 (Task 2): reposition-mode clicks route through the SAME
+        // combat tokens the fight itself just used -- see the file header
+        // comment on pixiCreateTokenBase for why this callback is a no-op
+        // outside reposition mode (registering it unconditionally at token
+        // creation, rather than only while reposition mode is active, avoids
+        // having to rewire every existing token's handlers when a wave ends).
+        if (PIXI_R.repositionMode && typeof PIXI_R.repositionClickCallback === 'function') {
+            PIXI_R.repositionClickCallback(u.gridRow, u.gridCol);
+        }
+    });
+    var container = base0.container, base = base0.base, ring = base0.ring, emojiText = base0.emojiText, nameText = base0.nameText;
 
     var hpBack = new PIXI.Graphics();
     var hpChunk = new PIXI.Graphics();
@@ -461,27 +631,6 @@ function pixiCreateVisual(unit) {
     });
     container.addChild(flagText);
 
-    // Task 4: element-colored selection ring, drawn under everything else
-    // added above -- addChildAt(0) so hover highlighting never occludes the
-    // token's own art/bars/text.
-    var ring = new PIXI.Graphics();
-    ring.visible = false;
-    container.addChildAt(ring, 0);
-
-    // Task 4: hover inspection -- Pixi pointer events drive a DOM tooltip
-    // (pixiShowUnitTooltip/pixiHideUnitTooltip below) and this same ring.
-    // hitArea is (re)sized every redraw in pixiRedrawToken (token size
-    // changes with depth scale/boss span), so it starts as a small
-    // placeholder rect here.
-    container.eventMode = 'static';
-    container.cursor = 'pointer';
-    container.hitArea = new PIXI.Rectangle(-10, -10, 20, 20);
-    container.on('pointerover', function(e) { PIXI_R.hoveredUnit = unit; pixiShowUnitTooltip(unit, e); });
-    container.on('pointermove', function(e) { if (PIXI_R.hoveredUnit === unit) pixiPositionUnitTooltip(e); });
-    container.on('pointerout', function() { if (PIXI_R.hoveredUnit === unit) { PIXI_R.hoveredUnit = null; pixiHideUnitTooltip(); } });
-
-    PIXI_R.unitLayer.addChild(container);
-
     var vis = {
         container: container,
         base: base,
@@ -515,11 +664,10 @@ function pixiCreateVisual(unit) {
         spawnDelay: pixiRngNext() * 0.22,
         spawnDuration: 0.32
     };
-    // Attach directly to the unit object (same convention render-dom.js
-    // uses for unit._uid) rather than a side Map -- keeps this file ES5-
-    // style like the rest of the codebase and needs no separate registry
-    // to garbage-collect: the visual dies with the unit object when
-    // initCombat() builds a fresh combatState for the next wave.
+    // Attach directly to the unit object rather than a side Map -- keeps
+    // this file ES5-style like the rest of the codebase and needs no
+    // separate registry to garbage-collect: the visual dies with the unit
+    // object when initCombat() builds a fresh combatState for the next wave.
     unit.__pixiVis = vis;
     return vis;
 }
@@ -757,13 +905,16 @@ function pixiRedrawToken(vis, unit, dtMs) {
     // testing already accounts for via the container's transform).
     pixiUpdateHitArea(vis, w, h);
 
-    // Task 4: element-colored selection ring, shown only for the hovered unit.
+    // Task 4: element-colored selection ring, shown for the hovered unit.
+    // Prompt 71 (Task 2): a white ring instead marks the unit currently
+    // picked up for wave-transition reposition (PIXI_R.repositionSelectedUnit).
     vis.ring.clear();
-    if (PIXI_R.hoveredUnit === unit) {
+    var repoSelected = PIXI_R.repositionMode && PIXI_R.repositionSelectedUnit === unit;
+    if (repoSelected || PIXI_R.hoveredUnit === unit) {
         vis.ring.visible = true;
-        var ringColor = pixiUnitElementColor(unit);
-        vis.ring.roundRect(-w / 2 - 4, -h / 2 - 4, w + 8, h + 8, 6).stroke({ width: 2, color: ringColor, alpha: 0.9 });
-        pixiShowUnitTooltip(unit);
+        var ringColor = repoSelected ? 0xffffff : pixiUnitElementColor(unit);
+        vis.ring.roundRect(-w / 2 - 4, -h / 2 - 4, w + 8, h + 8, 6).stroke({ width: repoSelected ? 3 : 2, color: ringColor, alpha: 0.95 });
+        if (!repoSelected) pixiShowUnitTooltip(unit);
     } else {
         vis.ring.visible = false;
     }
@@ -774,6 +925,140 @@ function pixiUpdateHitArea(vis, w, h) {
     vis.container.hitArea.y = -h / 2;
     vis.container.hitArea.width = w;
     vis.container.hitArea.height = h;
+}
+
+// ---- Task 2 (Prompt 71, Phase 3.5): wave-transition reposition-on-arena ----
+//
+// Between waves, ui-combat.js's showWaveTransition() used to swap in a
+// separate flat DOM grid (renderWaveRepositionGrid). It now stays on the
+// SAME arena the fight just used: the combat Pixi Application/tokens are
+// still mounted and frozen on the last rendered frame (the render loop stops
+// when combat ends, but PIXI_R.app/unit tokens are only torn down at the
+// NEXT wave's init -- see RENDER_PIXI.init's comment), so reposition mode
+// just adds click affordances on top of what's already drawn rather than
+// building a second token set.
+//
+// js/ui-combat.js owns what a click MEANS (mutating combatBoard + the
+// clicked unit's gridRow/gridCol, exactly like the pre-Prompt-71 DOM version
+// did) via the `clickCallback` passed to pixiEnterRepositionMode(); this file
+// only owns hit-testing and redrawing, per the renderer/chrome split the rest
+// of this codebase follows.
+
+// Builds one invisible interactive hex per player-side cell (combat rows
+// 4-7 -- the only rows a wave-transition reposition ever touches) so an
+// EMPTY cell is clickable too, not just occupied ones (which already get a
+// pointertap from their own token, wired in pixiCreateVisual above).
+function pixiBuildRepositionTileHits() {
+    if (!PIXI_R.tileHitLayer) return;
+    pixiDestroyAllChildren(PIXI_R.tileHitLayer);
+    var hexW = PIXI_R.cellW * 0.92;
+    var hexH = PIXI_R.cellH * PIXI_CAM_Y_SQUASH * 0.92;
+    for (var r = 4; r < PIXI_ROWS; r++) {
+        for (var c = 0; c < PIXI_COLS; c++) {
+            (function(row, col) {
+                var center = boardToScreen(row, col);
+                var hit = new PIXI.Container();
+                hit.x = center.x;
+                hit.y = center.y;
+                hit.eventMode = 'static';
+                hit.cursor = 'pointer';
+                hit.hitArea = new PIXI.Polygon(pixiHexPoints(0, 0, hexW, hexH));
+                hit.on('pointertap', function() {
+                    if (PIXI_R.repositionMode && typeof PIXI_R.repositionClickCallback === 'function') {
+                        PIXI_R.repositionClickCallback(row, col);
+                    }
+                });
+                PIXI_R.tileHitLayer.addChild(hit);
+            })(r, c);
+        }
+    }
+}
+
+// Translucent gold tint over every player-side cell while a unit is picked
+// up (PIXI_R.repositionSelectedUnit set) -- "these are the cells you can
+// drop onto" (any of them: occupied cells swap, empty cells move). Cleared
+// entirely when nothing is selected.
+function pixiUpdateRepositionHighlights() {
+    if (!PIXI_R.repositionHighlightLayer) return;
+    pixiDestroyAllChildren(PIXI_R.repositionHighlightLayer);
+    if (!PIXI_R.repositionSelectedUnit) return;
+    var g = new PIXI.Graphics();
+    var hexW = PIXI_R.cellW * 0.92;
+    var hexH = PIXI_R.cellH * PIXI_CAM_Y_SQUASH * 0.92;
+    for (var r = 4; r < PIXI_ROWS; r++) {
+        for (var c = 0; c < PIXI_COLS; c++) {
+            var center = boardToScreen(r, c);
+            g.poly(pixiHexPoints(center.x, center.y, hexW, hexH)).fill({ color: 0xe2b714, alpha: 0.14 });
+        }
+    }
+    PIXI_R.repositionHighlightLayer.addChild(g);
+}
+
+// Re-runs the exact same per-token update/redraw combat's own frame() loop
+// uses (pixiUpdateMovement/pixiRedrawToken) for every surviving player unit,
+// once, on demand -- there is no rAF loop driving frame() during the
+// wave-transition overlay, so a reposition click needs an explicit redraw
+// pass to show its effect. dtMs=0 keeps this a plain snap (no HP-chunk decay
+// or idle-bob advance); any cross-row/col jump is >1.5 cells by construction
+// (a real board move), so pixiUpdateMovement's jump-distance check always
+// takes the instant-snap branch, never a lerped slide.
+function pixiRedrawAfterReposition() {
+    if (!PIXI_R.ready || typeof combatState === 'undefined' || !combatState) return;
+    for (var i = 0; i < combatState.playerUnits.length; i++) {
+        var unit = combatState.playerUnits[i];
+        if (!unit || unit.hp <= 0) continue;
+        var vis = unit.__pixiVis;
+        if (!vis) continue;
+        pixiUpdateMovement(vis, unit, 0);
+        pixiRedrawToken(vis, unit, 0);
+    }
+}
+
+// Called by js/ui-combat.js's showWaveTransition(). `clickCallback(row, col)`
+// receives COMBAT grid coordinates (4-7), matching unit.gridRow/gridCol
+// directly -- see the Prompt 71 report for why the pre-existing DOM version's
+// 0-3 "team builder row" convention was a source of a latent (harmless,
+// because it was overwritten every wave anyway) gridRow bug this version
+// does not repeat.
+function pixiEnterRepositionMode(clickCallback) {
+    if (!PIXI_R.ready) return;
+    PIXI_R.repositionMode = true;
+    PIXI_R.repositionSelectedUnit = null;
+    PIXI_R.repositionClickCallback = clickCallback || null;
+    pixiBuildRepositionTileHits();
+    pixiUpdateRepositionHighlights();
+    pixiRedrawAfterReposition();
+}
+
+// Called by js/ui-combat.js's uiNextWave()/showMissionResults() (leaving the
+// wave-transition overlay either way -- starting the next wave or ending the
+// mission). Idempotent (safe to call when reposition mode was never entered,
+// e.g. the mission-complete path).
+function pixiExitRepositionMode() {
+    PIXI_R.repositionMode = false;
+    PIXI_R.repositionSelectedUnit = null;
+    PIXI_R.repositionClickCallback = null;
+    if (PIXI_R.tileHitLayer) pixiDestroyAllChildren(PIXI_R.tileHitLayer);
+    if (PIXI_R.repositionHighlightLayer) pixiDestroyAllChildren(PIXI_R.repositionHighlightLayer);
+}
+
+// Called by js/ui-combat.js's onWaveRepositionClick() after it has decided
+// whether this click is a "pick up" or a "drop" (it owns combatBoard/gridRow
+// mutation; this file just needs to know the resulting selection to redraw
+// the ring + refresh the highlight tint + snap tokens into their new cells).
+function pixiSetRepositionSelection(rowColOrNull) {
+    if (!rowColOrNull) {
+        PIXI_R.repositionSelectedUnit = null;
+    } else if (typeof combatState !== 'undefined' && combatState) {
+        var found = null;
+        for (var i = 0; i < combatState.playerUnits.length; i++) {
+            var u = combatState.playerUnits[i];
+            if (u.gridRow === rowColOrNull.row && u.gridCol === rowColOrNull.col) { found = u; break; }
+        }
+        PIXI_R.repositionSelectedUnit = found;
+    }
+    pixiUpdateRepositionHighlights();
+    pixiRedrawAfterReposition();
 }
 
 // ---- combatEvents-driven cosmetic effects ----
@@ -914,8 +1199,9 @@ function pixiUpdatePhaseTransitionOverlay(combatState) {
 
 // ---- Application lifecycle ----
 
-function pixiSizeBoard() {
-    var boardEl = PIXI_R.boardEl;
+function pixiSizeBoard(rs) {
+    rs = rs || PIXI_R;
+    var boardEl = rs.boardEl;
     var w = boardEl.clientWidth || boardEl.offsetWidth || 490;
     var h = boardEl.clientHeight || boardEl.offsetHeight || 320;
     // Prompt 69 hex migration: a packed hex board's actual content footprint
@@ -926,8 +1212,8 @@ function pixiSizeBoard() {
     // Dividing by those instead of the raw col/row counts sizes cells so the
     // packed hex board actually fills the container, instead of leaving a
     // dead gap at the right/bottom the way a naive w/COLS, h/ROWS would.
-    PIXI_R.cellW = w / (PIXI_COLS + 0.5);
-    PIXI_R.cellH = h / ((PIXI_ROWS - 1) * 0.75 + 1);
+    rs.cellW = w / (PIXI_COLS + 0.5);
+    rs.cellH = h / ((PIXI_ROWS - 1) * 0.75 + 1);
 }
 
 function pixiEnsureApp() {
@@ -964,6 +1250,13 @@ function pixiEnsureApp() {
         // frame" silhouette always paints beneath the tile group.
         PIXI_R.platformLayer = new PIXI.Container();
         PIXI_R.gridLayer = new PIXI.Container();
+        // Prompt 71 (Task 2): reposition-mode-only layers -- eligible-cell
+        // tint (repositionHighlightLayer) and per-cell click targets
+        // (tileHitLayer), both empty/inert outside reposition mode. Sit
+        // above the grid tiles but below unitLayer so a token on top of a
+        // cell still wins the pointer hit test over that cell's hit target.
+        PIXI_R.repositionHighlightLayer = new PIXI.Container();
+        PIXI_R.tileHitLayer = new PIXI.Container();
         PIXI_R.markerLayer = new PIXI.Container();
         PIXI_R.drawnMarkers = {};
         PIXI_R.unitLayer = new PIXI.Container();
@@ -973,6 +1266,8 @@ function pixiEnsureApp() {
 
         app.stage.addChild(PIXI_R.platformLayer);
         app.stage.addChild(PIXI_R.gridLayer);
+        app.stage.addChild(PIXI_R.repositionHighlightLayer);
+        app.stage.addChild(PIXI_R.tileHitLayer);
         app.stage.addChild(PIXI_R.markerLayer);
         app.stage.addChild(PIXI_R.unitLayer);
         app.stage.addChild(PIXI_R.fxLayer);
@@ -986,16 +1281,34 @@ function pixiEnsureApp() {
         if (typeof console !== 'undefined' && console.error) {
             console.error('render-pixi.js: PIXI.Application.init() failed', err);
         }
-        // Prompt 70 (Task 5): WebGL unavailable/broken on this machine --
-        // fall back to the DOM renderer for the rest of the session rather
-        // than silently leaving combat with a dead canvas (PIXI_R.ready never
-        // becomes true, so frame() would just no-op forever otherwise).
-        // js/ui-combat.js's renderCombatFrame() re-resolves getActiveRenderer()
-        // every call, so this takes effect on the very next tick.
-        if (typeof forceRendererDomFallback === 'function') {
-            forceRendererDomFallback('PIXI.Application.init() failed: ' + err);
+        // Prompt 71 (Phase 3.5, Task 3): the DOM renderer this used to fall
+        // back to (js/render-dom.js) is deleted -- pixi is now the only
+        // registered renderer, so a WebGL init failure has nowhere to fall
+        // back to. Show a clear "requires WebGL" notice instead of silently
+        // leaving a dead canvas (PIXI_R.ready never becomes true, so frame()
+        // would just no-op forever otherwise, per the old comment here).
+        if (typeof pixiShowWebGLRequiredNotice === 'function') {
+            pixiShowWebGLRequiredNotice(boardEl, err);
         }
     });
+}
+
+// Prompt 71 (Task 3): replaces combat with a plain DOM message when WebGL
+// is unavailable/broken -- "no silent fallback to a deleted renderer" per
+// the spec. `boardEl` is #combat-board (pixiEnsureApp's only caller today);
+// js/ui-builder.js's builder-mode arena calls this too (with its own board
+// element) if ITS PIXI.Application.init() rejects, so the message is written
+// generically ("This game requires WebGL") rather than combat-specific.
+function pixiShowWebGLRequiredNotice(boardEl, err) {
+    if (!boardEl) return;
+    var notice = document.createElement('div');
+    notice.className = 'webgl-required-notice';
+    notice.innerHTML = '<div class="webgl-required-icon">⚠️</div>' +
+        '<div class="webgl-required-title">This game requires WebGL</div>' +
+        '<div class="webgl-required-desc">Your browser or device could not start a WebGL context. ' +
+        'Try updating your browser, enabling hardware acceleration, or using a different device.</div>';
+    boardEl.innerHTML = '';
+    boardEl.appendChild(notice);
 }
 
 var RENDER_PIXI = {
@@ -1081,6 +1394,13 @@ var RENDER_PIXI = {
         if (typeof updateEncounterMechanicHud === 'function') updateEncounterMechanicHud();
         pixiUpdateEnrageTimer(combatState);
         pixiUpdatePhaseTransitionOverlay(combatState);
+        // Prompt 71 (Task 3): js/render-dom.js's own renderCombatBoard() used
+        // to call this every frame; nothing called it for the pixi renderer
+        // (the actual default since Prompt 70), so #combat-scoreboard was a
+        // silent, permanently-empty no-op whenever pixi was active -- fixed
+        // here rather than left to rot further now that render-dom.js (the
+        // only renderer that ever DID call it) is gone.
+        if (typeof renderCombatScoreboard === 'function') renderCombatScoreboard();
     },
 
     destroy: function() {
@@ -1099,6 +1419,8 @@ var RENDER_PIXI = {
         PIXI_R.ready = false;
         PIXI_R.platformLayer = null;
         PIXI_R.gridLayer = null;
+        PIXI_R.repositionHighlightLayer = null;
+        PIXI_R.tileHitLayer = null;
         PIXI_R.markerLayer = null;
         PIXI_R.drawnMarkers = null;
         PIXI_R.unitLayer = null;
@@ -1107,8 +1429,11 @@ var RENDER_PIXI = {
         PIXI_R.boardEl = null;
         PIXI_R.hoveredUnit = null;
         PIXI_R.clock = 0;
-        pixiLastGridW = -1;
-        pixiLastGridH = -1;
+        PIXI_R.lastGridW = -1;
+        PIXI_R.lastGridH = -1;
+        PIXI_R.repositionMode = false;
+        PIXI_R.repositionSelectedUnit = null;
+        PIXI_R.repositionClickCallback = null;
         pixiHideUnitTooltip();
 
         var enrageTimer = document.getElementById('enrage-timer');

@@ -1,9 +1,69 @@
 // ui-builder.js -- team builder screen + item equip on board (split from ui-v2.js)
+//
+// Prompt 71 (Phase 3.5, Task 1): the flat DOM team-builder grid is retired --
+// team building now happens ON the same angled hex arena combat uses. This
+// file mounts its own PixiJS Application (PIXI_BUILDER_R, a second instance
+// separate from js/render-pixi.js's combat-only PIXI_R -- the two screens are
+// never visible at once, but each needs its own sized/backdropped canvas) and
+// reuses render-pixi.js's projection/token code via the Prompt 71 refactor:
+// boardToScreen()/pixiHexPoints()/pixiSizeBoard()/pixiMaybeRebuildGrid()/
+// pixiCreateBuilderToken()/pixiRedrawBuilderToken() all now take an explicit
+// render-state object instead of assuming combat's PIXI_R, so this file
+// passes PIXI_BUILDER_R through every one of them rather than duplicating
+// that math. All team mutations still go through teams.js's addToTeam/
+// moveOnTeam/removeFromTeam -- this file never forks that validation.
+//
+// Click model (mouse + touch-friendly tap, no HTML5 drag API):
+//   click bench chip      -> "held" (highlight eligible hexes on the arena)
+//   click hex (empty)      -> place the held bench unit / move a held token
+//   click placed token     -> pick up (ring highlight); click again to drop it back
+//   click another token    -> swap with the held token
+//   click bench (while a token is held) -> unbench it
+// Task 2 (wave-transition reposition) reuses this same model against
+// js/render-pixi.js's combat PIXI_R instance instead -- see
+// pixiEnterRepositionMode() there.
 
 // ---- Team Builder Screen ----
 
-var selectedRosterUnit = null;
 var teamBuilderFilters = { element: 'all', archetype: 'all', sort: 'tier' };
+
+// Prompt 71: set by js/ui-missions.js's uiSelectStoryMission()/uiSelectGrindMission()
+// when the team builder is entered from stage/region select instead of the
+// hub's standalone "Team Builder" nav button -- {index, isStory, mission}.
+// (uiStartStoryMission()/uiStartGrindMission() themselves are untouched --
+// they still deploy + start combat immediately, no builder detour; kept that
+// way for tests/harness.js's runCombat() helper. See the Prompt 71 report.)
+// null means "entered standalone" (uiOpenTeamBuilderStandalone clears it):
+// neutral backdrop, no Deploy button.
+var teamBuilderEntryStage = null;
+
+// Entry point for the hub nav button (was a bare showScreen('team-builder')
+// onclick) -- clears any stale pending stage from a previous stage-select
+// visit so a standalone visit never shows a leftover "Deploy" button.
+function uiOpenTeamBuilderStandalone() {
+    teamBuilderEntryStage = null;
+    showScreen('team-builder');
+}
+
+// The "Deploy" button's handler (only rendered when teamBuilderEntryStage is
+// set -- see renderTeamBuilderDeployButton). Mirrors the pre-Prompt-71
+// uiStartStoryMission/uiStartGrindMission tail exactly (pendingMissionIndex/
+// pendingMissionIsStory + startMission + beginCombatScreen).
+function uiDeployFromBuilder() {
+    var sd = getSaveData();
+    var team = getActiveTeam(sd);
+    if (team.slots.length === 0) {
+        showToast('Build a team first!');
+        return;
+    }
+    if (!teamBuilderEntryStage) return;
+    pendingMissionIndex = teamBuilderEntryStage.index;
+    pendingMissionIsStory = teamBuilderEntryStage.isStory;
+    var mission = teamBuilderEntryStage.mission;
+    teamBuilderEntryStage = null;
+    startMission(sd, mission);
+    beginCombatScreen(sd);
+}
 
 function renderTeamBuilderScreen() {
     var sd = getSaveData();
@@ -12,15 +72,44 @@ function renderTeamBuilderScreen() {
     var maxSize = getMaxTeamSize(sd);
 
     document.getElementById('team-info').textContent =
-        'Team: ' + team.slots.length + ' / ' + maxSize + ' units';
+        'Team: ' + team.slots.length + ' / ' + maxSize + ' units' +
+        (teamBuilderEntryStage ? ' — deploying to ' + (teamBuilderEntryStage.mission ? teamBuilderEntryStage.mission.name : 'mission') : '');
 
-    // Render roster panel
+    builderRenderDeployButton();
+    builderRenderBench(sd, roster, team);
+    builderRefreshArena();
+
+    // Synergy preview (use enhanced sidebar if available)
+    if (typeof updateSynergySidebar === 'function') {
+        updateSynergySidebar();
+    } else {
+        renderTeamSynergyPreview(sd);
+    }
+
+    // Item bar
+    renderTeamBuilderItemBar();
+}
+
+function builderRenderDeployButton() {
+    var container = document.getElementById('team-builder-deploy');
+    if (!container) return;
+    if (!teamBuilderEntryStage) {
+        container.innerHTML = '';
+        return;
+    }
+    var name = teamBuilderEntryStage.mission ? teamBuilderEntryStage.mission.name : 'Mission';
+    container.innerHTML = '<button class="btn-primary" onclick="uiDeployFromBuilder()">🚀 Deploy to ' + name + '</button>';
+}
+
+// ---- Bench (Prompt 71: DOM strip below the arena, existing .team-roster-item
+// visual language, now a horizontal scrollable row) ----
+
+function builderRenderBench(sd, roster, team) {
     var panel = document.getElementById('team-roster-panel');
     panel.innerHTML = '';
 
-    // Filter/sort controls
+    // Filter/sort controls (unchanged from the pre-Prompt-71 layout).
     var filterHtml = '<div style="margin-bottom:6px; font-size:11px;">';
-    // Sort
     filterHtml += '<div style="margin-bottom:4px;"><span style="color:#888;">Sort:</span> ';
     var sortOpts = [['tier', 'Tier'], ['name', 'Name'], ['element', 'Element']];
     for (var so = 0; so < sortOpts.length; so++) {
@@ -28,7 +117,6 @@ function renderTeamBuilderScreen() {
         filterHtml += '<button class="tb-sort-btn" data-sort="' + sortOpts[so][0] + '" style="padding:1px 5px; border-radius:3px; border:1px solid #444; background:' + (sActive ? '#e2b714' : '#222') + '; color:' + (sActive ? '#000' : '#ccc') + '; cursor:pointer; font-size:10px; margin-right:2px;">' + sortOpts[so][1] + '</button>';
     }
     filterHtml += '</div>';
-    // Element filter
     filterHtml += '<div style="margin-bottom:4px; display:flex; flex-wrap:wrap; gap:2px;">';
     var elActive = teamBuilderFilters.element === 'all';
     filterHtml += '<button class="tb-elem-btn" data-elem="all" style="padding:1px 4px; border-radius:3px; border:1px solid #444; background:' + (elActive ? '#e2b714' : '#222') + '; color:' + (elActive ? '#000' : '#ccc') + '; cursor:pointer; font-size:10px;">All</button>';
@@ -38,7 +126,6 @@ function renderTeamBuilderScreen() {
         filterHtml += '<button class="tb-elem-btn" data-elem="' + elemKeys[ek] + '" style="padding:1px 4px; border-radius:3px; border:1px solid #444; background:' + (eAct ? '#e2b714' : '#222') + '; color:' + (eAct ? '#000' : '#ccc') + '; cursor:pointer; font-size:10px;">' + ELEMENTS[elemKeys[ek]].emoji + '</button>';
     }
     filterHtml += '</div>';
-    // Archetype filter
     filterHtml += '<div style="display:flex; flex-wrap:wrap; gap:2px;">';
     var archActive = teamBuilderFilters.archetype === 'all';
     filterHtml += '<button class="tb-arch-btn" data-arch="all" style="padding:1px 4px; border-radius:3px; border:1px solid #444; background:' + (archActive ? '#e2b714' : '#222') + '; color:' + (archActive ? '#000' : '#ccc') + '; cursor:pointer; font-size:10px;">All</button>';
@@ -49,7 +136,11 @@ function renderTeamBuilderScreen() {
     }
     filterHtml += '</div>';
     filterHtml += '</div>';
-    panel.innerHTML = filterHtml + '<div class="section-title" style="margin-top:4px;">Available Units</div>';
+    panel.innerHTML = filterHtml + '<div class="section-title" style="margin-top:4px;">Bench' +
+        (PIXI_BUILDER_R.heldBoardRC ? ' <span style="color:#e2b714; font-size:11px;">(click here to unbench held unit)</span>' : '') +
+        '</div><div class="tb-bench-chips" id="tb-bench-chips"></div>';
+
+    var chipsEl = document.getElementById('tb-bench-chips');
 
     // Apply filters to roster
     var filteredRoster = roster.filter(function(r) {
@@ -75,7 +166,7 @@ function renderTeamBuilderScreen() {
         }
 
         var div = document.createElement('div');
-        div.className = 'team-roster-item' + (onTeam ? ' on-team' : '');
+        div.className = 'team-roster-item' + (onTeam ? ' on-team' : '') + (PIXI_BUILDER_R.heldBenchKey === r.key ? ' held' : '');
         if (r.isEvolved) {
             div.style.borderLeft = '3px solid #e2b714';
         }
@@ -89,7 +180,6 @@ function renderTeamBuilderScreen() {
         var rATK = Math.floor(r.template.attack * rMult);
         var rTypeLabel = r.template.type.charAt(0).toUpperCase() + r.template.type.slice(1);
 
-        // Ability info for team builder
         var tbAbility = ABILITY_DATA ? ABILITY_DATA[r.key] : null;
         var tbAbilHtml = '';
         if (tbAbility) {
@@ -123,24 +213,23 @@ function renderTeamBuilderScreen() {
             'Cost: ' + r.template.cost + ' · Stars: ' + r.stars + '\n' +
             'HP: ' + rHP + ' · ATK: ' + rATK;
 
-        if (!onTeam) {
-            div.onclick = (function(key) {
-                return function() {
-                    selectedRosterUnit = key;
-                    highlightSelectedUnit(key);
-                };
-            })(r.key);
-        } else {
-            div.onclick = (function(key) {
-                return function() {
-                    removeFromTeam(sd, key);
-                    renderTeamBuilderScreen();
-                };
-            })(r.key);
-        }
+        div.onclick = (function(key) {
+            return function() { builderOnBenchChipClick(key); };
+        })(r.key);
 
-        panel.appendChild(div);
+        chipsEl.appendChild(div);
     }
+
+    // Clicking anywhere else in the bench (not on a specific chip) also
+    // unbenches a held board token -- "click bench to unbench" per the spec,
+    // not just "click a specific chip". Assigned (not addEventListener'd) so
+    // re-rendering the bench never accumulates duplicate listeners on this
+    // persistent panel node.
+    panel.onclick = function(e) {
+        if (e.target === panel && PIXI_BUILDER_R.heldBoardRC) {
+            builderUnbenchHeld();
+        }
+    };
 
     // Bind info buttons on roster items
     var infoBtns = panel.querySelectorAll('.unit-info-btn');
@@ -174,130 +263,78 @@ function renderTeamBuilderScreen() {
             renderTeamBuilderScreen();
         });
     }
-
-    // Render enemy zone preview above team board
-    var enemyPreviewEl = document.getElementById('enemy-zone-preview');
-    if (!enemyPreviewEl) {
-        enemyPreviewEl = document.createElement('div');
-        enemyPreviewEl.id = 'enemy-zone-preview';
-        var boardPanel = document.querySelector('.team-board-panel');
-        var boardEl2 = document.getElementById('team-board');
-        boardPanel.insertBefore(enemyPreviewEl, boardEl2);
-    }
-    var enemyPreviewHtml = '<div class="board-grid" style="gap:2px; opacity:0.3; margin-bottom:4px;">';
-    for (var er = 0; er < 4; er++) {
-        // Prompt 69 hex migration: per-row x-offset (half cell on odd rows,
-        // odd-r offset) so this preview's rows visually match combat's hex
-        // positions -- "minimum viable" per the spec (no hex-shaped CSS).
-        var erOffsetStyle = er % 2 === 1 ? ' transform:translateX(50%);' : '';
-        for (var ec = 0; ec < 7; ec++) {
-            enemyPreviewHtml += '<div class="board-cell" style="min-height:30px; background:#1a0a0a; border-color:#3a1a1a; cursor:default;' + erOffsetStyle + '"></div>';
-        }
-    }
-    enemyPreviewHtml += '</div>';
-    enemyPreviewHtml += '<div style="text-align:center; font-size:10px; color:#666; margin-bottom:2px;">\u2191 Enemy Zone \u2191 \u00b7 \u2193 Your Team \u2193</div>';
-    enemyPreviewEl.innerHTML = enemyPreviewHtml;
-
-    // Render board grid (4 rows x 7 cols, player's side)
-    var boardEl = document.getElementById('team-board');
-    boardEl.innerHTML = '';
-
-    for (var row = 0; row < 4; row++) {
-        // Prompt 69 hex migration: team-builder slot row `row` maps to combat
-        // row `7 - row` (CLAUDE.md's deployment convention, unchanged by the
-        // hex migration -- Task 2's "unchanged" instruction). Offset by the
-        // COMBAT row's parity, not the builder row's own index, so deploy
-        // positions visually match where units actually land in combat.
-        var combatRowForOffset = 7 - row;
-        var rowOffsetStyle = combatRowForOffset % 2 === 1 ? 'translateX(50%)' : '';
-        for (var col = 0; col < 7; col++) {
-            var cell = document.createElement('div');
-            cell.className = 'board-cell';
-            cell.setAttribute('data-row', row);
-            cell.setAttribute('data-col', col);
-            if (rowOffsetStyle) cell.style.transform = rowOffsetStyle;
-
-            // Check if a unit is here
-            var unitHere = null;
-            for (var u = 0; u < team.slots.length; u++) {
-                if (team.slots[u].row === row && team.slots[u].col === col) {
-                    unitHere = team.slots[u];
-                    break;
-                }
-            }
-
-            if (unitHere) {
-                cell.className += ' occupied';
-                var tmpl = UNIT_TEMPLATES[unitHere.key] || EVOLVED_TEMPLATES[unitHere.key];
-                var isEvolvedUnit = !!EVOLVED_TEMPLATES[unitHere.key];
-                if (isEvolvedUnit) {
-                    cell.style.border = '2px solid #e2b714';
-                    cell.style.boxShadow = '0 0 6px rgba(226,183,20,0.3)';
-                }
-                var itemIcons = getUnitItemIcons(sd, unitHere.key);
-                var heroIndicator = '';
-                if (typeof getHeroForUnit === 'function') {
-                    var unitHero = getHeroForUnit(sd, unitHere.key);
-                    if (unitHero && unitHero.def) {
-                        heroIndicator = '<div style="font-size:8px; color:#e2b714; line-height:1;">\u2694 ' + unitHero.def.name + '</div>';
-                    } else {
-                        heroIndicator = '<div style="font-size:7px; color:#666; line-height:1;">No Hero</div>';
-                    }
-                }
-                cell.innerHTML = '<div class="cell-unit">' +
-                    ELEMENTS[tmpl.element].emoji + '<br>' +
-                    tmpl.name.split(' ')[0] +
-                    heroIndicator +
-                    itemIcons + '</div>';
-            }
-
-            cell.onclick = (function(r, c) {
-                return function() { onTeamCellClick(r, c); };
-            })(row, col);
-
-            boardEl.appendChild(cell);
-        }
-    }
-
-    // Synergy preview (use enhanced sidebar if available)
-    if (typeof updateSynergySidebar === 'function') {
-        updateSynergySidebar();
-    } else {
-        renderTeamSynergyPreview(sd);
-    }
-
-    // Item bar
-    renderTeamBuilderItemBar();
-
-    // Enable drag & drop
-    if (typeof initTeamBoardDragDrop === 'function') {
-        initTeamBoardDragDrop();
-    }
 }
 
-function onTeamCellClick(row, col) {
+// A bench chip click means different things depending on current hold state:
+//   holding a board token -> drop it (unbench), regardless of which chip
+//   already on team        -> remove from team (direct unbench, no pick-up step)
+//   otherwise               -> pick up / put down this bench unit for placement
+function builderOnBenchChipClick(key) {
     var sd = getSaveData();
 
-    // Item equip mode: equip selected item to unit at this cell
+    if (PIXI_BUILDER_R.heldBoardRC) {
+        builderUnbenchHeld();
+        return;
+    }
+
+    var team = getActiveTeam(sd);
+    var onTeam = false;
+    for (var t = 0; t < team.slots.length; t++) {
+        if (team.slots[t].key === key) { onTeam = true; break; }
+    }
+    if (onTeam) {
+        removeFromTeam(sd, key);
+        renderTeamBuilderScreen();
+        return;
+    }
+
+    PIXI_BUILDER_R.heldBenchKey = (PIXI_BUILDER_R.heldBenchKey === key) ? null : key;
+    renderTeamBuilderScreen();
+}
+
+function builderUnbenchHeld() {
+    if (!PIXI_BUILDER_R.heldBoardRC) return;
+    var sd = getSaveData();
+    var teamRow = PIXI_BUILDER_R.heldBoardRC.row - 4;
+    var col = PIXI_BUILDER_R.heldBoardRC.col;
+    var team = getActiveTeam(sd);
+    var slot = builderFindSlotAt(team, teamRow, col);
+    PIXI_BUILDER_R.heldBoardRC = null;
+    if (slot) removeFromTeam(sd, slot.key);
+    renderTeamBuilderScreen();
+}
+
+function builderFindSlotAt(team, teamRow, col) {
+    for (var i = 0; i < team.slots.length; i++) {
+        if (team.slots[i].row === teamRow && team.slots[i].col === col) return team.slots[i];
+    }
+    return null;
+}
+
+// ---- Arena click routing (Task 1) ----
+//
+// `combatRow` is a combat grid row (4-7, matching unit.gridRow's own
+// convention -- see js/combat-core.js's initCombat(), which sets
+// unit.gridRow = 4 + boardRow). Called uniformly from both a placed token's
+// own pointertap and an empty hex's tile-hit target (see builderBuildTileHits/
+// pixiCreateBuilderToken's onTap), exactly like js/render-pixi.js's
+// wave-transition reposition click routing (Task 2) does.
+function builderOnCellClick(combatRow, col) {
+    var teamRow = combatRow - 4;
+    if (teamRow < 0 || teamRow > 3) return; // enemy-zone rows are non-interactive
+    var sd = getSaveData();
+
+    // Equip-mode passthrough -- highest priority, same as the pre-Prompt-71
+    // onTeamCellClick() (patchTeamCellClickForItems's real entry point).
     if (equipModeItemId) {
-        var team = getActiveTeam(sd);
-        var unitHere = null;
-        for (var t = 0; t < team.slots.length; t++) {
-            if (team.slots[t].row === row && team.slots[t].col === col) {
-                unitHere = team.slots[t];
-                break;
-            }
-        }
+        var teamE = getActiveTeam(sd);
+        var unitHere = builderFindSlotAt(teamE, teamRow, col);
         if (unitHere) {
             var result = equipItem(sd, equipModeItemId, unitHere.key);
             if (result === 'combined') {
                 addLogEntry('Items auto-combined into a recipe!', 'info');
             } else if (result === 'evolved_only') {
                 addLogEntry('Only evolved units can equip this item!', 'warning');
-            } else if (result === true) {
-                // Equipped normally
-            } else {
-                // Failed — slots full or other issue
             }
             equipModeItemId = null;
             renderTeamBuilderScreen();
@@ -305,18 +342,268 @@ function onTeamCellClick(row, col) {
         return;
     }
 
-    if (selectedRosterUnit) {
-        var result2 = addToTeam(sd, selectedRosterUnit, row, col);
-        selectedRosterUnit = null;
+    if (PIXI_BUILDER_R.heldBenchKey) {
+        var addResult = addToTeam(sd, PIXI_BUILDER_R.heldBenchKey, teamRow, col);
+        PIXI_BUILDER_R.heldBenchKey = null;
+        if (addResult && addResult.success === false && addResult.reason && typeof showToast === 'function') {
+            showToast(addResult.reason);
+        }
+        renderTeamBuilderScreen();
+        return;
+    }
+
+    if (PIXI_BUILDER_R.heldBoardRC) {
+        var fromTeamRow = PIXI_BUILDER_R.heldBoardRC.row - 4;
+        var fromCol = PIXI_BUILDER_R.heldBoardRC.col;
+        if (fromTeamRow === teamRow && fromCol === col) {
+            // Clicked the already-held token again -- put it back down (deselect).
+            PIXI_BUILDER_R.heldBoardRC = null;
+            renderTeamBuilderScreen();
+            return;
+        }
+        var teamH = getActiveTeam(sd);
+        var heldSlot = builderFindSlotAt(teamH, fromTeamRow, fromCol);
+        PIXI_BUILDER_R.heldBoardRC = null;
+        if (heldSlot) moveOnTeam(sd, heldSlot.key, teamRow, col);
+        renderTeamBuilderScreen();
+        return;
+    }
+
+    // Nothing held: clicking a placed token picks it up. Clicking an empty
+    // cell with nothing held is a no-op.
+    var team3 = getActiveTeam(sd);
+    var slotHere = builderFindSlotAt(team3, teamRow, col);
+    if (slotHere) {
+        PIXI_BUILDER_R.heldBoardRC = { row: combatRow, col: col };
         renderTeamBuilderScreen();
     }
 }
 
-function highlightSelectedUnit(key) {
-    var items = document.querySelectorAll('.team-roster-item');
-    for (var i = 0; i < items.length; i++) {
-        items[i].style.outline = items[i].getAttribute('data-key') === key ? '2px solid #e2b714' : 'none';
+// ---- Pixi builder arena (Task 1) ----
+
+var PIXI_BUILDER_R = {
+    app: null, ready: false, boardEl: null,
+    platformLayer: null, gridLayer: null, enemyDimLayer: null, highlightLayer: null,
+    tileHitLayer: null, unitLayer: null,
+    cellW: 0, cellH: 0, lastGridW: -1, lastGridH: -1,
+    hoveredUnit: null,
+    heldBenchKey: null,  // roster key picked up from the bench, awaiting placement
+    heldBoardRC: null    // {row, col} in COMBAT coords (4-7) of a placed unit picked up
+};
+
+function builderEnsureApp() {
+    if (PIXI_BUILDER_R.app) return; // already created -- reused across screen visits
+    if (typeof PIXI === 'undefined') return; // no vendor lib loaded (headless/test context)
+
+    var boardEl = document.getElementById('builder-board');
+    if (!boardEl) return;
+    PIXI_BUILDER_R.boardEl = boardEl;
+
+    var app = new PIXI.Application();
+    PIXI_BUILDER_R.app = app;
+
+    app.init({
+        resizeTo: boardEl,
+        backgroundAlpha: 0,
+        antialias: true,
+        autoDensity: true,
+        resolution: (typeof window !== 'undefined' && window.devicePixelRatio) || 1
+    }).then(function() {
+        if (PIXI_BUILDER_R.app !== app) return; // torn down mid-mount
+
+        app.canvas.style.position = 'absolute';
+        app.canvas.style.top = '0';
+        app.canvas.style.left = '0';
+        app.canvas.style.zIndex = '1';
+        boardEl.appendChild(app.canvas);
+
+        PIXI_BUILDER_R.platformLayer = new PIXI.Container();
+        PIXI_BUILDER_R.gridLayer = new PIXI.Container();
+        PIXI_BUILDER_R.enemyDimLayer = new PIXI.Container();
+        PIXI_BUILDER_R.highlightLayer = new PIXI.Container();
+        PIXI_BUILDER_R.tileHitLayer = new PIXI.Container();
+        PIXI_BUILDER_R.unitLayer = new PIXI.Container();
+        PIXI_BUILDER_R.unitLayer.sortableChildren = true;
+
+        app.stage.addChild(PIXI_BUILDER_R.platformLayer);
+        app.stage.addChild(PIXI_BUILDER_R.gridLayer);
+        app.stage.addChild(PIXI_BUILDER_R.enemyDimLayer);
+        app.stage.addChild(PIXI_BUILDER_R.highlightLayer);
+        app.stage.addChild(PIXI_BUILDER_R.tileHitLayer);
+        app.stage.addChild(PIXI_BUILDER_R.unitLayer);
+
+        // Defer the first real layout pass a couple of frames, same as
+        // js/ui-combat.js's startMissionCombat() does for the combat board --
+        // on first paint the screen's offsetWidth/offsetHeight can still be 0
+        // if read synchronously here.
+        requestAnimationFrame(function() {
+            requestAnimationFrame(function() {
+                PIXI_BUILDER_R.ready = true;
+                builderRefreshArena();
+            });
+        });
+    }).catch(function(err) {
+        if (typeof console !== 'undefined' && console.error) {
+            console.error('ui-builder.js: builder PIXI.Application.init() failed', err);
+        }
+        if (typeof pixiShowWebGLRequiredNotice === 'function') {
+            pixiShowWebGLRequiredNotice(boardEl, err);
+        }
+    });
+}
+
+function builderRefreshArena() {
+    builderEnsureApp();
+    if (!PIXI_BUILDER_R.ready) return;
+
+    var regionNum = (teamBuilderEntryStage && teamBuilderEntryStage.mission) ? teamBuilderEntryStage.mission.region : null;
+    if (typeof buildArenaBackdrop === 'function') buildArenaBackdrop(regionNum, 'builder-backdrop');
+
+    pixiSizeBoard(PIXI_BUILDER_R);
+    pixiMaybeRebuildGrid(PIXI_BUILDER_R);
+    builderBuildEnemyDim();
+    builderBuildTileHits();
+    builderRebuildTokens();
+    builderUpdateHighlights();
+}
+
+// Enemy rows (0-3): darkened -- "shown dimmed" per the spec. War Room intel
+// (js/hub.js's getWarRoomIntelLevel()) is permanently 0 -- that system was
+// removed -- so there is no per-unit enemy roster to render; this relocates
+// the pre-Prompt-71 behavior faithfully (the old DOM version never rendered
+// real enemy tokens either, only an empty dimmed zone) rather than inventing
+// new intel-gated content out of scope for this prompt.
+function builderBuildEnemyDim() {
+    if (!PIXI_BUILDER_R.enemyDimLayer) return;
+    pixiDestroyAllChildren(PIXI_BUILDER_R.enemyDimLayer);
+    var g = new PIXI.Graphics();
+    var hexW = PIXI_BUILDER_R.cellW * 0.92;
+    var hexH = PIXI_BUILDER_R.cellH * PIXI_CAM_Y_SQUASH * 0.92;
+    for (var r = 0; r < 4; r++) {
+        for (var c = 0; c < PIXI_COLS; c++) {
+            var center = boardToScreen(r, c, PIXI_BUILDER_R);
+            g.poly(pixiHexPoints(center.x, center.y, hexW, hexH)).fill({ color: 0x000000, alpha: 0.45 });
+        }
     }
+    PIXI_BUILDER_R.enemyDimLayer.addChild(g);
+}
+
+// One invisible interactive hex per player-side cell (combat rows 4-7) so an
+// EMPTY cell is clickable too, not just occupied ones (which get a
+// pointertap from their own token -- see builderRebuildTokens).
+function builderBuildTileHits() {
+    if (!PIXI_BUILDER_R.tileHitLayer) return;
+    pixiDestroyAllChildren(PIXI_BUILDER_R.tileHitLayer);
+    var hexW = PIXI_BUILDER_R.cellW * 0.92;
+    var hexH = PIXI_BUILDER_R.cellH * PIXI_CAM_Y_SQUASH * 0.92;
+    for (var r = 4; r < PIXI_ROWS; r++) {
+        for (var c = 0; c < PIXI_COLS; c++) {
+            (function(row, col) {
+                var center = boardToScreen(row, col, PIXI_BUILDER_R);
+                var hit = new PIXI.Container();
+                hit.x = center.x;
+                hit.y = center.y;
+                hit.eventMode = 'static';
+                hit.cursor = 'pointer';
+                hit.hitArea = new PIXI.Polygon(pixiHexPoints(0, 0, hexW, hexH));
+                hit.on('pointertap', function() { builderOnCellClick(row, col); });
+                PIXI_BUILDER_R.tileHitLayer.addChild(hit);
+            })(r, c);
+        }
+    }
+}
+
+// Rebuilds every placed-unit token from scratch each call -- the team
+// builder redraws on every state change (a click), not every animation
+// frame, so this cost is trivial (at most getMaxTeamSize() tokens) and
+// avoids having to reconcile a persistent token set against team.slots
+// mutating out from under it.
+function builderRebuildTokens() {
+    if (!PIXI_BUILDER_R.unitLayer) return;
+    pixiDestroyAllChildren(PIXI_BUILDER_R.unitLayer);
+    PIXI_BUILDER_R.hoveredUnit = null;
+
+    var sd = getSaveData();
+    var team = getActiveTeam(sd);
+    for (var i = 0; i < team.slots.length; i++) {
+        var slot = team.slots[i];
+        var combatRow = 4 + slot.row;
+        var unitLike = builderUnitLikeFromSlot(sd, slot);
+        if (!unitLike) continue;
+        unitLike.__builderRow = slot.row;
+        unitLike.__builderCol = slot.col;
+
+        var held = !!(PIXI_BUILDER_R.heldBoardRC && PIXI_BUILDER_R.heldBoardRC.row === combatRow && PIXI_BUILDER_R.heldBoardRC.col === slot.col);
+        var vis = pixiCreateBuilderToken(unitLike, PIXI_BUILDER_R.unitLayer, PIXI_BUILDER_R, function(u) {
+            builderOnCellClick(4 + u.__builderRow, u.__builderCol);
+        });
+        pixiRedrawBuilderToken(vis, unitLike, combatRow, slot.col, PIXI_BUILDER_R, { selected: held });
+    }
+}
+
+// Translucent tint over every player-side cell while a bench unit or a
+// picked-up token is held -- "eligible hexes highlight" per the spec. Every
+// row-4-7 cell is a valid drop target (occupied ones swap, empty ones move/
+// place), so this highlights the whole zone rather than filtering by
+// validity (team-size caps / one-family-one-slot are enforced by teams.js on
+// drop, surfaced via showToast on failure -- see builderOnCellClick).
+function builderUpdateHighlights() {
+    if (!PIXI_BUILDER_R.highlightLayer) return;
+    pixiDestroyAllChildren(PIXI_BUILDER_R.highlightLayer);
+    if (!PIXI_BUILDER_R.heldBenchKey && !PIXI_BUILDER_R.heldBoardRC) return;
+
+    var g = new PIXI.Graphics();
+    var hexW = PIXI_BUILDER_R.cellW * 0.92;
+    var hexH = PIXI_BUILDER_R.cellH * PIXI_CAM_Y_SQUASH * 0.92;
+    for (var r = 4; r < PIXI_ROWS; r++) {
+        for (var c = 0; c < PIXI_COLS; c++) {
+            var center = boardToScreen(r, c, PIXI_BUILDER_R);
+            g.poly(pixiHexPoints(center.x, center.y, hexW, hexH)).fill({ color: 0xe2b714, alpha: 0.14 });
+        }
+    }
+    PIXI_BUILDER_R.highlightLayer.addChild(g);
+}
+
+// Builds the "unit-like" object pixiCreateBuilderToken()/pixiUnitTooltipHtml()
+// (js/render-pixi.js) expect from a team.slots entry -- same derived-stats
+// shape createUnit() in teams.js produces for real combat units, so the
+// existing unit tooltip (reused unchanged, per the spec) renders sensibly.
+function builderUnitLikeFromSlot(sd, slot) {
+    var tmpl = UNIT_TEMPLATES[slot.key] || EVOLVED_TEMPLATES[slot.key];
+    if (!tmpl) return null;
+    var entry = sd.collection[slot.key];
+    var stars = entry ? entry.stars : 1;
+    var mult = getStarMultiplier(stars);
+    var items = getEquippedItems(sd, slot.key);
+    var itemEmojis = [];
+    for (var i = 0; i < items.length; i++) itemEmojis.push(getItemEmoji(items[i]));
+
+    return {
+        key: slot.key,
+        name: tmpl.name,
+        element: tmpl.element,
+        evolved: !!EVOLVED_TEMPLATES[slot.key],
+        hp: Math.floor(tmpl.hp * mult),
+        maxHp: Math.floor(tmpl.hp * mult),
+        attack: Math.floor(tmpl.attack * mult),
+        stars: stars,
+        maxMana: 0,
+        currentMana: 0,
+        combatItems: itemEmojis,
+        statusEffects: [],
+        side: 'player'
+    };
+}
+
+// Cheap safety net: a window resize while the builder screen is open doesn't
+// have a per-frame loop to pick it up (unlike combat's rAF render loop), so
+// nudge a refresh explicitly. No-ops instantly if the screen isn't current.
+if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('resize', function() {
+        if (typeof currentScreen !== 'undefined' && currentScreen === 'team-builder') {
+            builderRefreshArena();
+        }
+    });
 }
 
 function renderTeamSynergyPreview(sd) {
@@ -467,7 +754,7 @@ function renderTeamBuilderItemBar() {
     html += '</div>';
 
     if (equipModeItemId) {
-        html += '<div style="font-size:11px; color:#e2b714; margin-top:4px;">Click a unit on the board to equip</div>';
+        html += '<div style="font-size:11px; color:#e2b714; margin-top:4px;">Click a unit on the arena to equip</div>';
     }
 
     container.innerHTML = html;
@@ -493,189 +780,11 @@ function renderTeamBuilderItemBar() {
                 equipModeItemId = null;
             } else {
                 equipModeItemId = id;
-                selectedRosterUnit = null; // exit unit selection mode
+                PIXI_BUILDER_R.heldBenchKey = null; // exit unit-placement mode
+                PIXI_BUILDER_R.heldBoardRC = null;
             }
             renderTeamBuilderItemBar();
+            builderUpdateHighlights();
         });
     }
 }
-
-// ---- Item Slots on Team Builder Board Cells ----
-
-// Override onTeamCellClick to handle equip mode
-var _originalOnTeamCellClick = null;
-
-function patchTeamCellClickForItems() {
-    // We'll check equipModeItemId inside the existing onTeamCellClick
-}
-
-// ---- Render item icons on board cells in team builder ----
-
-function getUnitItemIcons(saveData, unitKey) {
-    var items = getEquippedItems(saveData, unitKey);
-    if (items.length === 0) return '';
-    var html = '<div style="font-size:8px; line-height:1;">';
-    for (var i = 0; i < items.length; i++) {
-        html += getItemEmoji(items[i]);
-    }
-    html += '</div>';
-    return html;
-}
-
-// ---- Team Board Drag & Drop Enhancement (Prompt 20 Phase C3) ----
-
-function initTeamBoardDragDrop() {
-    var slots = document.querySelectorAll('#team-board .board-cell');
-    for (var i = 0; i < slots.length; i++) {
-        (function(slot) {
-            slot.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                slot.classList.add('drag-over');
-            });
-
-            slot.addEventListener('dragleave', function() {
-                slot.classList.remove('drag-over');
-            });
-
-            slot.addEventListener('drop', function(e) {
-                e.preventDefault();
-                slot.classList.remove('drag-over');
-
-                var unitKey = e.dataTransfer.getData('unitKey');
-                if (!unitKey) return;
-
-                var row = parseInt(slot.getAttribute('data-row'));
-                var col = parseInt(slot.getAttribute('data-col'));
-                var sd = getSaveData();
-
-                var result = addToTeam(sd, unitKey, row, col);
-                if (result.success) {
-                    renderTeamBuilderScreen();
-                }
-            });
-        })(slots[i]);
-    }
-
-    // Make roster items draggable
-    var rosterItems = document.querySelectorAll('.team-roster-item');
-    for (var ri = 0; ri < rosterItems.length; ri++) {
-        rosterItems[ri].draggable = true;
-        (function(item) {
-            item.addEventListener('dragstart', function(e) {
-                var key = item.getAttribute('data-key');
-                if (key) {
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('unitKey', key);
-                }
-            });
-        })(rosterItems[ri]);
-    }
-}
-
-// ---- Synergy Sidebar Update (Prompt 20 Phase C4) ----
-
-function updateSynergySidebar() {
-    var sd = getSaveData();
-    var el = document.getElementById('team-synergy-preview');
-    if (!el) return;
-
-    var team = getActiveTeam(sd);
-    var elementCounts = {};
-    var archetypeCounts = {};
-
-    for (var i = 0; i < team.slots.length; i++) {
-        var slot = team.slots[i];
-        var unit = UNIT_TEMPLATES[slot.key] || EVOLVED_TEMPLATES[slot.key];
-        if (!unit) continue;
-
-        var isEvolved = !!EVOLVED_TEMPLATES[slot.key];
-
-        // Element counting: evolved T5 counts as 2 (prismatic)
-        var elementCount = 1;
-        if (isEvolved && (unit.baseCost === 5 || unit.cost === 5)) {
-            elementCount = 2;
-        }
-        elementCounts[unit.element] = (elementCounts[unit.element] || 0) + elementCount;
-
-        // Archetype counting (with ascension-aware contribution)
-        if (typeof getUnitArchetypeContribution === 'function') {
-            var fakeUnit = { key: slot.key, evolved: isEvolved, archetype: unit.archetype, ascensionTier: slot.ascensionTier || null };
-            var contrib = getUnitArchetypeContribution(fakeUnit);
-            archetypeCounts[contrib.primary] = (archetypeCounts[contrib.primary] || 0) + contrib.primaryCount;
-            if (contrib.secondary && contrib.secondaryCount > 0) {
-                archetypeCounts[contrib.secondary] = (archetypeCounts[contrib.secondary] || 0) + contrib.secondaryCount;
-            }
-        } else {
-            archetypeCounts[unit.archetype] = (archetypeCounts[unit.archetype] || 0) + 1;
-        }
-    }
-
-    if (team.slots.length === 0) {
-        el.innerHTML = '<span class="text-muted">Select units to see synergies</span>';
-        return;
-    }
-
-    var html = '<div style="font-weight:bold; margin-bottom:4px;">Active Synergies</div>';
-
-    // Elements section
-    html += '<div style="margin-bottom:6px;"><div style="color:#888; font-size:11px; margin-bottom:2px;">Elements</div>';
-    var allElements = Object.keys(ELEMENTS);
-    for (var ei = 0; ei < allElements.length; ei++) {
-        var elem = allElements[ei];
-        var count = elementCounts[elem] || 0;
-        if (count === 0) continue;
-
-        var elemSyn = ELEMENT_SYNERGIES[elem];
-        var activeClass = count >= 2 ? ' style="color:#e2b714;"' : '';
-
-        html += '<div' + activeClass + '>';
-        html += getElementEmoji(elem) + ' ' + ELEMENTS[elem].name + ': ' + count;
-
-        // Show threshold markers
-        if (elemSyn && elemSyn.thresholds) {
-            html += ' <span style="font-size:10px; color:#666;">';
-            for (var t = 0; t < elemSyn.thresholds.length; t++) {
-                var threshold = elemSyn.thresholds[t];
-                var lit = count >= threshold;
-                html += '<span style="color:' + (lit ? '#e2b714' : '#444') + ';">[' + threshold + ']</span> ';
-            }
-            html += '</span>';
-        }
-        html += '</div>';
-    }
-    html += '</div>';
-
-    // Archetypes section
-    html += '<div><div style="color:#888; font-size:11px; margin-bottom:2px;">Archetypes</div>';
-    var allArchetypes = Object.keys(ARCHETYPES);
-    for (var ai = 0; ai < allArchetypes.length; ai++) {
-        var arch = allArchetypes[ai];
-        var aCount = archetypeCounts[arch] || 0;
-        if (aCount === 0) continue;
-
-        var archData = ARCHETYPES[arch];
-        var aActiveClass = '';
-        if (archData && archData.thresholds && archData.thresholds.length > 0 && aCount >= archData.thresholds[0]) {
-            aActiveClass = ' style="color:#e2b714;"';
-        }
-
-        html += '<div' + aActiveClass + '>';
-        html += archData.emoji + ' ' + archData.name + ': ' + aCount;
-
-        if (archData && archData.thresholds) {
-            html += ' <span style="font-size:10px; color:#666;">';
-            for (var at = 0; at < archData.thresholds.length; at++) {
-                var aThreshold = archData.thresholds[at];
-                var aLit = aCount >= aThreshold;
-                html += '<span style="color:' + (aLit ? '#e2b714' : '#444') + ';">[' + aThreshold + ']</span> ';
-            }
-            html += '</span>';
-        }
-        html += '</div>';
-    }
-    html += '</div>';
-
-    el.innerHTML = html;
-}
-
