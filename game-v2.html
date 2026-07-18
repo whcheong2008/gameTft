@@ -887,8 +887,24 @@ body {
     <script src="js/hub.js"></script>
     <script src="js/items.js?v=2"></script>
     <script src="js/missions.js?v=2"></script>
-    <!-- V2 uses simplified combat in main-v2.js, not V1 combat.js -->
-    <script src="js/ui-v2.js?v=5"></script>
+    <!-- V2 uses simplified combat in these files, not V1 combat.js. Split from main-v2.js (Prompt 58). -->
+    <script src="js/combat-core.js"></script>
+    <script src="js/combat-status.js"></script>
+    <script src="js/combat-boss.js"></script>
+    <script src="js/combat-passives.js"></script>
+    <script src="js/combat-abilities.js"></script>
+    <script src="js/combat-legendary.js"></script>
+    <script src="js/combat-damage.js"></script>
+    <!-- UI renderers. Split from ui-v2.js (Prompt 58); ui-shared.js loads first. -->
+    <script src="js/ui-shared.js"></script>
+    <script src="js/ui-hub.js"></script>
+    <script src="js/ui-gacha.js"></script>
+    <script src="js/ui-heroes.js"></script>
+    <script src="js/ui-roster.js"></script>
+    <script src="js/ui-builder.js"></script>
+    <script src="js/ui-missions.js"></script>
+    <script src="js/ui-combat.js"></script>
+    <script src="js/ui-items.js"></script>
     <script src="js/main-v2.js"></script>
 </body>
 </html>

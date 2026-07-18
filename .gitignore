@@ -19,6 +19,9 @@ fibery api.txt
 # Node (future-proofing)
 node_modules/
 
+# Generated art assets (not committed)
+graphics/
+
 # Unity
 unity/*/Library/
 unity/*/Temp/
