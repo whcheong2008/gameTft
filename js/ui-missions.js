@@ -5,6 +5,34 @@
 var missionScreenMode = 'regions'; // 'regions' or 'stages'
 var selectedRegion = null;
 
+// Prompt 80 (Phase 6.5): region-card header tint. Reuses js/ui-combat.js's
+// ARENA_BACKDROP_THEMES (already the canonical per-region accent color --
+// the same hex paints that region's combat arena backdrop) instead of
+// inventing a second color mapping. ui-missions.js loads before
+// ui-combat.js in game-v2.html's script order, but that's fine: this is
+// only read from inside render functions, called long after every script
+// has finished loading. Presentation only -- no new game data.
+function p80RegionAccent(regionNum) {
+    if (typeof ARENA_BACKDROP_THEMES !== 'undefined' && ARENA_BACKDROP_THEMES[regionNum]) {
+        return ARENA_BACKDROP_THEMES[regionNum].accent;
+    }
+    return '#e2b714';
+}
+
+// Prompt 80: one pip per stage in the region (not per star) -- filled to a
+// tier (0-3) by that stage's sd.missions.starRatings best-of-3 rating, same
+// data the stage list's own ⭐/☆ row already reads. Pure display aggregation
+// over existing save data, no new fields.
+function p80RegionStagePips(sd, region) {
+    var html = '';
+    for (var i = 0; i < region.stageIds.length; i++) {
+        var sid = region.stageIds[i];
+        var st = (sd.missions.starRatings && sd.missions.starRatings[sid]) || 0;
+        html += '<span class="p80-region-pip p80-region-pip-' + st + '" title="' + st + '/3 stars"></span>';
+    }
+    return html;
+}
+
 function renderMissionSelectScreen() {
     if (missionScreenMode === 'stages' && selectedRegion) {
         renderStageListScreen();
@@ -24,33 +52,37 @@ function renderRegionMapScreen() {
     for (var i = 0; i < statuses.length; i++) {
         var rs = statuses[i];
         var regionNum = rs.region;
+        var region = REGIONS[regionNum];
         var unlocked = regionNum === 1 || isRegionBossCleared(sd, regionNum - 1);
         var allDone = rs.complete;
         var canClaim = allDone && !rs.rewardClaimed;
+        var accent = p80RegionAccent(regionNum);
 
         var div = document.createElement('div');
-        div.className = 'mission-card' + (!unlocked ? ' locked' : '') + (allDone ? ' completed' : '');
-        div.style.flexDirection = 'column';
-        div.style.alignItems = 'stretch';
+        div.className = 'sv-panel p80-region-card' + (!unlocked ? ' locked' : '') + (allDone ? ' completed' : '');
 
         var statusIcon = allDone ? (rs.rewardClaimed ? ' ✅' : ' ✓') : '';
         var lockIcon = !unlocked ? ' 🔒' : '';
+        var bossChipClass = 'sv-chip p80-boss-chip' + (rs.bossCleared ? ' cleared' : '');
+        var bossChipText = rs.bossCleared ? '👑 Boss cleared' : '👑 Boss';
 
-        var progressText = rs.completedStages + '/' + rs.totalStages + ' stages';
-        var bossText = rs.bossCleared ? '<span style="color:#6bcb77;">Boss: Cleared</span>' : '<span style="color:#888;">Boss: Not cleared</span>';
-
-        var html = '<div style="display:flex; justify-content:space-between; align-items:center;">';
-        html += '<div>';
-        html += '<div class="m-name">Region ' + regionNum + ': ' + rs.name + lockIcon + statusIcon + '</div>';
-        html += '<div class="m-desc">' + rs.subtitle + '</div>';
-        html += '<div style="font-size:12px; color:#aaa; margin-top:4px;">' + progressText + ' · ' + bossText + '</div>';
-        html += '<div style="font-size:11px; color:#e2b714; margin-top:2px;">Reward: ' + rs.rewardDescription + '</div>';
-        html += '</div>';
+        var html = '<div class="sv-panel-header p80-region-header" style="border-left:4px solid ' + accent + '; background:linear-gradient(90deg,' + accent + '2a,transparent);">';
+        html += '<span class="p80-region-title">Region ' + regionNum + ': ' + rs.name + lockIcon + statusIcon + '</span>';
+        html += '<span class="' + bossChipClass + '">' + bossChipText + '</span>';
         html += '</div>';
 
-        if (canClaim) {
-            html += '<div style="margin-top:8px;"><button class="btn-primary region-claim-btn" data-region="' + regionNum + '" style="font-size:12px; padding:6px 14px;">Claim Reward</button></div>';
+        html += '<div class="sv-panel-body p80-region-body">';
+        html += '<div class="p80-region-subtitle">' + rs.subtitle + '</div>';
+        html += '<div class="p80-region-progress-row"><span class="text-muted" style="font-size:12px;">' + rs.completedStages + '/' + rs.totalStages + ' stages</span>';
+        html += '<span class="p80-region-pips">' + p80RegionStagePips(sd, region) + '</span></div>';
+        html += '<div class="p80-region-reward text-gold" style="font-size:11px;">Reward: ' + rs.rewardDescription + '</div>';
+        if (!unlocked) {
+            html += '<div class="p80-region-lock-req">🔒 Clear Region ' + (regionNum - 1) + '\'s boss stage to unlock</div>';
         }
+        if (canClaim) {
+            html += '<div style="margin-top:8px;"><button class="sv-btn sv-btn-primary region-claim-btn" data-region="' + regionNum + '">Claim Reward</button></div>';
+        }
+        html += '</div>';
 
         div.innerHTML = html;
 
@@ -94,11 +126,14 @@ function renderEndlessChallengesEntryCards(sd, storyEl) {
     var endlessBest = (typeof getEndlessSaveData === 'function') ? getEndlessSaveData(sd).bestFloor : 0;
 
     var endlessDiv = document.createElement('div');
-    endlessDiv.className = 'mission-card' + (!endlessOn ? ' locked' : '');
-    endlessDiv.style.borderColor = '#7a3ab8';
+    endlessDiv.className = 'sv-panel p80-region-card p80-entry-card' + (!endlessOn ? ' locked' : '');
     endlessDiv.innerHTML =
-        '<div><div class="m-name">🕳️ The Abyss (Endless)' + (!endlessOn ? ' 🔒' : '') + '</div>' +
-        '<div class="m-desc">' + (endlessOn ? 'Infinite floors. Your best: Floor ' + endlessBest + '.' : 'Unlocks after clearing the Eternal Throne (Region 8 boss).') + '</div></div>';
+        '<div class="sv-panel-header p80-region-header" style="border-left:4px solid #7a3ab8; background:linear-gradient(90deg,#7a3ab82a,transparent);">' +
+            '<span class="p80-region-title">🕳️ The Abyss (Endless)' + (!endlessOn ? ' 🔒' : '') + '</span>' +
+        '</div>' +
+        '<div class="sv-panel-body p80-region-body">' +
+            '<div class="p80-region-subtitle">' + (endlessOn ? 'Infinite floors. Your best: Floor ' + endlessBest + '.' : 'Unlocks after clearing the Eternal Throne (Region 8 boss).') + '</div>' +
+        '</div>';
     if (endlessOn) {
         endlessDiv.style.cursor = 'pointer';
         endlessDiv.onclick = function() { if (typeof showEndlessScreen === 'function') showEndlessScreen(); };
@@ -106,11 +141,14 @@ function renderEndlessChallengesEntryCards(sd, storyEl) {
     storyEl.appendChild(endlessDiv);
 
     var challengesDiv = document.createElement('div');
-    challengesDiv.className = 'mission-card' + (!challengesOn ? ' locked' : '');
-    challengesDiv.style.borderColor = '#4488cc';
+    challengesDiv.className = 'sv-panel p80-region-card p80-entry-card' + (!challengesOn ? ' locked' : '');
     challengesDiv.innerHTML =
-        '<div><div class="m-name">🏆 Challenges' + (!challengesOn ? ' 🔒' : '') + '</div>' +
-        '<div class="m-desc">' + (challengesOn ? 'Time Trial, Survival, Restricted Roster, and the 4 Element Bosses.' : 'Unlocks after clearing the Shattered Colossus (Region 4 boss).') + '</div></div>';
+        '<div class="sv-panel-header p80-region-header" style="border-left:4px solid #4488cc; background:linear-gradient(90deg,#4488cc2a,transparent);">' +
+            '<span class="p80-region-title">🏆 Challenges' + (!challengesOn ? ' 🔒' : '') + '</span>' +
+        '</div>' +
+        '<div class="sv-panel-body p80-region-body">' +
+            '<div class="p80-region-subtitle">' + (challengesOn ? 'Time Trial, Survival, Restricted Roster, and the 4 Element Bosses.' : 'Unlocks after clearing the Shattered Colossus (Region 4 boss).') + '</div>' +
+        '</div>';
     if (challengesOn) {
         challengesDiv.style.cursor = 'pointer';
         challengesDiv.onclick = function() { if (typeof showChallengesScreen === 'function') showChallengesScreen(); };
@@ -227,11 +265,13 @@ function renderStageListScreen() {
     var storyEl = document.getElementById('story-missions');
     storyEl.innerHTML = '';
 
+    var accent = p80RegionAccent(regionNum);
+
     // Back button + header
     var header = document.createElement('div');
-    header.style.cssText = 'display:flex; align-items:center; gap:10px; margin-bottom:10px;';
-    header.innerHTML = '<button class="btn-secondary" style="padding:6px 14px; font-size:13px;" id="region-back-btn">&larr; Back to Regions</button>' +
-        '<div style="font-size:16px; font-weight:bold; color:#e2b714;">Region ' + regionNum + ': ' + region.name + '</div>';
+    header.className = 'p80-stage-list-header';
+    header.innerHTML = '<button class="sv-btn" id="region-back-btn">&larr; Back to Regions</button>' +
+        '<div class="p80-stage-list-title" style="color:' + accent + ';">Region ' + regionNum + ': ' + region.name + '</div>';
     storyEl.appendChild(header);
 
     document.getElementById('region-back-btn').onclick = function() {
@@ -257,11 +297,7 @@ function renderStageListScreen() {
         var bestStars = (sd.missions.starRatings && sd.missions.starRatings[stageId]) || 0;
 
         var div = document.createElement('div');
-        div.className = 'mission-card' + (!unlocked ? ' locked' : '') + (completed ? ' completed' : '');
-        if (isBoss) {
-            div.style.borderColor = completed ? '#4a8a5e' : '#884422';
-            div.style.borderWidth = '2px';
-        }
+        div.className = 'sv-panel p80-stage-row' + (!unlocked ? ' locked' : '') + (completed ? ' completed' : '') + (isBoss ? ' boss' : '');
 
         var starsHtml = '';
         if (bestStars > 0) {
@@ -271,31 +307,33 @@ function renderStageListScreen() {
         var waveText = isBoss ? '👑 Boss Fight' : stage.waves.length + ' wave' + (stage.waves.length > 1 ? 's' : '');
         var lockText = '';
         if (!lockCheck.passed && unlocked) {
-            lockText = '<div style="font-size:11px; color:#ff8844; margin-top:2px;">🔒 ' + lockCheck.reason + '</div>';
+            lockText = '<div class="p80-stage-lock-req">🔒 ' + lockCheck.reason + '</div>';
         }
 
         var veReward = stage.rewards.ve || stage.rewards.gold || 0;
         var xpReward = stage.rewards.xp || 0;
         var dropText = stage.rewards.unitDrops ? ' · ' + stage.rewards.unitDrops + ' drops' : '';
-        var typeTag = stage.stageType ? '<span style="color:#888; font-size:10px; text-transform:uppercase; margin-left:6px;">' + stage.stageType + '</span>' : '';
+        var typeTag = stage.stageType ? '<span class="sv-chip p80-type-chip">' + stage.stageType + '</span>' : '';
+        var bossBadge = isBoss ? '<span class="sv-chip p80-boss-chip' + (completed ? ' cleared' : '') + '">👑 Boss</span>' : '';
 
         // Stage narration flavor block: shown once the stage has been cleared (Prompt 63).
         var loreUnlocked = !!(sd.loreUnlocks && sd.loreUnlocks.stages && sd.loreUnlocks.stages[stageId]);
         var loreText = (typeof STAGE_LORE !== 'undefined' && STAGE_LORE[stageId]) ? STAGE_LORE[stageId] : '';
         var loreHtml = (loreUnlocked && loreText) ?
-            '<div class="m-lore" style="font-size:11px; color:#b8a8e0; font-style:italic; margin-top:4px;">' + loreText + '</div>' : '';
+            '<div class="p80-stage-lore">' + loreText + '</div>' : '';
 
         div.innerHTML =
-            '<div>' +
-                '<div class="m-name">' + stage.name + (isBoss ? ' 👑' : '') + (!unlocked ? ' 🔒' : '') + typeTag + '</div>' +
-                '<div class="m-desc">' + stage.description + '</div>' +
+            '<div class="p80-stage-main">' +
+                '<div class="p80-stage-name-row">' +
+                    '<span class="p80-stage-name">' + stage.name + (!unlocked ? ' 🔒' : '') + '</span>' +
+                    bossBadge + typeTag +
+                '</div>' +
+                '<div class="p80-stage-desc">' + stage.description + '</div>' +
                 loreHtml +
-                '<div class="m-reward">Reward: ' + veReward + ' VE · ' + xpReward + ' XP' + dropText + ' · ' + waveText + '</div>' +
+                '<div class="p80-stage-reward text-gold">Reward: ' + veReward + ' VE · ' + xpReward + ' XP' + dropText + ' · ' + waveText + '</div>' +
                 lockText +
             '</div>' +
-            '<div>' +
-                '<div class="m-stars">' + starsHtml + '</div>' +
-            '</div>';
+            '<div class="p80-stage-stars">' + starsHtml + '</div>';
 
         if (unlocked && lockCheck.passed) {
             div.onclick = (function(idx) {
@@ -308,8 +346,8 @@ function renderStageListScreen() {
 
     // Grind button at bottom
     var grindDiv = document.createElement('div');
-    grindDiv.style.cssText = 'margin-top:16px; text-align:center;';
-    grindDiv.innerHTML = '<button class="btn-primary" id="grind-from-region">Start Training Mission</button>';
+    grindDiv.className = 'p80-grind-row';
+    grindDiv.innerHTML = '<button class="sv-btn sv-btn-primary" id="grind-from-region">Start Training Mission</button>';
     storyEl.appendChild(grindDiv);
     document.getElementById('grind-from-region').onclick = function() { uiSelectGrindMission(); };
 }
