@@ -19,6 +19,13 @@ function initGameV2() {
         saveGame(saveData);
     }
 
+    // Prompt 81 (Phase 7): load/cache audio settings + (re)apply bus volumes.
+    // AudioContext creation itself is deferred to the first real user
+    // gesture (js/audio.js's unlock-on-gesture handling) -- this just makes
+    // sure AUDIO.getSettings()/the settings drawer read real saved values
+    // from the moment the game boots.
+    if (typeof AUDIO !== 'undefined' && AUDIO.init) AUDIO.init();
+
     // Show hub screen
     showScreen('hub');
 }

@@ -235,6 +235,21 @@ function uiDoMultiRoll() {
 // with the correct unit data -- only its on-screen appearance is still
 // mid-transition in a real browser.
 function runGachaSingleCeremony(result) {
+    // Prompt 81 (Phase 7): charge riser now, card-flip tick + tier-scaled
+    // reveal sting timed to the card's own 0.6s CSS transition-delay below
+    // (setTimeout is a real no-op in tests/harness.js -- never fires
+    // headlessly, so this is inert in tests, matching the ceremony's own
+    // "no JS timers in the reveal path" contract for anything that actually
+    // gates visuals).
+    if (typeof SFX !== 'undefined' && SFX.play) {
+        SFX.play('rollCharge', {});
+        var revealTier = (result.unitTemplate && (result.unitTemplate.cost || result.unitTemplate.baseCost)) || 1;
+        setTimeout(function() {
+            SFX.play('cardFlip', {});
+            SFX.play('rollReveal', { tier: revealTier });
+        }, 600);
+    }
+
     var altarContent = document.getElementById('gacha-altar-content');
     if (altarContent && altarContent.classList) altarContent.classList.remove('gacha-skip-anim');
 
@@ -287,6 +302,22 @@ function runGachaSingleCeremony(result) {
 // file already used for animationDelay), tier bursts as above, then a
 // new/dupes/highest-tier summary row.
 function runGachaMultiCeremony(results) {
+    // Prompt 81 (Phase 7): one charge riser for the whole multi-summon, then
+    // a card-flip tick + tier-scaled reveal sting staggered per card at the
+    // same 120ms-per-card delay the CSS transition-delay stagger below uses.
+    if (typeof SFX !== 'undefined' && SFX.play) {
+        SFX.play('rollCharge', {});
+        for (var ci = 0; ci < results.length; ci++) {
+            (function(r, delayMs) {
+                var revealTier = (r.unitTemplate && (r.unitTemplate.cost || r.unitTemplate.baseCost)) || 1;
+                setTimeout(function() {
+                    SFX.play('cardFlip', {});
+                    SFX.play('rollReveal', { tier: revealTier });
+                }, delayMs);
+            })(results[ci], ci * 120);
+        }
+    }
+
     var altarContent = document.getElementById('gacha-altar-content');
     if (altarContent && altarContent.classList) altarContent.classList.remove('gacha-skip-anim');
 

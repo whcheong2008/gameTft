@@ -336,6 +336,8 @@ function builderOnCellClick(combatRow, col) {
             } else if (result === 'evolved_only') {
                 addLogEntry('Only evolved units can equip this item!', 'warning');
             }
+            // Prompt 81 (Phase 7): item-equip SFX on success.
+            if (result && result.success && typeof SFX !== 'undefined' && SFX.play) SFX.play('itemEquip', {});
             equipModeItemId = null;
             renderTeamBuilderScreen();
         }

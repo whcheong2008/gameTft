@@ -111,6 +111,8 @@ function createDefaultSaveData() {
         endless: { bestFloor: 0, totalRuns: 0 },
         // Challenge mode bests (Prompt 64)
         challenges: { timeTrial: {}, survival: { bestWave: 0 }, restrictedRoster: {}, elementBosses: {} },
+        // Audio settings (Prompt 81, Phase 7): master/music/sfx volume (0-1) + mute.
+        audio: { masterVolume: 0.8, musicVolume: 0.7, sfxVolume: 0.9, muted: false },
         // Stats tracking
         stats: {
             totalMissionsCompleted: 0,
@@ -791,6 +793,13 @@ function migrateSave(data) {
     if (!data.challenges.restrictedRoster) data.challenges.restrictedRoster = {};
     if (!data.challenges.elementBosses) data.challenges.elementBosses = {};
 
+    // Prompt 81: audio settings (version-agnostic backfill)
+    if (!data.audio) data.audio = { masterVolume: 0.8, musicVolume: 0.7, sfxVolume: 0.9, muted: false };
+    if (typeof data.audio.masterVolume !== 'number') data.audio.masterVolume = 0.8;
+    if (typeof data.audio.musicVolume !== 'number') data.audio.musicVolume = 0.7;
+    if (typeof data.audio.sfxVolume !== 'number') data.audio.sfxVolume = 0.9;
+    if (typeof data.audio.muted !== 'boolean') data.audio.muted = false;
+
     return data;
 }
 
@@ -933,6 +942,13 @@ function validateSaveData(data) {
     if (typeof data.challenges.survival.bestWave !== 'number') data.challenges.survival.bestWave = 0;
     if (!data.challenges.restrictedRoster) data.challenges.restrictedRoster = {};
     if (!data.challenges.elementBosses) data.challenges.elementBosses = {};
+
+    // Audio settings (Prompt 81)
+    if (!data.audio) data.audio = { masterVolume: 0.8, musicVolume: 0.7, sfxVolume: 0.9, muted: false };
+    if (typeof data.audio.masterVolume !== 'number') data.audio.masterVolume = 0.8;
+    if (typeof data.audio.musicVolume !== 'number') data.audio.musicVolume = 0.7;
+    if (typeof data.audio.sfxVolume !== 'number') data.audio.sfxVolume = 0.9;
+    if (typeof data.audio.muted !== 'boolean') data.audio.muted = false;
 
     console.log('Validation complete. Valid entries:', Object.keys(data.collection).length);
     return data;

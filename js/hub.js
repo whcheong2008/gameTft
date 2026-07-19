@@ -38,6 +38,11 @@ function showScreen(screenId) {
     }
     currentScreen = screenId;
     renderCurrentScreen();
+    // Prompt 81 (Phase 7): screen-change SFX + camp ambient music. One-line
+    // hook -- js/audio.js's AUDIO.onScreenChange() owns the actual logic
+    // (and skips 'combat', which gets its region/boss/endless-aware music
+    // context from js/ui-combat.js's beginCombatScreen() instead).
+    if (typeof AUDIO !== 'undefined' && AUDIO.onScreenChange) AUDIO.onScreenChange(screenId);
 }
 
 function renderCurrentScreen() {

@@ -262,6 +262,7 @@ function showQuickEquipPanel(unitKey) {
                 var sdd = getSaveData();
                 var result = equipItem(sdd, itemId, uk);
                 if (result.success) {
+                    if (typeof SFX !== 'undefined' && SFX.play) SFX.play('itemEquip', {}); // Prompt 81
                     showToast('Equipped!');
                 } else {
                     showToast(result.reason);

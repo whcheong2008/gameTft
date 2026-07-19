@@ -167,6 +167,10 @@ function onSurvivalWaveEnd(victory) {
 }
 
 function finalizeSurvivalChallenge() {
+    // Prompt 81 (Phase 7): Survival always ends in death (this is only ever
+    // called from the !victory branch of onSurvivalWaveEnd()) -- reuses the
+    // same "open-ended run ended" cue endless mode uses.
+    if (typeof AUDIO !== 'undefined' && AUDIO.onEndlessEnd) AUDIO.onEndlessEnd(false);
     var sd = getSaveData();
     var cd = getChallengesSaveData(sd);
     var wavesSurvived = Math.max(0, survivalRunState.wave - 1); // the wave they died on doesn't count as cleared
