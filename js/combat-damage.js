@@ -608,14 +608,18 @@ function performAttack(attacker, target) {
         empoweredDrIgnore = attacker.abilityBuffs.empoweredShotDrIgnore || 0;
         empoweredManaRefundOnKill = attacker.abilityBuffs.empoweredShotManaRefundOnKill || 0;
         if (attacker.abilityBuffs.empoweredShotWoundPct && target && target.hp > 0) {
-            // "If target is Rival": Challenge Protocol (the passive that
-            // would track a persistent Rival) is out of scope for Prompt 74
-            // (BUGS #11 covers executeAbility only) -- approximated using the
-            // passive's OWN definition of Rival ("marks highest-ATK enemy"),
-            // checked fresh here rather than adding new persistent state.
-            var edEnemyPool = attacker.side === 'player' ? (combatState ? combatState.enemyUnits : []) : (combatState ? combatState.playerUnits : []);
-            var edRivalList = typeof getHighestAtkUnits === 'function' ? getHighestAtkUnits(edEnemyPool, 1) : [];
-            if (edRivalList.length > 0 && edRivalList[0] === target) {
+            // "If target is Rival": Prompt 74 approximated this by
+            // recomputing "highest-ATK enemy" fresh at attack time, since
+            // Challenge Protocol (the passive that actually tracks a
+            // persistent Rival) didn't exist yet. Prompt 75 implements that
+            // passive (combat-passives.js's processRivalTrackingPassive) and
+            // stores the tracked reference at
+            // attacker.passiveState.customData.rivalRef -- read that directly
+            // now instead of re-deriving "highest ATK" here, since the real
+            // Rival is sticky (survives ATK-buff reshuffles mid-fight) rather
+            // than recomputed every hit.
+            var edRival = attacker.passiveState && attacker.passiveState.customData ? attacker.passiveState.customData.rivalRef : null;
+            if (edRival && edRival === target) {
                 addStatus(target, 'healReduction', attacker.abilityBuffs.empoweredShotWoundDuration || 2, attacker.abilityBuffs.empoweredShotWoundPct, attacker);
             }
         }
