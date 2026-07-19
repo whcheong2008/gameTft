@@ -1,6 +1,11 @@
 // =============================================================================
 // ui-lore.js -- Lore Codex screen: World / Regions / Units / Heroes / Bonds tabs
 // (Prompt 63 -- Phase 2.8 Lore Delivery)
+// Prompt 79 (Phase 6.4): light pass onto the design system (game-v2.html's
+// "P79 COLLECTION" CSS block) -- tokens + consistent .sv-tab tabs only,
+// structure/logic unchanged. The purple accent (#b388ff) that distinguishes
+// the Codex from the gold-bordered default .sv-modal-panel is kept via the
+// .p79-modal-accent-purple modifier.
 // =============================================================================
 
 var loreCodexTab = 'world';
@@ -14,7 +19,7 @@ function showLoreCodex() {
     if (!overlay) {
         overlay = document.createElement('div');
         overlay.id = 'lore-codex-overlay';
-        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:1000;';
+        overlay.className = 'sv-modal-backdrop';
         document.body.appendChild(overlay);
     }
 
@@ -32,16 +37,16 @@ function renderLoreCodex(overlay) {
         { id: 'bonds', label: 'Bonds' }
     ];
 
-    var html = '<div style="background:#1a1a2e; border:2px solid #b388ff; border-radius:12px; max-width:720px; width:95%; max-height:85vh; overflow-y:auto; padding:20px;">';
+    var html = '<div class="sv-modal-panel p79-modal-lg p79-modal-accent-purple">';
     html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">';
     html += '<div style="font-size:20px; font-weight:bold; color:#b388ff;">📜 Codex</div>';
-    html += '<button id="lore-codex-close" style="padding:6px 16px; background:#333; color:#fff; border:none; border-radius:6px; cursor:pointer;">Close</button>';
+    html += '<button id="lore-codex-close" class="sv-btn">Close</button>';
     html += '</div>';
 
     html += '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;">';
     for (var t = 0; t < tabs.length; t++) {
         var active = loreCodexTab === tabs[t].id;
-        html += '<button class="lore-tab-btn" data-tab="' + tabs[t].id + '" style="padding:6px 14px; font-size:12px; border-radius:6px; border:1px solid ' + (active ? '#b388ff' : '#333') + '; background:' + (active ? '#3a2a5e' : '#16213e') + '; color:' + (active ? '#fff' : '#aaa') + '; cursor:pointer;">' + tabs[t].label + '</button>';
+        html += '<button class="sv-tab lore-tab-btn' + (active ? ' active' : '') + '" data-tab="' + tabs[t].id + '">' + tabs[t].label + '</button>';
     }
     html += '</div>';
 
@@ -73,10 +78,8 @@ function renderLoreCodexTabBody(tab, sd) {
 }
 
 function loreEntryBox(unlocked, innerHtml, lockedLabel) {
-    var bg = unlocked ? '#16213e' : '#12121a';
-    var border = unlocked ? '#333' : '#222';
-    var body = unlocked ? innerHtml : '<div style="font-size:14px; font-weight:bold; color:#555;">🔒 ' + (lockedLabel || '???') + '</div>';
-    return '<div style="margin-bottom:10px; padding:10px 12px; background:' + bg + '; border-radius:8px; border:1px solid ' + border + ';">' + body + '</div>';
+    var body = unlocked ? innerHtml : '<div style="font-size:14px; font-weight:bold; color:var(--sv-text-3);">🔒 ' + (lockedLabel || '???') + '</div>';
+    return '<div class="p79-lore-entry' + (unlocked ? '' : ' locked') + '">' + body + '</div>';
 }
 
 function renderLoreWorldTab() {
@@ -85,7 +88,7 @@ function renderLoreWorldTab() {
         var w = WORLD_LORE[i];
         html += loreEntryBox(true,
             '<div style="font-size:14px; font-weight:bold; color:#b388ff; margin-bottom:4px;">' + w.title + '</div>' +
-            '<div style="font-size:12px; color:#ccc; line-height:1.5;">' + w.text + '</div>');
+            '<div style="font-size:12px; color:var(--sv-text-2); line-height:1.5;">' + w.text + '</div>');
     }
     return html;
 }
@@ -99,8 +102,8 @@ function renderLoreRegionsTab(sd) {
         var region = (typeof REGIONS !== 'undefined' && REGIONS[r]) ? REGIONS[r] : null;
         var title = lore ? lore.title : (region ? region.name : ('Region ' + r));
         html += loreEntryBox(unlocked,
-            '<div style="font-size:14px; font-weight:bold; color:#e2b714; margin-bottom:4px;">Region ' + r + ': ' + title + '</div>' +
-            '<div style="font-size:12px; color:#ccc; line-height:1.5;">' + (lore ? lore.text : '') + '</div>',
+            '<div style="font-size:14px; font-weight:bold; color:var(--sv-gold); margin-bottom:4px;">Region ' + r + ': ' + title + '</div>' +
+            '<div style="font-size:12px; color:var(--sv-text-2); line-height:1.5;">' + (lore ? lore.text : '') + '</div>',
             'Region ' + r + ': ???');
     }
     return html;
@@ -115,8 +118,8 @@ function renderLoreUnitsTab(sd) {
         var tmpl = UNIT_TEMPLATES[key];
         var unlocked = !!unlocks[key];
         html += loreEntryBox(unlocked,
-            '<div style="font-size:12px; font-weight:bold; color:#fff;">' + tmpl.emoji + ' ' + tmpl.name + '</div>' +
-            '<div style="font-size:11px; color:#aaa; margin-top:3px; line-height:1.4;">' + (UNIT_LORE[key] || '') + '</div>');
+            '<div style="font-size:12px; font-weight:bold; color:var(--sv-text-1);">' + tmpl.emoji + ' ' + tmpl.name + '</div>' +
+            '<div style="font-size:11px; color:var(--sv-text-3); margin-top:3px; line-height:1.4;">' + (UNIT_LORE[key] || '') + '</div>');
     }
     html += '</div>';
     return html;
@@ -131,8 +134,8 @@ function renderLoreHeroesTab(sd) {
         var hero = HERO_DATA[key];
         var unlocked = !!unlocks[key];
         html += loreEntryBox(unlocked,
-            '<div style="font-size:14px; font-weight:bold; color:#e2b714;">' + hero.name + ' <span style="font-size:11px; color:#888; font-weight:normal;">(' + hero.philosophy + ')</span></div>' +
-            '<div style="font-size:12px; color:#ccc; margin-top:4px; line-height:1.5;">' + (HERO_LORE[key] || '') + '</div>');
+            '<div style="font-size:14px; font-weight:bold; color:var(--sv-gold);">' + hero.name + ' <span style="font-size:11px; color:var(--sv-text-3); font-weight:normal;">(' + hero.philosophy + ')</span></div>' +
+            '<div style="font-size:12px; color:var(--sv-text-2); margin-top:4px; line-height:1.5;">' + (HERO_LORE[key] || '') + '</div>');
     }
     return html;
 }
@@ -146,9 +149,9 @@ function renderLoreBondsTab(sd) {
         var bond = UNIT_BONDS[key];
         var unlocked = !!unlocks[key];
         html += loreEntryBox(unlocked,
-            '<div style="font-size:14px; font-weight:bold; color:#44aa88;">' + bond.name + ' <span style="font-size:11px; color:#888; font-weight:normal;">(' + bond.type + ')</span></div>' +
-            '<div style="font-size:12px; color:#ccc; margin-top:4px; line-height:1.5;">' + (BOND_LORE[key] || '') + '</div>',
-            '??? <span style="font-size:11px; color:#666; font-weight:normal;">(' + bond.type + ')</span>');
+            '<div style="font-size:14px; font-weight:bold; color:#44aa88;">' + bond.name + ' <span style="font-size:11px; color:var(--sv-text-3); font-weight:normal;">(' + bond.type + ')</span></div>' +
+            '<div style="font-size:12px; color:var(--sv-text-2); margin-top:4px; line-height:1.5;">' + (BOND_LORE[key] || '') + '</div>',
+            '??? <span style="font-size:11px; color:var(--sv-text-3); font-weight:normal;">(' + bond.type + ')</span>');
     }
     return html;
 }

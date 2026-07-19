@@ -1,4 +1,36 @@
 // ui-roster.js -- collection, unit detail (split from ui-v2.js)
+// Prompt 79 (Phase 6.4): restyled onto the design system (game-v2.html's
+// "P79 COLLECTION" CSS block) -- structure/logic unchanged, presentation only.
+
+// ---- P79 helpers: portrait placeholder + star pips --------------------
+// Shared by the roster cards, the collection grid, and the unit detail
+// sheet. Portrait divs get a stable id="unit-portrait-<unitKey>" (load-
+// bearing for Phase 5 art integration -- swapping the placeholder for real
+// art will just mean setting this element's background-image/content) and
+// an elemental radial-gradient fallback + giant element emoji until then.
+
+function p79PortraitHtml(unitKey, tmpl, sizeClass) {
+    var element = tmpl && tmpl.element;
+    var emoji = (element && ELEMENTS[element]) ? ELEMENTS[element].emoji : '❓';
+    var grad = element ?
+        ('radial-gradient(circle at 32% 26%, var(--sv-el-' + element + '), var(--sv-bg-0) 78%)') :
+        'var(--sv-bg-0)';
+    return '<div id="unit-portrait-' + unitKey + '" class="p79-portrait' + (sizeClass ? ' ' + sizeClass : '') +
+        '" style="background:' + grad + ';">' + emoji + '</div>';
+}
+
+function p79StarPipsHtml(count, lg) {
+    var n = count || 0;
+    var cls = lg ? ' lg' : '';
+    var html = '<div class="p79-star-pips">';
+    if (n <= 0) {
+        html += '<span class="p79-star-pip' + cls + '"></span>';
+    } else {
+        for (var i = 0; i < n; i++) html += '<span class="p79-star-pip filled' + cls + '"></span>';
+    }
+    html += '</div>';
+    return html;
+}
 
 // ---- Roster Screen ----
 
@@ -29,42 +61,37 @@ function renderRosterScreen() {
         var r = roster[i];
         var rCost = r.template.cost || r.template.baseCost || 1;
         var div = document.createElement('div');
-        div.className = 'roster-card cost-' + rCost;
-        if (r.isEvolved) {
-            div.style.border = '2px solid #e2b714';
-            div.style.boxShadow = '0 0 8px rgba(226,183,20,0.3)';
-        }
-
-        var starsStr = '';
-        for (var s = 0; s < r.stars; s++) starsStr += '⭐';
+        div.className = 'p79-unit-card tier-' + rCost + (r.isEvolved ? ' p79-evolved' : '');
 
         var statMult = getStarMultiplier(r.stars);
         var scaledHP = Math.floor(r.template.hp * statMult);
         var scaledATK = Math.floor(r.template.attack * statMult);
         var typeLabel = r.template.type.charAt(0).toUpperCase() + r.template.type.slice(1);
 
-        var html =
-            (r.isEvolved ? '<div style="font-size:10px; color:#e2b714; font-weight:bold;">✨ Evolved</div>' : '') +
-            '<div class="r-stars">' + starsStr + '</div>' +
-            '<div>' + ELEMENTS[r.template.element].emoji + ' ' +
-                ARCHETYPES[r.template.archetype].emoji + '</div>' +
-            '<div class="r-name">' + r.template.name + '</div>' +
-            '<div class="r-info">' + typeLabel + ' · Cost ' + rCost + '</div>' +
-            '<div class="r-info" style="color:#ccc;">HP: ' + scaledHP + ' · ATK: ' + scaledATK + '</div>' +
-            '<div class="r-copies">' + r.copiesForNext + ' / ' + r.copiesNeeded + ' copies</div>';
+        var html = '<div class="p79-card-head">' +
+            p79PortraitHtml(r.key, r.template, 'p79-portrait-sm') +
+            '<div class="p79-card-body">' +
+                (r.isEvolved ? '<div class="p79-card-tag">✨ Evolved</div>' : '') +
+                p79StarPipsHtml(r.stars) +
+                '<div class="p79-card-name">' + r.template.name + '</div>' +
+                '<div class="p79-card-meta">' + ARCHETYPES[r.template.archetype].emoji + ' ' + typeLabel + ' · Cost ' + rCost + '</div>' +
+            '</div>' +
+        '</div>' +
+        '<div class="p79-card-stats">HP: ' + scaledHP + ' · ATK: ' + scaledATK + '</div>' +
+        '<div class="text-green" style="font-size:11px;">' + r.copiesForNext + ' / ' + r.copiesNeeded + ' copies</div>';
 
+        html += '<div class="p79-btn-row">';
         if (r.canStarUp) {
-            html += '<button class="star-up-btn" data-key="' + r.key + '">⬆ Star Up!</button>';
+            html += '<button class="sv-btn p79-btn-green star-up-btn" data-key="' + r.key + '" style="font-size:11px; padding:3px 8px;">⬆ Star Up!</button>';
         }
-
         if (r.copiesForNext > 0) {
-            html += '<button class="sell-btn" data-key="' + r.key +
-                '" data-copies="' + r.copiesForNext + '">💰 Sell (' +
-                r.copiesForNext + ' copies)</button>';
+            html += '<button class="sv-btn sell-btn" data-key="' + r.key +
+                '" data-copies="' + r.copiesForNext + '" style="font-size:11px; padding:3px 8px;">💰 Sell (' +
+                r.copiesForNext + ')</button>';
         }
+        html += '</div>';
 
         div.innerHTML = html;
-        div.style.cursor = 'pointer';
         div.onclick = (function(key) {
             return function() { showUnitDetail(key, 'roster'); };
         })(r.key);
@@ -115,18 +142,18 @@ function showSellPanel(unitKey) {
     function updateSellPanel() {
         var goldValue = getEchoReleaseTotal(unitKey, sellCount);
         overlay.innerHTML =
-            '<div class="sell-panel">' +
-                '<div class="sell-title">Sell ' + tmpl.name + ' Copies</div>' +
-                '<div class="sell-info">Available: ' + maxCopies + ' copies</div>' +
-                '<div class="sell-amount">' +
-                    '<button class="sell-amt-btn" data-amt="1">1</button>' +
-                    '<button class="sell-amt-btn" data-amt="5">5</button>' +
-                    '<button class="sell-amt-btn" data-amt="' + maxCopies + '">All (' + maxCopies + ')</button>' +
+            '<div class="sv-modal-panel" style="text-align:center; min-width:280px; max-width:340px;">' +
+                '<div style="font-size:16px; font-weight:bold; color:var(--sv-text-1); margin-bottom:10px;">Sell ' + tmpl.name + ' Copies</div>' +
+                '<div class="text-muted" style="font-size:13px; margin-bottom:12px;">Available: ' + maxCopies + ' copies</div>' +
+                '<div class="p79-btn-row" style="justify-content:center; margin-bottom:14px;">' +
+                    '<button class="sv-btn sell-amt-btn" data-amt="1">1</button>' +
+                    '<button class="sv-btn sell-amt-btn" data-amt="5">5</button>' +
+                    '<button class="sv-btn sell-amt-btn" data-amt="' + maxCopies + '">All (' + maxCopies + ')</button>' +
                 '</div>' +
-                '<div class="sell-preview">Selling ' + sellCount + ' → ✨ ' + goldValue + ' VE</div>' +
-                '<div class="sell-actions">' +
-                    '<button id="sell-confirm" class="btn-green">Confirm Sell</button>' +
-                    '<button id="sell-cancel">Cancel</button>' +
+                '<div style="font-size:15px; color:var(--sv-gold); margin-bottom:14px;">Selling ' + sellCount + ' → ✨ ' + goldValue + ' VE</div>' +
+                '<div class="p79-btn-row" style="justify-content:center;">' +
+                    '<button id="sell-confirm" class="sv-btn sv-btn-primary">Confirm Sell</button>' +
+                    '<button id="sell-cancel" class="sv-btn">Cancel</button>' +
                 '</div>' +
             '</div>';
 
@@ -178,68 +205,69 @@ function showUnitDetail(unitKey, context) {
     var archData = ARCHETYPES[tmpl.archetype];
     var typeData = UNIT_TYPE_DESCRIPTIONS[tmpl.type];
 
-    var starsStr = '';
-    for (var s = 0; s < stars; s++) starsStr += '⭐';
-
-    var html = '';
-
     var displayCost = tmpl.cost || tmpl.baseCost || 1;
 
-    // ---- Header ----
-    html += '<div class="ud-header">';
+    // ---- Left column: portrait + identity ----
+    var left = '<div class="p79-ud-left">';
+    left += p79PortraitHtml(unitKey, tmpl, 'p79-portrait-modal');
     if (isEvolvedUnit) {
-        html += '<div style="color:#e2b714; font-size:11px; font-weight:bold;">✨ Evolved Unit</div>';
+        left += '<div class="text-gold" style="font-size:11px; font-weight:bold;">✨ Evolved Unit</div>';
     }
-    html += '<div class="ud-name">' + elemData.emoji + ' ' + tmpl.name + ' ' + archData.emoji + '</div>';
-    html += '<div class="ud-stars">' + starsStr + ' (Cost ' + displayCost + ')</div>';
-    html += '<div class="ud-meta">' + elemData.name + ' ' + archData.name + ' ' + (typeData ? typeData.name : tmpl.type) + '</div>';
-    html += '</div>';
+    left += '<div class="ud-name" style="font-size:16px;">' + tmpl.name + '</div>';
+    left += p79StarPipsHtml(stars, true);
+    left += '<div class="ud-meta">Cost ' + displayCost + '</div>';
+    left += '<div class="ud-meta">' + elemData.emoji + ' ' + elemData.name + ' · ' + archData.emoji + ' ' + archData.name + '</div>';
+    left += '<div class="ud-meta">' + (typeData ? typeData.name : tmpl.type) + '</div>';
+    left += '</div>';
+
+    // ---- Right column: everything else ----
+    var right = '<div class="p79-ud-right">';
 
     // ---- Combat Behavior ----
     if (typeData) {
-        html += '<div class="ud-section">';
-        html += '<div class="ud-section-title">⚔️ Combat Behavior — ' + typeData.name + '</div>';
-        html += '<div class="ud-type-desc">' + typeData.desc + '</div>';
-        html += '</div>';
+        right += '<div class="ud-section">';
+        right += '<div class="ud-section-title">⚔️ Combat Behavior — ' + typeData.name + '</div>';
+        right += '<div class="ud-type-desc">' + typeData.desc + '</div>';
+        right += '</div>';
     }
 
     // ---- Stats ----
-    html += '<div class="ud-section">';
-    html += '<div class="ud-section-title">📊 Stats</div>';
+    right += '<div class="ud-section">';
+    right += '<div class="ud-section-title">📊 Stats</div>';
 
-    html += '<div class="ud-stat-row"><span class="ud-stat-label">HP</span><span class="ud-stat-value">' +
-        scaledHP + ' <span style="color:#666; font-size:10px;">(base ' + tmpl.hp + ' × ' + statMult.toFixed(2) + ')</span></span></div>';
-    html += '<div class="ud-stat-row"><span class="ud-stat-label">Attack</span><span class="ud-stat-value">' +
-        scaledATK + ' <span style="color:#666; font-size:10px;">(base ' + tmpl.attack + ')</span></span></div>';
-    html += '<div class="ud-stat-row"><span class="ud-stat-label">Attack Speed</span><span class="ud-stat-value">' +
+    right += '<div class="ud-stat-row"><span class="ud-stat-label">HP</span><span class="ud-stat-value">' +
+        scaledHP + ' <span class="text-muted" style="font-size:10px;">(base ' + tmpl.hp + ' × ' + statMult.toFixed(2) + ')</span></span></div>';
+    right += '<div class="ud-stat-row"><span class="ud-stat-label">Attack</span><span class="ud-stat-value">' +
+        scaledATK + ' <span class="text-muted" style="font-size:10px;">(base ' + tmpl.attack + ')</span></span></div>';
+    right += '<div class="ud-stat-row"><span class="ud-stat-label">Attack Speed</span><span class="ud-stat-value">' +
         tmpl.attackSpd + 's</span></div>';
-    html += '<div class="ud-stat-row"><span class="ud-stat-label">Range</span><span class="ud-stat-value">' +
+    right += '<div class="ud-stat-row"><span class="ud-stat-label">Range</span><span class="ud-stat-value">' +
         tmpl.range + '</span></div>';
-    html += '<div class="ud-stat-row"><span class="ud-stat-label">Move Speed</span><span class="ud-stat-value">' +
+    right += '<div class="ud-stat-row"><span class="ud-stat-label">Move Speed</span><span class="ud-stat-value">' +
         tmpl.moveSpd + '</span></div>';
 
     // ---- Element Matchup ----
-    html += '<div style="margin-top:6px; font-size:11px; color:#aaa;">';
-    html += 'Strong vs ' + ELEMENTS[elemData.strong].emoji + ' ' + ELEMENTS[elemData.strong].name + ' (1.3×) · ';
-    html += 'Weak vs ' + ELEMENTS[elemData.weak].emoji + ' ' + ELEMENTS[elemData.weak].name + ' (0.7×)';
-    html += '</div>';
-    html += '</div>';
+    right += '<div class="text-muted" style="margin-top:6px; font-size:11px;">';
+    right += 'Strong vs ' + ELEMENTS[elemData.strong].emoji + ' ' + ELEMENTS[elemData.strong].name + ' (1.3×) · ';
+    right += 'Weak vs ' + ELEMENTS[elemData.weak].emoji + ' ' + ELEMENTS[elemData.weak].name + ' (0.7×)';
+    right += '</div>';
+    right += '</div>';
 
     // ---- Equipped Items ----
     var equippedItems = getEquippedItems(sd, unitKey);
     if (equippedItems.length > 0) {
-        html += '<div class="ud-section">';
-        html += '<div class="ud-section-title">🎒 Equipped Items</div>';
+        right += '<div class="ud-section">';
+        right += '<div class="ud-section-title">🎒 Equipped Items</div>';
         for (var i = 0; i < equippedItems.length; i++) {
             var item = equippedItems[i];
             var rarityColor = getItemRarityColor(item);
-            html += '<div class="ud-item-row">';
-            html += '<span style="font-size:16px;">' + getItemEmoji(item) + '</span>';
-            html += '<span style="color:' + rarityColor + ';">' + getItemName(item) + '</span>';
-            html += '<span style="color:#aaa; font-size:11px;">(' + getItemStatDescription(item) + ')</span>';
-            html += '</div>';
+            right += '<div class="ud-item-row">';
+            right += '<span style="font-size:16px;">' + getItemEmoji(item) + '</span>';
+            right += '<span style="color:' + rarityColor + ';">' + getItemName(item) + '</span>';
+            right += '<span class="text-muted" style="font-size:11px;">(' + getItemStatDescription(item) + ')</span>';
+            right += '</div>';
         }
-        html += '</div>';
+        right += '</div>';
     }
 
     // ---- Synergies (team builder context) ----
@@ -279,93 +307,98 @@ function showUnitDetail(unitKey, context) {
         }
 
         if (relevantSynergies.length > 0) {
-            html += '<div class="ud-section">';
-            html += '<div class="ud-section-title">🔗 Team Synergies</div>';
+            right += '<div class="ud-section">';
+            right += '<div class="ud-section-title">🔗 Team Synergies</div>';
             for (var si = 0; si < relevantSynergies.length; si++) {
                 var syn = relevantSynergies[si];
-                html += '<div style="font-size:12px; color:' + (syn.active ? '#6bcb77' : '#888') + '; padding:2px 0;">';
-                html += syn.emoji + ' ' + syn.name + ' (' + syn.count + ') — ' + syn.status;
-                html += '</div>';
+                right += '<div class="' + (syn.active ? 'text-green' : 'text-muted') + '" style="font-size:12px; padding:2px 0;">';
+                right += syn.emoji + ' ' + syn.name + ' (' + syn.count + ') — ' + syn.status;
+                right += '</div>';
             }
-            html += '</div>';
+            right += '</div>';
         }
     }
 
     // ---- Copy Progress (roster context) ----
     if (context === 'roster') {
-        html += '<div class="ud-section">';
-        html += '<div class="ud-section-title">📈 Progress</div>';
+        right += '<div class="ud-section">';
+        right += '<div class="ud-section-title">📈 Progress</div>';
         var copiesNeeded = 10; // 10-copy star-up
-        html += '<div class="ud-stat-row"><span class="ud-stat-label">Current Stars</span><span class="ud-stat-value">' + starsStr + '</span></div>';
-        html += '<div class="ud-stat-row"><span class="ud-stat-label">Copies</span><span class="ud-stat-value">' + entry.copiesForNext + ' / ' + copiesNeeded + ' for next star</span></div>';
+        right += '<div class="ud-stat-row"><span class="ud-stat-label">Current Stars</span><span class="ud-stat-value">' + stars + '</span></div>';
+        right += '<div class="ud-stat-row"><span class="ud-stat-label">Copies</span><span class="ud-stat-value">' + entry.copiesForNext + ' / ' + copiesNeeded + ' for next star</span></div>';
+        right += '<div class="sv-bar sv-bar-gold" style="margin-top:4px;"><div class="sv-bar-fill" style="width:' + Math.min(100, (entry.copiesForNext / copiesNeeded) * 100) + '%;"></div></div>';
         if (entry.copiesForNext >= copiesNeeded) {
-            html += '<div style="font-size:12px; color:#6bcb77; margin-top:4px;">Ready to star up!</div>';
+            right += '<div class="text-green" style="font-size:12px; margin-top:4px;">Ready to star up!</div>';
         }
-        html += '</div>';
+        right += '</div>';
     }
 
     // ---- Evolution Info ----
     if (isEvolvedUnit) {
         // Show "Evolved from" info and ability
         var baseTmpl = UNIT_TEMPLATES[tmpl.baseKey];
-        html += '<div class="ud-section">';
-        html += '<div class="ud-section-title">✨ Evolved Unit</div>';
-        html += '<div class="ud-evo-box">';
+        right += '<div class="ud-section">';
+        right += '<div class="ud-section-title">✨ Evolved Unit</div>';
+        right += '<div class="ud-evo-box">';
         if (baseTmpl) {
-            html += '<div style="font-size:12px; color:#aaa;">Evolved from: ' + baseTmpl.name + '</div>';
+            right += '<div class="text-muted" style="font-size:12px;">Evolved from: ' + baseTmpl.name + '</div>';
         }
         if (tmpl.ability) {
-            html += '<div class="ud-evo-ability" style="margin-top:4px;">⚡ ' + tmpl.ability + '</div>';
+            right += '<div class="ud-evo-ability" style="margin-top:4px;">⚡ ' + tmpl.ability + '</div>';
         }
-        html += '</div>';
-        html += '</div>';
+        right += '</div>';
+        right += '</div>';
     } else {
         // Show evolution path for base units
         var evo = EVOLUTIONS[unitKey];
         if (evo) {
             var evolvedTmpl2 = EVOLVED_TEMPLATES[evo.into];
             if (evolvedTmpl2) {
-                html += '<div class="ud-section">';
-                html += '<div class="ud-section-title">✨ Evolution Path</div>';
-                html += '<div class="ud-evo-box">';
-                html += '<div style="font-size:14px; font-weight:bold;">' + tmpl.name + ' → ' + evolvedTmpl2.name + '</div>';
+                right += '<div class="ud-section">';
+                right += '<div class="ud-section-title">✨ Evolution Path</div>';
+                right += '<div class="ud-evo-box">';
+                right += '<div style="font-size:14px; font-weight:bold; color:var(--sv-text-1);">' + tmpl.name + ' → ' + evolvedTmpl2.name + '</div>';
 
                 // Check requirements
                 var evoCheck = checkEvolutionRequirements(sd, unitKey);
                 if (evoCheck.requirements) {
                     for (var ri2 = 0; ri2 < evoCheck.requirements.length; ri2++) {
                         var reqResult = evoCheck.requirements[ri2];
-                        html += '<div class="' + (reqResult.met ? 'ud-evo-met' : 'ud-evo-unmet') + '" style="font-size:12px;">';
-                        html += (reqResult.met ? '✓' : '○') + ' ' + reqResult.desc;
-                        html += '</div>';
+                        right += '<div class="' + (reqResult.met ? 'ud-evo-met' : 'ud-evo-unmet') + '" style="font-size:12px;">';
+                        right += (reqResult.met ? '✓' : '○') + ' ' + reqResult.desc;
+                        right += '</div>';
                     }
                 }
 
                 // Already evolved?
                 if (sd.collection[evo.into]) {
-                    html += '<div style="font-size:12px; color:#6bcb77; margin-top:4px;">✅ Already evolved!</div>';
+                    right += '<div class="text-green" style="font-size:12px; margin-top:4px;">✅ Already evolved!</div>';
                 } else if (canEvolve(sd)) {
                     var evoCost = getEvolutionGoldCost(sd, unitKey);
-                    html += '<div style="font-size:12px; color:#e2b714; margin-top:4px;">Evolution cost: ' + evoCost + ' VE (Deep Resonance)</div>';
+                    right += '<div class="text-gold" style="font-size:12px; margin-top:4px;">Evolution cost: ' + evoCost + ' VE (Deep Resonance)</div>';
                 } else {
-                    html += '<div style="font-size:12px; color:#888; margin-top:4px;">Build the Evolution Lab to evolve</div>';
+                    right += '<div class="text-muted" style="font-size:12px; margin-top:4px;">Build the Evolution Lab to evolve</div>';
                 }
 
                 // Evolved stats preview
-                html += '<div style="margin-top:6px; font-size:11px; color:#aaa;">Evolved Stats (at 1⭐):</div>';
-                html += '<div style="font-size:11px; color:#ccc;">HP: ' + evolvedTmpl2.hp +
+                right += '<div class="text-muted" style="margin-top:6px; font-size:11px;">Evolved Stats (at 1⭐):</div>';
+                right += '<div style="font-size:11px; color:var(--sv-text-2);">HP: ' + evolvedTmpl2.hp +
                     ' · ATK: ' + evolvedTmpl2.attack +
                     ' · SPD: ' + evolvedTmpl2.attackSpd + 's · Range: ' + evolvedTmpl2.range + '</div>';
 
                 if (evolvedTmpl2.ability) {
-                    html += '<div class="ud-evo-ability">⚡ ' + evolvedTmpl2.ability + '</div>';
+                    right += '<div class="ud-evo-ability">⚡ ' + evolvedTmpl2.ability + '</div>';
                 }
 
-                html += '</div>';
-                html += '</div>';
+                right += '</div>';
+                right += '</div>';
             }
         }
     }
+
+    right += '</div>';
+
+    var html = '<div class="p79-ud-grid">' + left + right + '</div>';
 
     // Render
     var overlay = document.getElementById('unit-detail-overlay');
@@ -397,7 +430,7 @@ function buildCollectionUI() {
     if (!filterBar) {
         filterBar = document.createElement('div');
         filterBar.id = 'collection-filter-bar';
-        filterBar.style.cssText = 'margin-bottom:8px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:12px;';
+        filterBar.className = 'p79-filter-bar';
         container.parentNode.insertBefore(filterBar, container);
     }
 
@@ -405,68 +438,68 @@ function buildCollectionUI() {
     var allArchetypes = Object.keys(ARCHETYPES);
     var allTypes = ['warrior', 'tank', 'archer', 'mage', 'assassin', 'healer'];
 
+    function filterTabBtn(filterKey, value, label, isActive) {
+        return '<button class="sv-tab' + (isActive ? ' active' : '') + '" data-filter="' + filterKey + '" data-value="' + value + '">' + label + '</button>';
+    }
+
     var html = '';
 
     // Element filter
-    html += '<div class="filter-group" style="display:flex; gap:2px; flex-wrap:wrap;">';
-    html += '<span style="color:#888; margin-right:4px;">Element:</span>';
-    html += '<button class="filter-btn' + (collectionFilters.element === 'all' ? ' active' : '') + '" data-filter="element" data-value="all" style="padding:2px 6px; border-radius:4px; border:1px solid #444; background:' + (collectionFilters.element === 'all' ? '#e2b714' : '#222') + '; color:' + (collectionFilters.element === 'all' ? '#000' : '#ccc') + '; cursor:pointer; font-size:11px;">All</button>';
+    html += '<div class="p79-filter-row">';
+    html += '<span class="p79-filter-label">Element:</span>';
+    html += filterTabBtn('element', 'all', 'All', collectionFilters.element === 'all');
     for (var ei = 0; ei < allElements.length; ei++) {
         var el = allElements[ei];
-        var isActive = collectionFilters.element === el;
-        html += '<button class="filter-btn' + (isActive ? ' active' : '') + '" data-filter="element" data-value="' + el + '" style="padding:2px 6px; border-radius:4px; border:1px solid #444; background:' + (isActive ? '#e2b714' : '#222') + '; color:' + (isActive ? '#000' : '#ccc') + '; cursor:pointer; font-size:11px;">' + getElementEmoji(el) + '</button>';
+        html += filterTabBtn('element', el, getElementEmoji(el), collectionFilters.element === el);
     }
     html += '</div>';
 
     // Type filter
-    html += '<div class="filter-group" style="display:flex; gap:2px; flex-wrap:wrap;">';
-    html += '<span style="color:#888; margin-right:4px;">Type:</span>';
-    html += '<button class="filter-btn' + (collectionFilters.type === 'all' ? ' active' : '') + '" data-filter="type" data-value="all" style="padding:2px 6px; border-radius:4px; border:1px solid #444; background:' + (collectionFilters.type === 'all' ? '#e2b714' : '#222') + '; color:' + (collectionFilters.type === 'all' ? '#000' : '#ccc') + '; cursor:pointer; font-size:11px;">All</button>';
+    html += '<div class="p79-filter-row">';
+    html += '<span class="p79-filter-label">Type:</span>';
+    html += filterTabBtn('type', 'all', 'All', collectionFilters.type === 'all');
     for (var ti = 0; ti < allTypes.length; ti++) {
         var tp = allTypes[ti];
-        var tActive = collectionFilters.type === tp;
-        html += '<button class="filter-btn' + (tActive ? ' active' : '') + '" data-filter="type" data-value="' + tp + '" style="padding:2px 6px; border-radius:4px; border:1px solid #444; background:' + (tActive ? '#e2b714' : '#222') + '; color:' + (tActive ? '#000' : '#ccc') + '; cursor:pointer; font-size:11px;">' + tp.charAt(0).toUpperCase() + tp.slice(1) + '</button>';
+        html += filterTabBtn('type', tp, tp.charAt(0).toUpperCase() + tp.slice(1), collectionFilters.type === tp);
     }
     html += '</div>';
 
     // Archetype filter
-    html += '<div class="filter-group" style="display:flex; gap:2px; flex-wrap:wrap;">';
-    html += '<span style="color:#888; margin-right:4px;">Archetype:</span>';
-    html += '<button class="filter-btn' + (collectionFilters.archetype === 'all' ? ' active' : '') + '" data-filter="archetype" data-value="all" style="padding:2px 6px; border-radius:4px; border:1px solid #444; background:' + (collectionFilters.archetype === 'all' ? '#e2b714' : '#222') + '; color:' + (collectionFilters.archetype === 'all' ? '#000' : '#ccc') + '; cursor:pointer; font-size:11px;">All</button>';
+    html += '<div class="p79-filter-row">';
+    html += '<span class="p79-filter-label">Archetype:</span>';
+    html += filterTabBtn('archetype', 'all', 'All', collectionFilters.archetype === 'all');
     for (var ai = 0; ai < allArchetypes.length; ai++) {
         var arch = allArchetypes[ai];
-        var aActive = collectionFilters.archetype === arch;
-        html += '<button class="filter-btn' + (aActive ? ' active' : '') + '" data-filter="archetype" data-value="' + arch + '" style="padding:2px 6px; border-radius:4px; border:1px solid #444; background:' + (aActive ? '#e2b714' : '#222') + '; color:' + (aActive ? '#000' : '#ccc') + '; cursor:pointer; font-size:11px;">' + ARCHETYPES[arch].emoji + ' ' + ARCHETYPES[arch].name + '</button>';
+        html += filterTabBtn('archetype', arch, ARCHETYPES[arch].emoji + ' ' + ARCHETYPES[arch].name, collectionFilters.archetype === arch);
     }
     html += '</div>';
 
     // Tier filter
-    html += '<div class="filter-group" style="display:flex; gap:2px; flex-wrap:wrap;">';
-    html += '<span style="color:#888; margin-right:4px;">Tier:</span>';
-    html += '<button class="filter-btn' + (collectionFilters.tier === 'all' ? ' active' : '') + '" data-filter="tier" data-value="all" style="padding:2px 6px; border-radius:4px; border:1px solid #444; background:' + (collectionFilters.tier === 'all' ? '#e2b714' : '#222') + '; color:' + (collectionFilters.tier === 'all' ? '#000' : '#ccc') + '; cursor:pointer; font-size:11px;">All</button>';
+    html += '<div class="p79-filter-row">';
+    html += '<span class="p79-filter-label">Tier:</span>';
+    html += filterTabBtn('tier', 'all', 'All', collectionFilters.tier === 'all');
     for (var ci = 1; ci <= 5; ci++) {
-        var cActive = collectionFilters.tier === ci;
         var stars = '';
         for (var si = 0; si < ci; si++) stars += '★';
-        html += '<button class="filter-btn' + (cActive ? ' active' : '') + '" data-filter="tier" data-value="' + ci + '" style="padding:2px 6px; border-radius:4px; border:1px solid #444; background:' + (cActive ? '#e2b714' : '#222') + '; color:' + (cActive ? '#000' : '#ccc') + '; cursor:pointer; font-size:11px;">T' + ci + ' ' + stars + '</button>';
+        html += filterTabBtn('tier', ci, 'T' + ci + ' ' + stars, collectionFilters.tier === ci);
     }
     html += '</div>';
 
     // Sort + Search
-    html += '<div class="filter-group" style="display:flex; gap:6px; align-items:center;">';
-    html += '<span style="color:#888;">Sort:</span>';
-    html += '<select id="collection-sort" style="padding:2px 4px; border-radius:4px; border:1px solid #444; background:#222; color:#ccc; font-size:11px;">';
+    html += '<div class="p79-filter-row">';
+    html += '<span class="p79-filter-label">Sort:</span>';
+    html += '<select id="collection-sort" class="p79-filter-select">';
     html += '<option value="tier"' + (collectionFilters.sort === 'tier' ? ' selected' : '') + '>By Tier</option>';
     html += '<option value="name"' + (collectionFilters.sort === 'name' ? ' selected' : '') + '>By Name</option>';
     html += '<option value="element"' + (collectionFilters.sort === 'element' ? ' selected' : '') + '>By Element</option>';
     html += '</select>';
-    html += '<input type="text" id="collection-search" placeholder="Search..." value="' + (collectionFilters.search || '') + '" style="padding:2px 6px; border-radius:4px; border:1px solid #444; background:#222; color:#ccc; font-size:11px; width:100px;" />';
+    html += '<input type="text" id="collection-search" class="p79-filter-input" placeholder="Search..." value="' + (collectionFilters.search || '') + '" style="width:110px;" />';
     html += '</div>';
 
     filterBar.innerHTML = html;
 
     // Bind filter buttons
-    var filterBtns = filterBar.querySelectorAll('.filter-btn');
+    var filterBtns = filterBar.querySelectorAll('.sv-tab');
     for (var fb = 0; fb < filterBtns.length; fb++) {
         filterBtns[fb].addEventListener('click', function() {
             var filterType = this.getAttribute('data-filter');
@@ -550,17 +583,10 @@ function renderCollectionGrid(unitKeys) {
         var copiesProgress = owned ? Math.min(100, (copies / nextStarCopies) * 100) : 0;
 
         var div = document.createElement('div');
-        div.className = 'roster-card cost-' + template.cost;
+        div.className = 'p79-unit-card tier-' + template.cost + (!owned ? ' p79-not-owned' : '');
         div.setAttribute('data-unit-key', key);
-        if (!owned) {
-            div.style.opacity = '0.4';
-        }
 
         var hasEvolvedForm = !!EVOLUTIONS[key];
-
-        var starSpan = '';
-        for (var s = 0; s < stars; s++) starSpan += '⭐';
-        if (stars === 0) starSpan = '<span style="color:#555;">☆</span>';
 
         var statMult = getStarMultiplier(Math.max(1, stars));
         var scaledHP = Math.floor(template.hp * statMult);
@@ -572,42 +598,44 @@ function renderCollectionGrid(unitKeys) {
         if (abilityInfo) {
             var abilDesc = abilityInfo.desc || '';
             if (abilDesc.length > 60) abilDesc = abilDesc.substring(0, 57) + '...';
-            abilityHtml = '<div style="font-size:10px; color:#8bbcff; margin-top:2px; line-height:1.3;">⚡ ' + abilityInfo.name + '</div>' +
-                '<div style="font-size:9px; color:#777; line-height:1.2;">' + abilDesc + '</div>';
+            abilityHtml = '<div class="p79-card-ability">⚡ ' + abilityInfo.name + '</div>' +
+                '<div class="p79-card-ability-desc">' + abilDesc + '</div>';
         }
 
-        var html =
-            '<div class="r-stars">' + starSpan + '</div>' +
-            '<div>' + getElementEmoji(template.element) + ' ' + ARCHETYPES[template.archetype].emoji + '</div>' +
-            '<div class="r-name">' + template.name + '</div>' +
-            '<div class="r-info">' + template.type.charAt(0).toUpperCase() + template.type.slice(1) + ' · Cost ' + template.cost + '</div>' +
-            '<div class="r-info" style="color:#ccc;">HP: ' + scaledHP + ' · ATK: ' + scaledATK + '</div>' +
-            abilityHtml;
+        var html = '<div class="p79-card-head">' +
+            p79PortraitHtml(key, template, 'p79-portrait-sm') +
+            '<div class="p79-card-body">' +
+                p79StarPipsHtml(stars) +
+                '<div class="p79-card-name">' + template.name + '</div>' +
+                '<div class="p79-card-meta">' + ARCHETYPES[template.archetype].emoji + ' ' + template.type.charAt(0).toUpperCase() + template.type.slice(1) + ' · Cost ' + template.cost + '</div>' +
+            '</div>' +
+        '</div>' +
+        '<div class="p79-card-stats">HP: ' + scaledHP + ' · ATK: ' + scaledATK + '</div>' +
+        abilityHtml;
 
         if (owned) {
-            html += '<div class="r-copies" style="margin-top:2px;">' +
-                '<div style="background:#333; border-radius:3px; height:4px; width:100%; overflow:hidden;">' +
-                '<div style="background:#e2b714; height:100%; width:' + copiesProgress + '%;"></div>' +
-                '</div>' +
-                '<span style="font-size:10px; color:#888;">' + copies + ' / ' + nextStarCopies + ' copies</span>' +
+            html += '<div style="margin-top:2px;">' +
+                '<div class="sv-bar sv-bar-gold"><div class="sv-bar-fill" style="width:' + copiesProgress + '%;"></div></div>' +
+                '<span class="text-muted" style="font-size:10px;">' + copies + ' / ' + nextStarCopies + ' copies</span>' +
                 '</div>';
 
+            html += '<div class="p79-btn-row">';
             if (canStarUp(sd, key)) {
-                html += '<button class="star-up-btn" data-key="' + key + '" style="margin-top:2px;">⬆ Star Up!</button>';
+                html += '<button class="sv-btn p79-btn-green star-up-btn" data-key="' + key + '" style="font-size:11px; padding:3px 8px;">⬆ Star Up!</button>';
             }
             if (copies > 0) {
-                html += '<button class="sell-btn" data-key="' + key + '" data-copies="' + copies + '" style="margin-top:2px;">💰 Sell (' + copies + ')</button>';
+                html += '<button class="sv-btn sell-btn" data-key="' + key + '" data-copies="' + copies + '" style="font-size:11px; padding:3px 8px;">💰 Sell (' + copies + ')</button>';
             }
+            html += '</div>';
         } else {
-            html += '<div style="font-size:10px; color:#555; margin-top:4px;">Not collected</div>';
+            html += '<div class="p79-card-tag-muted">Not collected</div>';
         }
 
         if (hasEvolvedForm) {
-            html += '<div style="font-size:10px; color:#e2b714; margin-top:2px;">✨ Can Evolve</div>';
+            html += '<div class="p79-card-tag">✨ Can Evolve</div>';
         }
 
         div.innerHTML = html;
-        div.style.cursor = 'pointer';
         div.onclick = (function(k) {
             return function() { showUnitDetail(k, 'roster'); };
         })(key);
@@ -678,41 +706,37 @@ function showUnitDetailPanel(unitKey) {
         ability = ABILITY_DATA[template.ability];
     }
 
-    var starSpan = '';
-    for (var i = 0; i < stars; i++) starSpan += '★';
-    if (!starSpan) starSpan = '☆';
-
     var html = '';
     html += '<div style="text-align:center; margin-bottom:8px;">';
-    html += '<div style="font-size:24px;">' + getElementEmoji(template.element) + '</div>';
-    html += '<div style="font-size:16px; font-weight:bold;">' + template.name + '</div>';
-    html += '<div style="color:#e2b714;">' + starSpan + '</div>';
-    html += '<div style="font-size:12px; color:#888;">' + getElementEmoji(template.element) + ' ' + ELEMENTS[template.element].name + ' · ' + ARCHETYPES[template.archetype].emoji + ' ' + ARCHETYPES[template.archetype].name + '</div>';
-    if (isEvolved) html += '<div style="color:#e2b714; font-size:11px;">✨ Evolved Form</div>';
+    html += p79PortraitHtml(unitKey, template, 'p79-portrait-modal');
+    html += '<div style="font-size:16px; font-weight:bold; color:var(--sv-text-1); margin-top:6px;">' + template.name + '</div>';
+    html += p79StarPipsHtml(stars, true);
+    html += '<div class="text-muted" style="font-size:12px;">' + getElementEmoji(template.element) + ' ' + ELEMENTS[template.element].name + ' · ' + ARCHETYPES[template.archetype].emoji + ' ' + ARCHETYPES[template.archetype].name + '</div>';
+    if (isEvolved) html += '<div class="text-gold" style="font-size:11px;">✨ Evolved Form</div>';
     html += '</div>';
 
     // Stats grid
     html += '<div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:4px; margin-bottom:8px; text-align:center; font-size:11px;">';
-    html += '<div><div style="color:#888;">HP</div><div>' + Math.floor(template.hp * statMult) + '</div></div>';
-    html += '<div><div style="color:#888;">ATK</div><div>' + Math.floor(template.attack * statMult) + '</div></div>';
-    html += '<div><div style="color:#888;">AtkSpd</div><div>' + template.attackSpd + '</div></div>';
-    html += '<div><div style="color:#888;">Range</div><div>' + template.range + '</div></div>';
-    html += '<div><div style="color:#888;">MoveSpd</div><div>' + template.moveSpd + '</div></div>';
+    html += '<div><div class="text-muted">HP</div><div style="color:var(--sv-text-1);">' + Math.floor(template.hp * statMult) + '</div></div>';
+    html += '<div><div class="text-muted">ATK</div><div style="color:var(--sv-text-1);">' + Math.floor(template.attack * statMult) + '</div></div>';
+    html += '<div><div class="text-muted">AtkSpd</div><div style="color:var(--sv-text-1);">' + template.attackSpd + '</div></div>';
+    html += '<div><div class="text-muted">Range</div><div style="color:var(--sv-text-1);">' + template.range + '</div></div>';
+    html += '<div><div class="text-muted">MoveSpd</div><div style="color:var(--sv-text-1);">' + template.moveSpd + '</div></div>';
     html += '</div>';
 
     // Passive
     if (passive) {
-        html += '<div style="margin-bottom:6px; padding:6px; background:#1a2a1a; border-radius:4px; font-size:12px;">';
-        html += '<div style="font-weight:bold; color:#66bb6a;">Passive: ' + passive.name + '</div>';
-        html += '<div style="color:#aaa;">' + (passive.description || passive.desc || 'No description') + '</div>';
+        html += '<div style="margin-bottom:6px; padding:6px; background:var(--sv-bg-0); border-radius:var(--sv-radius-sm); font-size:12px;">';
+        html += '<div class="text-green" style="font-weight:bold;">Passive: ' + passive.name + '</div>';
+        html += '<div class="text-muted">' + (passive.description || passive.desc || 'No description') + '</div>';
         html += '</div>';
     }
 
     // Ability
     if (ability) {
-        html += '<div style="margin-bottom:6px; padding:6px; background:#2a1a2a; border-radius:4px; font-size:12px;">';
+        html += '<div style="margin-bottom:6px; padding:6px; background:var(--sv-bg-0); border-radius:var(--sv-radius-sm); font-size:12px;">';
         html += '<div style="font-weight:bold; color:#ce93d8;">Ability: ' + ability.name + '</div>';
-        html += '<div style="color:#aaa;">' + (ability.description || ability.desc || 'No description') + '</div>';
+        html += '<div class="text-muted">' + (ability.description || ability.desc || 'No description') + '</div>';
         html += '</div>';
     }
 
@@ -720,20 +744,18 @@ function showUnitDetailPanel(unitKey) {
     var evo = EVOLUTIONS[unitKey];
     if (evo) {
         var evolvedTmpl = EVOLVED_TEMPLATES[evo.evolved];
-        html += '<div style="margin-bottom:6px; padding:6px; background:#2a2a1a; border-radius:4px; font-size:12px;">';
-        html += '<div style="font-weight:bold; color:#e2b714;">✨ Evolved Form: ' + (evolvedTmpl ? evolvedTmpl.name : evo.evolved) + '</div>';
-        html += '<div style="color:#aaa;">Requires: ' + (evo.essences || '?') + ' essences + 3★</div>';
+        html += '<div style="margin-bottom:6px; padding:6px; background:var(--sv-bg-0); border-radius:var(--sv-radius-sm); font-size:12px;">';
+        html += '<div class="text-gold" style="font-weight:bold;">✨ Evolved Form: ' + (evolvedTmpl ? evolvedTmpl.name : evo.evolved) + '</div>';
+        html += '<div class="text-muted">Requires: ' + (evo.essences || '?') + ' essences + 3★</div>';
         html += '</div>';
     }
 
     // Star-up progress
     if (owned) {
         html += '<div style="margin-top:6px;">';
-        html += '<div style="font-size:12px; font-weight:bold;">Star Progress</div>';
-        html += '<div style="background:#333; border-radius:3px; height:6px; width:100%; overflow:hidden; margin:4px 0;">';
-        html += '<div style="background:#e2b714; height:100%; width:' + progress + '%;"></div>';
-        html += '</div>';
-        html += '<span style="font-size:11px; color:#888;">' + copies + ' / ' + nextStarCopies + ' copies</span>';
+        html += '<div style="font-size:12px; font-weight:bold; color:var(--sv-text-1);">Star Progress</div>';
+        html += '<div class="sv-bar sv-bar-gold" style="margin:4px 0;"><div class="sv-bar-fill" style="width:' + progress + '%;"></div></div>';
+        html += '<span class="text-muted" style="font-size:11px;">' + copies + ' / ' + nextStarCopies + ' copies</span>';
         html += '</div>';
     }
 
@@ -742,4 +764,3 @@ function showUnitDetailPanel(unitKey) {
     document.getElementById('unit-detail-content').innerHTML = html;
     overlay.style.display = 'flex';
 }
-
