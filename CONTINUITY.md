@@ -28,7 +28,14 @@
 > - Phase 5 art: hybrid direction locked (abstract T1-T2 / humanoid T3-T5+heroes); 96 anchor
 >   candidates generated to `D:\ComfyUI\output\sv-anchors\` (REVIEW.html contact sheet) —
 >   BLOCKED on user keeper curation, then batch production.
-> - Phase 6 IN PROGRESS: UI overhaul (prompts 77+).
+> - Phase 6 DONE (`v0.11.0-ui`, prompts 77-80): design system (--sv-* tokens, .sv-* components,
+>   screen transitions, reduced-motion), camp-scene hub with docked nav + settings drawer, gacha
+>   summon ceremony (charge/flip/burst reveals, skippable, CSS-only timing), collection/forge/gems/
+>   heroes/codex restyled with portrait placeholder ids (unit-portrait-<key>/hero-portrait-<key> —
+>   Phase 5 art drops in there), mission select + combat chrome + results sequence restyled.
+>   Suite: 248 cases green.
+> - Phase 7 IN PROGRESS: audio (prompt 81) — synthesized SFX/ambient (no external assets; licensed
+>   music can replace later).
 > - Dev server for verification: `node scripts/serve.js` → http://localhost:8123 (no-cache headers;
 >   file:// caching serves stale js — don't verify via file://). NOTE: `alert()`/`confirm()` freeze
 >   the embedded browser pane — shim them before driving the UI programmatically.
