@@ -43,10 +43,16 @@
 >   (with migration hardening — BUGS #13 fixed), version stamping, `DEPLOY.md`.
 >   Suite: 266 cases green.
 >
-> **REMAINING TO v1.0.0 — both user-gated:**
-> 1. **Art production** (Phase 5): user curates anchor keepers from
->    `D:\ComfyUI\output\sv-anchors\REVIEW.html` → then batch portraits (132) → rigs → integration.
-> 2. **Public deploy** (Phase 8.3): user enables GitHub Pages per `DEPLOY.md` → tag `v1.0.0`.
+> **v1.0.0 SHIPPED (2026-07-19): https://whcheong2008.github.io/gameTft/**
+> - Phase 5 art DONE (orchestrator-curated per user delegation): 84 portraits (36 abstract T1-T2,
+>   30 humanoid T3-T5, 6 heroes, 12 Voidspawn bosses) + 9 region/camp backgrounds, generated via
+>   ComfyUI (`scripts/comfy-gen.js`), processed to webp in `assets/`, integrated everywhere
+>   (prompt 83): UI portraits, Pixi combat tokens with lazy textures + fallbacks, real backdrop art.
+> - Deploy DONE: repo made public (history secret-scanned clean first — required for free Pages),
+>   Pages enabled via API, version-stamped, tagged `v1.0.0`. Suite: 273 cases green.
+> - **Post-1.0 backlog**: 6 skeletal animation rigs + per-unit skins (MASTERPLAN 5.3-5.4 original
+>   ambition; v1.0 ships portrait tokens), licensed audio swap-ins via the per-cue `src` field,
+>   Voidspawn enemy portrait variants, hard mode stages.
 > - Dev server for verification: `node scripts/serve.js` → http://localhost:8123 (no-cache headers;
 >   file:// caching serves stale js — don't verify via file://). NOTE: `alert()`/`confirm()` freeze
 >   the embedded browser pane — shim them before driving the UI programmatically.
