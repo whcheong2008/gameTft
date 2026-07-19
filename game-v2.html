@@ -354,6 +354,42 @@ body {
 #combat-controls-right { display: flex; align-items: center; gap: 8px; }
 #enrage-timer { color: #ff6644; font-size: 11px; }
 
+/* Prompt 76 (Phase 4.5, Task 3): pulsing enrage HUD timer in the last 10s
+   (js/render-pixi.js's pixiUpdateEnrageTimer() toggles this class). */
+.enrage-timer-pulse { animation: enrageTimerPulse 0.6s ease-in-out infinite; }
+@keyframes enrageTimerPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(1.18); }
+}
+
+/* Prompt 76 (Phase 4.4 remainder + 4.5): "Wave N" / "PHASE N" sweep-in/out
+   banner -- js/ui-combat.js's showWaveBanner() (wave start) and
+   js/render-pixi.js's showPhaseBanner() (boss phase transition) both create
+   one of these. .wave-banner-boss is the "distinct heavier banner" boss
+   waves/phase transitions get (bigger, slower, red-tinted); .wave-banner-phase
+   layers on top of that for the phase-transition flavor specifically. */
+.wave-banner-sweep {
+    position: absolute; top: 38%; left: 0; right: 0;
+    display: flex; justify-content: center; align-items: center;
+    padding: 8px 0; font-size: 20px; font-weight: bold; letter-spacing: 2px;
+    color: #fff; background: rgba(20,20,30,0.75);
+    border-top: 2px solid #e2b714; border-bottom: 2px solid #e2b714;
+    z-index: 28; pointer-events: none; text-align: center;
+    animation: waveBannerSweep 1.3s cubic-bezier(.2,.9,.3,1) forwards;
+}
+.wave-banner-boss {
+    top: 34%; padding: 14px 0; font-size: 26px; color: #ffdd66;
+    background: rgba(60,10,10,0.85); border-color: #ff4444;
+    animation-duration: 1.9s;
+}
+.wave-banner-phase { top: 30%; }
+@keyframes waveBannerSweep {
+    0% { transform: translateX(-120%); opacity: 0; }
+    12% { transform: translateX(0); opacity: 1; }
+    78% { transform: translateX(0); opacity: 1; }
+    100% { transform: translateX(120%); opacity: 0; }
+}
+
 /* === Combat Synergy Bar -- slim overlay drawer, top-center under the wave
    banner (collapsible: js/ui-combat.js's toggleCombatSynergyBar()) === */
 #combat-synergy-bar {

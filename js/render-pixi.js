@@ -107,7 +107,16 @@ var PIXI_R = {
     repositionSelectedUnit: null,
     repositionClickCallback: null, // function(row, col) -- js/ui-combat.js's onWaveRepositionClick
     tileHitLayer: null,
-    repositionHighlightLayer: null
+    repositionHighlightLayer: null,
+    // Prompt 76 (Phase 4.4 remainder + 4.5): combat-juice render-only state.
+    // hitStopUntil is a wall-clock (Date.now()) timestamp -- see
+    // pixiTriggerHitStop()/RENDER_PIXI.frame() below for why wall-clock
+    // (not a combat-speed-scaled clock) is correct here: hit-stop freezes
+    // the RENDERER for a fixed slice of real time, completely independent
+    // of js/ui-combat.js's separate combatTick() pump.
+    hitStopUntil: 0,
+    shakeMagnitude: 0,     // current screen-shake amplitude (px), decays every frame
+    unitBanners: []        // live "RAMPAGE!"-style floating banners (pixiTickUnitBanners)
 };
 
 // ---- Task 2 (Prompt 70, Phase 3.4): angled TFT-style camera projection ----
@@ -582,6 +591,119 @@ function pixiRedrawBuilderToken(vis, unitLike, row, col, rs, opts) {
     pixiUpdateHitArea(vis, w, h);
 }
 
+// ---- Prompt 76 (Phase 4.4 remainder, Task 1): status visual upgrade ----
+//
+// Replaces the old emoji-only status row with animated overlays drawn
+// directly ON the token for the 7 "big" status types, driven purely by
+// `unit.statusEffects` each frame (render-side only -- no new combatEvents,
+// no new fields; combat-status.js/combat-*.js are untouched this round per
+// the file-scope boundary). Every draw below is deterministic math against
+// PIXI_R.clock (the same combat-speed-scaled cosmetic clock idle-bob already
+// uses) -- zero PRNG calls, so there's nothing here that could ever touch
+// the seeded logic Math.random() stream even by accident.
+var PIXI_STATUS_ANIMATED = { freeze: 1, stun: 1, burn: 1, root: 1, silence: 1, poison: 1, bleed: 1 };
+
+function pixiUnitActiveStatusTypes(unit) {
+    var types = [];
+    if (!unit.statusEffects) return types;
+    for (var i = 0; i < unit.statusEffects.length; i++) {
+        var t = unit.statusEffects[i].type;
+        if (types.indexOf(t) < 0) types.push(t);
+    }
+    return types;
+}
+
+// Small 8-point star polygon -- used by the "stunned" orbit overlay.
+function pixiDrawStarShape(g, cx, cy, r, color, alpha) {
+    var pts = [];
+    for (var i = 0; i < 8; i++) {
+        var ang = (i / 8) * Math.PI * 2 - Math.PI / 2;
+        var rad = (i % 2 === 0) ? r : r * 0.42;
+        pts.push(cx + Math.cos(ang) * rad, cy + Math.sin(ang) * rad);
+    }
+    g.poly(pts).fill({ color: color, alpha: alpha });
+}
+
+// Draws every animated status overlay currently active on `unit` into `g`
+// (a Graphics owned by that unit's token, cleared+redrawn every frame
+// alongside the rest of pixiRedrawToken -- see vis.statusFxG below).
+// `w`/`h` are this frame's token box (already accounts for boss span);
+// `clock` is PIXI_R.clock (combat-speed-scaled cosmetic seconds).
+function pixiDrawStatusOverlays(g, unit, w, h, clock) {
+    g.clear();
+    var types = pixiUnitActiveStatusTypes(unit);
+    if (types.length === 0) return;
+    var has = {};
+    for (var i = 0; i < types.length; i++) has[types[i]] = true;
+
+    // frozen: ice-block tint over the whole token + twinkling crystal shards
+    if (has.freeze) {
+        g.roundRect(-w / 2, -h / 2, w, h, 4).fill({ color: 0x99e6ff, alpha: 0.32 });
+        var crystalCount = 4;
+        for (var c = 0; c < crystalCount; c++) {
+            var cAng = (c / crystalCount) * Math.PI * 2 + 0.4;
+            var cx = Math.cos(cAng) * w * 0.32;
+            var cy = Math.sin(cAng) * h * 0.32;
+            var tw = w * 0.09;
+            var twinkle = 0.5 + Math.sin(clock * 4 + c * 1.7) * 0.25;
+            g.poly([cx, cy - tw, cx + tw * 0.55, cy, cx, cy + tw, cx - tw * 0.55, cy])
+                .fill({ color: 0xd7f6ff, alpha: twinkle });
+        }
+    }
+
+    // stunned: 3 stars orbiting above the token
+    if (has.stun) {
+        var starCount = 3;
+        var orbitR = w * 0.42;
+        for (var s = 0; s < starCount; s++) {
+            var sAng = clock * 3.4 + (s / starCount) * Math.PI * 2;
+            var sx = Math.cos(sAng) * orbitR;
+            var sy = -h * 0.58 + Math.sin(sAng) * orbitR * 0.3;
+            pixiDrawStarShape(g, sx, sy, w * 0.075, 0xffe14a, 0.95);
+        }
+    }
+
+    // burning: looping ember rise
+    if (has.burn) {
+        var emberCount = 4;
+        for (var e = 0; e < emberCount; e++) {
+            var ePhase = (clock * 0.6 + e / emberCount) % 1;
+            var ex = Math.sin(e * 12.9) * w * 0.28;
+            var ey = h / 2 - ePhase * h * 1.1;
+            var eAlpha = Math.max(0, 1 - ePhase) * 0.85;
+            g.circle(ex, ey, Math.max(1, w * 0.045 * (1 - ePhase * 0.4))).fill({ color: 0xff7733, alpha: eAlpha });
+        }
+    }
+
+    // rooted: vine-wrap arcs around the base
+    if (has.root) {
+        var vinePulse = 0.55 + Math.sin(clock * 2.4) * 0.15;
+        g.ellipse(0, h * 0.28, w * 0.42, h * 0.14).stroke({ width: 2, color: 0x3fae3f, alpha: vinePulse });
+        g.ellipse(0, h * 0.1, w * 0.36, h * 0.11).stroke({ width: 2, color: 0x6fd66f, alpha: vinePulse * 0.8 });
+    }
+
+    // silenced: crossed-out glyph pulse above the token
+    if (has.silence) {
+        var silAlpha = 0.5 + Math.sin(clock * 5) * 0.35;
+        var sy0 = -h / 2 - 8;
+        g.circle(0, sy0, w * 0.13).stroke({ width: 2, color: 0xbbbbee, alpha: silAlpha });
+        g.moveTo(-w * 0.09, sy0 - w * 0.09).lineTo(w * 0.09, sy0 + w * 0.09).stroke({ width: 2, color: 0xbbbbee, alpha: silAlpha });
+    }
+
+    // poisoned / bleeding: dripping ticks (color distinguishes the two)
+    if (has.poison || has.bleed) {
+        var dripColor = has.poison ? 0x66dd44 : 0xdd3344;
+        var dripCount = 3;
+        for (var d = 0; d < dripCount; d++) {
+            var dPhase = (clock * 0.9 + d / dripCount) % 1;
+            var dx = Math.sin(d * 7.3) * w * 0.22;
+            var dy = -h * 0.1 + dPhase * h * 0.75;
+            var dAlpha = Math.max(0, 1 - dPhase) * 0.85;
+            g.circle(dx, dy, Math.max(1, w * 0.035)).fill({ color: dripColor, alpha: dAlpha });
+        }
+    }
+}
+
 // ---- per-unit visual token (combat) ----
 
 function pixiCreateVisual(unit) {
@@ -631,6 +753,12 @@ function pixiCreateVisual(unit) {
     });
     container.addChild(flagText);
 
+    // Prompt 76 (Task 1): animated on-token status overlays -- drawn LAST so
+    // it paints over the bars/pips/emoji beneath it (an ice tint dimming the
+    // HP bar reads as "this unit is frozen", not a rendering bug).
+    var statusFxG = new PIXI.Graphics();
+    container.addChild(statusFxG);
+
     var vis = {
         container: container,
         base: base,
@@ -645,6 +773,7 @@ function pixiCreateVisual(unit) {
         pipsText: pipsText,
         statusText: statusText,
         flagText: flagText,
+        statusFxG: statusFxG,
         row: unit.gridRow,
         col: unit.gridCol,
         segRow0: unit.gridRow, segCol0: unit.gridCol,
@@ -824,6 +953,24 @@ function pixiRedrawToken(vis, unit, dtMs) {
         vis.base.roundRect(-w / 2, -h / 2, w, h, 4).fill({ color: 0xffffff, alpha: Math.max(0, vis.castFlashT / 0.3) * 0.5 });
     }
 
+    // Prompt 76 (Task 2): boss phase-transition invulnerability shimmer -- a
+    // fast white scan-line sweep across the token plus a pale overall tint,
+    // active for the whole boss.phaseTransitioning window (combat-boss.js
+    // already owns that flag/timer; this is a pure read, render-side only).
+    if (unit.isBoss && unit.phaseTransitioning) {
+        var shimmerT = (PIXI_R.clock * 2.2) % 1; // TUNABLE: sweep speed
+        var shimmerX = -w / 2 + shimmerT * w;
+        vis.base.roundRect(-w / 2, -h / 2, w, h, 4).fill({ color: 0xffffff, alpha: 0.12 });
+        vis.base.rect(shimmerX - w * 0.08, -h / 2, w * 0.16, h).fill({ color: 0xffffff, alpha: 0.55 });
+    }
+
+    // Prompt 76 (Task 2): enrage persistent red rim-glow -- pulsing outline,
+    // active for the rest of the fight once boss.enraged flips true.
+    if (unit.isBoss && unit.enraged) {
+        var enrageAlpha = 0.55 + Math.sin(PIXI_R.clock * 5) * 0.3; // TUNABLE: pulse speed/depth
+        vis.base.roundRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, 6).stroke({ width: 3, color: 0xff2222, alpha: enrageAlpha });
+    }
+
     vis.emojiText.text = pixiUnitEmoji(unit);
     vis.emojiText.style.fontSize = Math.floor(h * 0.4);
     vis.emojiText.y = -h * 0.18;
@@ -872,12 +1019,18 @@ function pixiRedrawToken(vis, unit, dtMs) {
     vis.pipsText.text = unit.stars ? new Array(unit.stars + 1).join('★') : '';
     vis.pipsText.y = h / 2 + 1;
 
-    // Status icons: up to 3 unique types + overflow count (parity with DOM).
+    // Prompt 76 (Task 1): the 7 "big" status types (frozen/stunned/burning/
+    // rooted/silenced/poisoned/bleeding) now get an animated overlay ON the
+    // token (pixiDrawStatusOverlays below) instead of a mini emoji icon --
+    // the icon row is left for everything else (slow/taunt/atkMod/buffs/
+    // etc.), still capped at 3 + a condensed "+N" overflow marker exactly
+    // like before.
     var statusStr = '';
     if (unit.statusEffects && unit.statusEffects.length > 0) {
         var uniqueTypes = [];
         for (var si = 0; si < unit.statusEffects.length; si++) {
             var sType = unit.statusEffects[si].type;
+            if (PIXI_STATUS_ANIMATED.hasOwnProperty(sType)) continue;
             if (uniqueTypes.indexOf(sType) < 0) uniqueTypes.push(sType);
         }
         var shown = uniqueTypes.slice(0, 3);
@@ -888,6 +1041,10 @@ function pixiRedrawToken(vis, unit, dtMs) {
     }
     vis.statusText.text = statusStr;
     vis.statusText.y = -h / 2 - 2;
+
+    // Prompt 76 (Task 1): animated on-token overlays, driven fresh every
+    // frame straight off unit.statusEffects (render-side only).
+    pixiDrawStatusOverlays(vis.statusFxG, unit, w, h, PIXI_R.clock);
 
     // Boss enrage/invulnerable flags -- can't "reuse DOM chrome" for text
     // baked into the token itself (Pixi draws its own token), so this is
@@ -1156,9 +1313,259 @@ if (typeof combatEvents !== 'undefined' && typeof combatEvents.onPersistent === 
     combatEvents.onPersistent('abilityCast', function(p) { pixiOnAbilityCast(p); });
 }
 
+// =============================================================================
+// Prompt 76 (Phase 4.5): combat juice -- hit-stop, screen shake, kill
+// streaks, victory/defeat sequences. See the file header + prompts/
+// 76-combat-juice.md for the iron rule this section exists to satisfy:
+// hit-stop is a RENDER-FRAME-ONLY pause. js/ui-combat.js's combat tick pump
+// (combatTick(), setTimeout-cadenced, COMBAT_TICK_MS) is a completely
+// separate loop from this file's frame()/the requestAnimationFrame render
+// loop -- nothing below ever calls combatTick(), mutates combatState, or
+// touches Math.random()/the seeded logic RNG stream. The only randomness
+// used (screen-shake jitter direction) goes through this file's own
+// pixiRngNext() cosmetic PRNG, exactly like every other cosmetic effect in
+// this file. See tests/test-vfx.js's "juice: hit-stop ..." test for the
+// determinism proof (forces hit-stop permanently ON for an entire seeded
+// combat and asserts tick count/result/survivors are byte-identical to a
+// run where the renderer never runs at all).
+// =============================================================================
+
+// ---- hit-stop: 40-60ms render-frame freeze on kills / big crits ----------
+
+var PIXI_HITSTOP_KILL_MS = 55;             // TUNABLE: render freeze on any kill
+var PIXI_HITSTOP_CRIT_MS = 45;             // TUNABLE: render freeze on a qualifying big crit
+var PIXI_HITSTOP_CRIT_HP_FRACTION = 0.14;  // TUNABLE: crit must deal >=14% of target maxHp to qualify as "big"
+
+// Only ever EXTENDS the freeze window (never shortens an in-progress one) --
+// two hit-stop-worthy events landing within the same ~50ms real-time window
+// (e.g. a crit that's also the killing blow) should read as one slightly
+// longer pause, not restart from zero on the second trigger.
+function pixiTriggerHitStop(ms) {
+    if (!(ms > 0)) return;
+    var until = Date.now() + ms;
+    if (until > PIXI_R.hitStopUntil) PIXI_R.hitStopUntil = until;
+}
+
+// ---- screen shake: small stage-container shake, amplitude by damage tier -
+
+var PIXI_SHAKE_CAP = 16;               // TUNABLE: hard cap on shake amplitude (px)
+var PIXI_SHAKE_DECAY_PER_SEC = 26;     // TUNABLE: decay rate (px/nominal-second), combat-speed-scaled
+
+function pixiTriggerScreenShake(amount) {
+    if (!(amount > 0)) return;
+    PIXI_R.shakeMagnitude = Math.min(PIXI_SHAKE_CAP, PIXI_R.shakeMagnitude + amount);
+}
+
+// Applied to PIXI_R.app.stage itself (the root of every layer -- grid,
+// tokens, VFX decal/particle layers all mounted as its children) so the
+// whole "camera" punches together rather than shaking pieces independently.
+// dtMs is the SAME (possibly hit-stop-clamped) value RENDER_PIXI.frame()
+// received this call -- shake visibly pauses during a hit-stop window too,
+// which reads as part of the same "impact" beat rather than two disjoint
+// effects.
+function pixiUpdateScreenShake(dtMs) {
+    if (!PIXI_R.app || !PIXI_R.app.stage) return;
+    if (PIXI_R.shakeMagnitude > 0.05) {
+        var dtSec = (dtMs / 1000) * pixiGetCombatSpeed();
+        PIXI_R.shakeMagnitude = Math.max(0, PIXI_R.shakeMagnitude - PIXI_SHAKE_DECAY_PER_SEC * dtSec);
+        var mag = PIXI_R.shakeMagnitude;
+        PIXI_R.app.stage.x = (pixiRngNext() - 0.5) * 2 * mag;
+        PIXI_R.app.stage.y = (pixiRngNext() - 0.5) * 2 * mag * 0.6; // squashed like the board plane
+    } else if (PIXI_R.app.stage.x !== 0 || PIXI_R.app.stage.y !== 0) {
+        PIXI_R.shakeMagnitude = 0;
+        PIXI_R.app.stage.x = 0;
+        PIXI_R.app.stage.y = 0;
+    }
+}
+
+// ---- kill streaks: 3+ kills within 2s by one unit -> "RAMPAGE" flourish --
+
+var PIXI_KILLSTREAK_WINDOW_S = 2.0;    // TUNABLE: combat-time window (combatState.elapsed, speed-invariant)
+var PIXI_KILLSTREAK_THRESHOLD = 3;     // TUNABLE: kills within the window to trigger
+
+function pixiUnitBannerAnchor(unit) {
+    if (unit.__pixiVis && unit.__pixiVis.container) return { x: unit.__pixiVis.container.x, y: unit.__pixiVis.container.y };
+    var p = boardToScreen(unit.gridRow, unit.gridCol);
+    return { x: p.x, y: p.y };
+}
+
+function pixiSpawnRampageFlourish(unit) {
+    if (!PIXI_R.ready || !PIXI_R.floatLayer || typeof PIXI === 'undefined' || typeof PIXI.Text !== 'function') return;
+    var anchor = pixiUnitBannerAnchor(unit);
+    var t = new PIXI.Text({
+        text: 'RAMPAGE!',
+        anchor: 0.5,
+        style: { fontSize: 14, fill: 0xffcc22, fontWeight: 'bold', stroke: { color: 0x330000, width: 3 } }
+    });
+    t.x = anchor.x;
+    t.y = anchor.y - PIXI_R.cellH * 0.7;
+    t._pixiBannerAge = 0;
+    t._pixiBannerLife = 0.9; // TUNABLE
+    t._pixiBannerUnit = unit;
+    PIXI_R.floatLayer.addChild(t);
+    PIXI_R.unitBanners.push(t);
+}
+
+// Ticks every live unit banner (currently just the RAMPAGE flourish, but
+// written generically) -- same combat-speed-scaled convention as
+// pixiTickFloatingText/pixiTickFlashCells.
+function pixiTickUnitBanners(dtMs) {
+    if (!PIXI_R.unitBanners || PIXI_R.unitBanners.length === 0) return;
+    var speed = pixiGetCombatSpeed();
+    for (var i = PIXI_R.unitBanners.length - 1; i >= 0; i--) {
+        var t = PIXI_R.unitBanners[i];
+        t._pixiBannerAge += (dtMs / 1000) * speed;
+        var p = Math.min(1, t._pixiBannerAge / t._pixiBannerLife);
+        if (t._pixiBannerUnit && t._pixiBannerUnit.__pixiVis && t._pixiBannerUnit.__pixiVis.container) {
+            t.x = t._pixiBannerUnit.__pixiVis.container.x;
+        }
+        t.y -= (dtMs / 1000) * speed * 26;
+        t.alpha = p < 0.15 ? (p / 0.15) : (1 - (p - 0.15) / 0.85);
+        if (t.scale && typeof t.scale.set === 'function') t.scale.set(p < 0.15 ? (0.6 + p / 0.15 * 0.5) : 1.1);
+        if (p >= 1) {
+            PIXI_R.floatLayer.removeChild(t);
+            if (typeof t.destroy === 'function') t.destroy();
+            PIXI_R.unitBanners.splice(i, 1);
+        }
+    }
+}
+
+// ---- victory/defeat result sequences --------------------------------------
+
+var PIXI_RESULT_VICTORY_MS = 1000;     // TUNABLE: victory slow-mo window (real ms)
+var PIXI_RESULT_SLOWMO_FACTOR = 0.4;   // TUNABLE: render-interpolation slowdown during that window
+var PIXI_RESULT_DEFEAT_MS = 650;       // TUNABLE: defeat desaturation fade window (real ms)
+var PIXI_RESULT_GOLD_COLOR = 0xffd24a;
+
+// Called by js/ui-combat.js's showMissionResults() BEFORE it reveals the
+// results DOM -- `done()` must always eventually fire (it's what actually
+// shows #combat-results), so every early-out path below calls it
+// synchronously rather than silently swallowing the callback. Render-only:
+// no combatState/save mutation happens in here, only cosmetic playback on
+// top of whatever the final frame already looks like.
+function pixiPlayResultSequence(victory, done) {
+    var safeDone = function() { try { done(); } catch (e) {} };
+    var renderer = (typeof getActiveRenderer === 'function') ? getActiveRenderer() : null;
+    if (!renderer || typeof renderer.frame !== 'function' || !PIXI_R.ready ||
+        typeof requestAnimationFrame !== 'function' || typeof combatState === 'undefined' || !combatState) {
+        safeDone();
+        return;
+    }
+
+    if (victory) {
+        // Gold burst over every surviving player unit. Cosmetic-PRNG only
+        // (vfx.js's own vfxRngNext()) -- guarded, this file never assumes
+        // vfx.js is loaded.
+        if (typeof VFX !== 'undefined' && typeof VFX.play === 'function') {
+            for (var i = 0; i < combatState.playerUnits.length; i++) {
+                var u = combatState.playerUnits[i];
+                if (u.hp > 0) {
+                    VFX.play('burst', { unit: u, row: u.gridRow, col: u.gridCol, color: PIXI_RESULT_GOLD_COLOR, big: true, count: 12, duration: 0.8 });
+                }
+            }
+        }
+        // Render-side interpolation slowdown: every frame for ~1s of real
+        // time gets fed a QUARTER-SCALE dtMs (renderer.frame(), same seam
+        // renderCombatFrame() normally drives) -- idle bob, HP-bar chunk
+        // decay, floating text, and the gold burst above all visibly play
+        // out at ~0.4x speed. combatTick()/combatState are never touched;
+        // the fight is already fully resolved by the time this runs.
+        //
+        // Browsers may throttle/fully suspend requestAnimationFrame for a
+        // backgrounded/invisible tab -- if that happened here, the rAF loop
+        // below would never reach its own exit condition and the results
+        // screen would never appear (a real softlock, not just a slow
+        // animation). safeDoneOnce() + the setTimeout safety net guarantee
+        // `done()` fires within a bounded real-time budget regardless.
+        var finished = false;
+        function safeDoneOnce() {
+            if (finished) return;
+            finished = true;
+            safeDone();
+        }
+        var last = null, elapsedMs = 0;
+        function slowMoStep(now) {
+            if (finished) return;
+            if (last === null) last = now;
+            var realDt = now - last;
+            last = now;
+            elapsedMs += realDt;
+            renderer.frame(realDt * PIXI_RESULT_SLOWMO_FACTOR);
+            if (elapsedMs < PIXI_RESULT_VICTORY_MS) {
+                requestAnimationFrame(slowMoStep);
+            } else {
+                safeDoneOnce();
+            }
+        }
+        requestAnimationFrame(slowMoStep);
+        setTimeout(safeDoneOnce, PIXI_RESULT_VICTORY_MS + 500); // TUNABLE safety-net buffer
+    } else {
+        // Defeat: desaturation fade over the frozen final frame -- pure CSS,
+        // no render-loop involvement needed.
+        var boardEl = (typeof document !== 'undefined') ? document.getElementById('combat-board') : null;
+        if (boardEl && boardEl.style) {
+            boardEl.style.transition = 'filter ' + PIXI_RESULT_DEFEAT_MS + 'ms ease-in';
+            boardEl.style.filter = 'grayscale(0.9) brightness(0.6)';
+        }
+        setTimeout(function() {
+            if (boardEl && boardEl.style) { boardEl.style.filter = ''; boardEl.style.transition = ''; }
+            safeDone();
+        }, PIXI_RESULT_DEFEAT_MS);
+    }
+}
+
+// ---- combatEvents wiring for the juice triggers above ---------------------
+
+if (typeof combatEvents !== 'undefined' && typeof combatEvents.onPersistent === 'function') {
+    combatEvents.onPersistent('unitDamaged', function(p) {
+        if (!p || !p.target || !(p.target.maxHp > 0)) return;
+        var pct = p.amount / p.target.maxHp;
+        if (p.isCrit && pct >= PIXI_HITSTOP_CRIT_HP_FRACTION) pixiTriggerHitStop(PIXI_HITSTOP_CRIT_MS);
+        // Screen shake by damage tier (TUNABLE amplitudes) -- covers both
+        // "big hits" and "boss slams" (a boss's own attacks/telegraphs
+        // routinely clear the top tier against typical player maxHp).
+        if (pct >= 0.30) pixiTriggerScreenShake(9);
+        else if (pct >= 0.18) pixiTriggerScreenShake(5);
+        else if (pct >= 0.10) pixiTriggerScreenShake(2.5);
+    });
+
+    combatEvents.onPersistent('unitKilled', function(p) {
+        if (!p) return;
+        pixiTriggerHitStop(PIXI_HITSTOP_KILL_MS);
+        if (!p.killer) return;
+        var killer = p.killer;
+        var now = (typeof combatState !== 'undefined' && combatState) ? combatState.elapsed : 0;
+        if (!killer._pixiRecentKills) killer._pixiRecentKills = [];
+        killer._pixiRecentKills.push(now);
+        for (var i = killer._pixiRecentKills.length - 1; i >= 0; i--) {
+            if (now - killer._pixiRecentKills[i] > PIXI_KILLSTREAK_WINDOW_S) killer._pixiRecentKills.splice(i, 1);
+        }
+        if (killer._pixiRecentKills.length >= PIXI_KILLSTREAK_THRESHOLD) {
+            if (!killer._pixiRampageShown) {
+                killer._pixiRampageShown = true;
+                pixiSpawnRampageFlourish(killer);
+            }
+        } else {
+            killer._pixiRampageShown = false;
+        }
+    });
+
+    // Detonation punch: a telegraphed boss AoE going off is exactly the kind
+    // of "detonation" the spec calls out for screen shake.
+    combatEvents.onPersistent('bossTelegraphDetonate', function(p) {
+        pixiTriggerScreenShake(7); // TUNABLE
+    });
+}
+
 // ---- chrome duplication (enrage timer text + boss phase-transition flash)
 // -- see the file header comment for why these two small bits can't just
 // call render-dom.js's renderCombatBoard() directly. ----
+
+// Prompt 76 (Task 2): pulsing HUD timer in the last 10s -- toggles a CSS
+// class (game-v2.html's .enrage-timer-pulse keyframe) rather than animating
+// anything in JS; cheap to call every frame, no-ops safely if the element
+// doesn't support classList (permissive test-harness DOM stub).
+var PIXI_ENRAGE_PULSE_THRESHOLD_S = 10; // TUNABLE
 
 function pixiUpdateEnrageTimer(combatState) {
     var timerEl = document.getElementById('enrage-timer');
@@ -1169,13 +1576,40 @@ function pixiUpdateEnrageTimer(combatState) {
         var timeLeft = enrageTime - combatState.elapsed;
         if (timeLeft > 0 && timeLeft <= 30) {
             timerEl.textContent = '⏱️ Enrage: ' + Math.ceil(timeLeft) + 's';
+            if (timerEl.classList) {
+                if (timeLeft <= PIXI_ENRAGE_PULSE_THRESHOLD_S) timerEl.classList.add('enrage-timer-pulse');
+                else timerEl.classList.remove('enrage-timer-pulse');
+            }
         } else {
             timerEl.textContent = '';
+            if (timerEl.classList) timerEl.classList.remove('enrage-timer-pulse');
         }
     } else {
         timerEl.textContent = '';
+        if (timerEl.classList) timerEl.classList.remove('enrage-timer-pulse');
     }
 }
+
+// Prompt 76 (Task 2): "PHASE N" sweep-in/out banner -- reuses the wave-
+// banner CSS family (game-v2.html's .wave-banner-sweep/.wave-banner-boss,
+// see js/ui-combat.js's showWaveBanner()) with its own boss-flavored variant
+// rather than inventing a second animation language for the same visual
+// idea. Chrome-only DOM, no gameplay reads/writes.
+var PIXI_PHASE_BANNER_MS = 2000; // TUNABLE: how long the phase banner holds before removal
+
+function showPhaseBanner(boss) {
+    var area = document.getElementById('combat-area');
+    if (!area || !area.appendChild) return;
+    var banner = document.createElement('div');
+    banner.className = 'wave-banner-sweep wave-banner-boss wave-banner-phase';
+    banner.textContent = '⚡ ' + (boss.name || 'Boss') + ' — PHASE ' + (boss.currentPhase + 1);
+    area.appendChild(banner);
+    (function(el) {
+        setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, PIXI_PHASE_BANNER_MS);
+    })(banner);
+}
+
+var PIXI_PHASE_PUNCH_SHAKE = 9; // TUNABLE: camera-level punch amplitude on a phase transition
 
 var pixiPhaseOverlayShownFor = null;
 function pixiUpdatePhaseTransitionOverlay(combatState) {
@@ -1191,6 +1625,10 @@ function pixiUpdatePhaseTransitionOverlay(combatState) {
             (function(el) {
                 setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 2000);
             })(overlay);
+            // Task 2: banner sweep + a camera-level punch (Task 3's screen
+            // shake) on the same edge-trigger as the existing flash overlay.
+            showPhaseBanner(boss);
+            pixiTriggerScreenShake(PIXI_PHASE_PUNCH_SHAKE);
         } else if (!boss.phaseTransitioning) {
             if (pixiPhaseOverlayShownFor === boss) pixiPhaseOverlayShownFor = null;
         }
@@ -1323,6 +1761,15 @@ var RENDER_PIXI = {
         PIXI_R.hoveredUnit = null; // Task 4: don't carry a hover/tooltip from the previous wave's now-destroyed token
         pixiHideUnitTooltip();
 
+        // Prompt 76: combat-juice render state is per-wave-session cosmetic
+        // only -- reset here so a hit-stop/shake left mid-flight by a wave
+        // that just ended (or the previous mission entirely) never bleeds
+        // into the next wave's very first frame.
+        PIXI_R.hitStopUntil = 0;
+        PIXI_R.shakeMagnitude = 0;
+        PIXI_R.unitBanners = [];
+        if (PIXI_R.app && PIXI_R.app.stage) { PIXI_R.app.stage.x = 0; PIXI_R.app.stage.y = 0; }
+
         // Player units are the SAME object references across every wave of
         // a mission (combatBoard/deployTeam() in ui-combat.js persists them
         // for HP/mana carry-over -- only enemy units are freshly created
@@ -1359,6 +1806,15 @@ var RENDER_PIXI = {
     frame: function(dtMs) {
         if (!PIXI_R.ready || typeof combatState === 'undefined' || !combatState) return;
 
+        // Prompt 76 (Task 3): hit-stop -- clamp the dtMs THIS FUNCTION
+        // advances every downstream animation/clock by to 0 while a freeze
+        // window is active. This never touches js/ui-combat.js's independent
+        // combatTick() pump (a separate setTimeout loop that never calls into
+        // this file) -- combat logic keeps ticking at its normal cadence
+        // throughout; only what gets DRAWN stops changing for up to ~60ms of
+        // real time. See tests/test-vfx.js's hit-stop determinism test.
+        if (Date.now() < PIXI_R.hitStopUntil) dtMs = 0;
+
         // Task 4: idle-bob clock, scaled by COMBAT_SPEED like every other
         // cosmetic timer in this file (pixiTickFloatingText/pixiTickFlashCells).
         PIXI_R.clock += (dtMs / 1000) * pixiGetCombatSpeed();
@@ -1389,6 +1845,8 @@ var RENDER_PIXI = {
 
         pixiTickFloatingText(dtMs);
         pixiTickFlashCells(dtMs);
+        pixiTickUnitBanners(dtMs);
+        pixiUpdateScreenShake(dtMs);
 
         // Prompt 72 (VFX framework): ticked AFTER the per-unit redraw loop
         // above so js/vfx.js's `shake` primitive (the one primitive that
@@ -1452,10 +1910,13 @@ var RENDER_PIXI = {
         PIXI_R.repositionMode = false;
         PIXI_R.repositionSelectedUnit = null;
         PIXI_R.repositionClickCallback = null;
+        PIXI_R.hitStopUntil = 0;
+        PIXI_R.shakeMagnitude = 0;
+        PIXI_R.unitBanners = [];
         pixiHideUnitTooltip();
 
         var enrageTimer = document.getElementById('enrage-timer');
-        if (enrageTimer) enrageTimer.textContent = '';
+        if (enrageTimer) { enrageTimer.textContent = ''; if (enrageTimer.classList) enrageTimer.classList.remove('enrage-timer-pulse'); }
         var banner = document.getElementById('encounter-mechanic-banner');
         if (banner) banner.style.display = 'none';
         var hud = document.getElementById('encounter-mechanic-hud');

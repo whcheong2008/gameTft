@@ -69,7 +69,7 @@ function makeFakePixi() {
 
     function FakeGraphics() { FakeDisplayObject.call(this); this._ops = 0; }
     FakeGraphics.prototype = Object.create(FakeDisplayObject.prototype);
-    const chainMethods = ['clear', 'circle', 'rect', 'roundRect', 'poly', 'moveTo', 'lineTo', 'stroke', 'fill'];
+    const chainMethods = ['clear', 'circle', 'ellipse', 'rect', 'roundRect', 'poly', 'moveTo', 'lineTo', 'stroke', 'fill'];
     chainMethods.forEach(function(name) {
         FakeGraphics.prototype[name] = function() { this._ops++; return this; };
     });
@@ -278,6 +278,143 @@ module.exports = [
                 { result: withoutVfx.result, ticks: withoutVfx.ticks, survivors: withoutVfx.survivors },
                 'VFX must not affect combat determinism/outcome in any way'
             );
+        }
+    },
+
+    // =================================================================
+    // Prompt 76 (Phase 4.4 remainder + 4.5): status overlays + combat juice
+    // acceptance tests.
+    // =================================================================
+
+    // ---------------------------------------------------------------
+    {
+        name: 'juice: hit-stop is render-frame-only -- forcing it permanently ON for a whole seeded fight never alters logic tick progression/outcome',
+        fn: function() {
+            const team = [
+                { key: 'flame_warrior', row: 0, col: 2, stars: 3 },
+                { key: 'cinder_archer', row: 0, col: 4, stars: 3 }
+            ];
+
+            // Drives the exact same low-level loop tests/harness.js's own
+            // runCombat() uses (pumpWave: while combatState.running,
+            // combatTick(dt)) but ALSO drives RENDER_PIXI.frame() every tick
+            // when `driveRenderer` is true, with hit-stop/screen-shake
+            // aggressively force-triggered on every single frame -- if
+            // hit-stop leaked into logic at all, this is the setup that would
+            // expose it (a permanently-frozen renderer for the whole fight).
+            function replay(seed, driveRenderer) {
+                const h = driveRenderer ? makeReadyHarness(seed) : createHarness({ seed: seed });
+                if (!driveRenderer) { h.loadScripts(); h.freshSave(); }
+
+                let randomCount = 0;
+                const origRandom = h.context.Math.random;
+                h.context.Math.random = function() { randomCount++; return origRandom(); };
+
+                const sd = h.context.getSaveData();
+                for (let i = 0; i < team.length; i++) {
+                    sd.collection[team[i].key] = { stars: team[i].stars || 1, copiesForNext: 0 };
+                }
+                const activeTeam = h.context.getActiveTeam(sd);
+                activeTeam.slots = team.map(function(u) { return { key: u.key, row: u.row, col: u.col }; });
+
+                const stageIndex = h.context.STAGES.findIndex(function(s) { return s.id === 'r1_boss'; });
+                h.context.uiStartStoryMission(stageIndex);
+
+                const dt = h.context.COMBAT_DT || 0.05;
+                let ticks = 0;
+                const MAX_TICKS = 50000;
+                while (h.context.combatState && h.context.combatState.running && ticks < MAX_TICKS) {
+                    h.context.combatTick(dt);
+                    ticks++;
+                    if (driveRenderer) {
+                        // Force hit-stop/shake maximally active on every frame.
+                        h.context.pixiTriggerHitStop(1000000);
+                        h.context.pixiTriggerScreenShake(999);
+                        h.context.RENDER_PIXI.frame(37); // arbitrary non-round dtMs
+                    }
+                }
+                h.context.Math.random = origRandom;
+
+                const survivors = h.context.combatState ?
+                    h.context.combatState.playerUnits.filter(function(u) { return u.hp > 0; }).length : 0;
+                return {
+                    result: h.context.combatState ? h.context.combatState.result : null,
+                    ticks: ticks, survivors: survivors, randomCount: randomCount
+                };
+            }
+
+            const withJuice = replay(9001, true);
+            const withoutRenderer = replay(9001, false);
+
+            assert.equal(withJuice.randomCount, withoutRenderer.randomCount, 'permanently-forced hit-stop/screen-shake must consume the exact same number of Math.random() calls as never running the renderer at all');
+            assert.deepEqual(
+                { result: withJuice.result, ticks: withJuice.ticks, survivors: withJuice.survivors },
+                { result: withoutRenderer.result, ticks: withoutRenderer.ticks, survivors: withoutRenderer.survivors },
+                'hit-stop/screen-shake forced ON every frame must not change combat tick progression or outcome in any way -- proves hit-stop is render-frame-only, never touching combatTick()'
+            );
+            assert.ok(withJuice.ticks > 0, 'sanity: the fight should have run for at least 1 tick');
+        }
+    },
+
+    // ---------------------------------------------------------------
+    {
+        name: 'juice: screen-shake/status-overlay/result-sequence functions exist and no-op safely with no PIXI present',
+        fn: function() {
+            const h = createHarness({ seed: 9002 });
+            h.loadScripts(); // no PIXI stub at all
+            h.freshSave();
+            assert.equal(typeof h.context.PIXI, 'undefined', 'sanity: PIXI should be undefined');
+
+            assert.equal(typeof h.context.pixiTriggerHitStop, 'function', 'pixiTriggerHitStop should be defined even without PIXI');
+            assert.equal(typeof h.context.pixiTriggerScreenShake, 'function', 'pixiTriggerScreenShake should be defined even without PIXI');
+            assert.equal(typeof h.context.pixiDrawStatusOverlays, 'function', 'pixiDrawStatusOverlays should be defined even without PIXI');
+            assert.equal(typeof h.context.pixiPlayResultSequence, 'function', 'pixiPlayResultSequence should be defined even without PIXI');
+            assert.equal(typeof h.context.RENDER_PIXI, 'object', 'RENDER_PIXI itself should still be a plain object without PIXI (only registerRenderer() is guarded)');
+
+            assert.doesNotThrow(function() {
+                h.context.pixiTriggerHitStop(50);
+                h.context.pixiTriggerScreenShake(10);
+                h.context.RENDER_PIXI.frame(16); // PIXI_R.ready is false -- must no-op, not throw
+                h.context.pixiUpdateScreenShake(16);
+                h.context.pixiTickUnitBanners(16);
+            }, 'juice trigger/update functions must never throw when PIXI/the pixi Application is unavailable');
+
+            let calledBack = false;
+            h.context.pixiPlayResultSequence(true, function() { calledBack = true; });
+            assert.equal(calledBack, true, 'pixiPlayResultSequence must call done() synchronously when no live renderer is available (headless-safe early-out)');
+        }
+    },
+
+    // ---------------------------------------------------------------
+    {
+        name: 'juice: status overlays + shake trigger functions never touch the seeded logic RNG stream',
+        fn: function() {
+            const h = makeReadyHarness(9003);
+            const unit = h.context.createUnit('flame_warrior', 3);
+            unit.gridRow = 5; unit.gridCol = 3;
+            unit.statusEffects = [
+                { type: 'freeze', duration: 2, value: 0 },
+                { type: 'stun', duration: 1, value: 0 },
+                { type: 'burn', duration: 3, value: 5 },
+                { type: 'root', duration: 2, value: 0 },
+                { type: 'silence', duration: 2, value: 0 },
+                { type: 'poison', duration: 3, value: 3 },
+                { type: 'bleed', duration: 3, value: 3 }
+            ];
+            const g = new (h.context.PIXI.Graphics)();
+
+            let count = 0;
+            const origRandom = h.context.Math.random;
+            h.context.Math.random = function() { count++; return origRandom(); };
+
+            for (let i = 0; i < 30; i++) {
+                h.context.pixiDrawStatusOverlays(g, unit, 60, 60, i * 0.13);
+                h.context.pixiTriggerScreenShake(5);
+                h.context.pixiUpdateScreenShake(16);
+            }
+
+            h.context.Math.random = origRandom;
+            assert.equal(count, 0, 'status overlays are pure deterministic trig against PIXI_R.clock, and shake triggering/decay use only this file\'s own cosmetic pixiRngNext() -- neither should ever call the seeded Math.random()');
         }
     }
 ];

@@ -107,6 +107,31 @@ function showCombatStartText() {
     setTimeout(function() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 1000);
 }
 
+// Prompt 76 (Phase 4.5, Task 3): "Wave N" sweep-in/out banner, alongside the
+// "FIGHT!" pop above -- boss waves get a distinct heavier banner (bigger,
+// slower, red-tinted). Called from uiStartCombatLoop() below, which fires
+// every time the player actually starts a wave's combat (including every
+// wave after the first -- see startMissionCombat()'s re-show of
+// #combat-start-overlay at the end of every wave setup), so this naturally
+// fires once per wave without any extra per-wave wiring. Pure chrome DOM,
+// CSS-driven (game-v2.html's .wave-banner-sweep/.wave-banner-boss).
+var PIXI_WAVE_BANNER_MS = 1300;       // TUNABLE: normal wave banner hold time
+var PIXI_WAVE_BANNER_BOSS_MS = 1900;  // TUNABLE: boss wave banner hold time (heavier/slower)
+
+function showWaveBanner() {
+    var area = document.getElementById('combat-area');
+    if (!area || !area.appendChild) return;
+    var isBoss = !!(activeMission && activeMission.boss);
+    var progress = (typeof getMissionProgress === 'function') ? getMissionProgress() : null;
+    var text = isBoss ? '⚠️ BOSS FIGHT' : ('WAVE ' + (progress ? progress.currentWave : ''));
+    var banner = document.createElement('div');
+    banner.className = 'wave-banner-sweep' + (isBoss ? ' wave-banner-boss' : '');
+    banner.textContent = text;
+    area.appendChild(banner);
+    var life = isBoss ? PIXI_WAVE_BANNER_BOSS_MS : PIXI_WAVE_BANNER_MS;
+    setTimeout(function() { if (banner.parentNode) banner.parentNode.removeChild(banner); }, life);
+}
+
 // ---- Prompt 62: Encounter mechanic banner + live HUD readout ----
 // Reuses the wave-transition visual language (a small overlay banner) rather
 // than introducing new UI chrome. No-ops when the stage has no
@@ -536,8 +561,9 @@ function uiStartCombatLoop() {
     // (sidebars may have changed the board width)
     renderCombatFrame(0);
 
-    // Show FIGHT! text
+    // Show FIGHT! text + the per-wave banner sweep (Prompt 76, Task 3)
     showCombatStartText();
+    showWaveBanner();
 
     // Prompt 67: the combat tick (logic pump) and the render loop are now
     // independent. The tick pump keeps its exact pre-refactor cadence/
@@ -1046,8 +1072,24 @@ function showMissionResults(victory, stars) {
         }
     }
 
-    document.getElementById('combat-results').className = 'combat-results show';
-    renderTopBar();
+    // Prompt 76 (Phase 4.5, Task 3): victory/defeat sequence -- a short
+    // render-only cosmetic beat (victory: slow-mo + gold burst over
+    // survivors; defeat: desaturation fade) plays BEFORE the results DOM is
+    // actually revealed. Every reward/save mutation above this point already
+    // ran synchronously (unchanged) -- only the final reveal + top-bar
+    // refresh is deferred. Falls straight through to an immediate reveal
+    // when pixiPlayResultSequence isn't available (js/render-pixi.js not
+    // loaded) or no-ops internally (no live renderer/PIXI app, e.g. headless
+    // tests) -- see that function's own early-out for the exact conditions.
+    var revealResults = function() {
+        document.getElementById('combat-results').className = 'combat-results show';
+        renderTopBar();
+    };
+    if (typeof pixiPlayResultSequence === 'function') {
+        pixiPlayResultSequence(victory, revealResults);
+    } else {
+        revealResults();
+    }
 }
 
 function uiReturnFromCombat() {
