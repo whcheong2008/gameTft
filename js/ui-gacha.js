@@ -405,6 +405,14 @@ function appendGachaMultiSummary(container, results) {
     container.appendChild(row);
 }
 
+// Prompt 83 (Phase 5.6): when getPortraitUrl() resolves, the card's `.has-
+// portrait` class (P83 ART INTEGRATION CSS block) layers the portrait <img>
+// as the card face under a dark scrim, keeping every existing element
+// (tier border/glow, NEW/EVO badges, name/stars/archetype text) exactly as
+// before -- both now painted above the scrim via that block's z-index rule.
+// A 404'd portrait just leaves an empty <img> box; the card's own flat
+// gradient background (unchanged, still declared in .gacha-card) shows
+// through since .has-portrait's scrim/z-index rules don't remove it.
 function createGachaCard(unitKey, tmpl) {
     var sd = getSaveData();
     var entry = sd.collection[unitKey];
@@ -415,13 +423,16 @@ function createGachaCard(unitKey, tmpl) {
     var tierStars = '';
     for (var s = 0; s < unitCost; s++) tierStars += '★';
 
+    var portraitUrl = (typeof getPortraitUrl === 'function') ? getPortraitUrl(unitKey) : null;
+
     var div = document.createElement('div');
-    div.className = 'gacha-card cost-' + unitCost;
+    div.className = 'gacha-card cost-' + unitCost + (portraitUrl ? ' has-portrait' : '');
     if (isEvolved) {
         div.style.border = '2px solid #e2b714';
         div.style.boxShadow = '0 0 10px rgba(226,183,20,0.3)';
     }
     div.innerHTML =
+        (portraitUrl ? '<img src="' + portraitUrl + '" alt="" class="gacha-card-portrait" onerror="this.style.display=\'none\'; this.parentNode.classList.remove(\'has-portrait\');" />' : '') +
         (isNew ? '<div class="card-new-badge">NEW</div>' : '') +
         (isEvolved ? '<div class="card-evolved-badge">✨ EVO</div>' : '') +
         '<div class="card-element-icon">' + getElementEmoji(tmpl.element) + '</div>' +

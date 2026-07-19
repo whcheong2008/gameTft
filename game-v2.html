@@ -1659,6 +1659,75 @@ body {
     .gacha-burst.is-active { opacity: 0.6 !important; }
     .gacha-burst-tier-3.is-active, .gacha-burst-tier-4.is-active, .gacha-burst-tier-5.is-active { opacity: 0.85 !important; }
 }
+
+/* =============================================================================
+   P83 ART INTEGRATION -- Prompt 83 (Phase 5.6): real portraits/backgrounds
+   layered onto every placeholder hook Phase 3-4 already established. Every
+   rule below styles a NEW element (an <img> or a background layer div) that
+   sits alongside/under the pre-existing placeholder markup -- nothing here
+   removes or restyles the placeholder itself, so a 404'd image degrades
+   straight back to exactly what rendered before this prompt. Scope:
+   js/assets.js, js/ui-roster.js, js/ui-heroes.js, js/ui-gacha.js,
+   js/ui-missions.js, js/ui-combat.js, js/ui-hub.js, js/ui-lore.js,
+   js/render-pixi.js.
+   ============================================================================= */
+
+/* ---- Shared portrait <img>: absolutely filled over the existing .p79-portrait
+   gradient+emoji placeholder div. Positioned children paint above static
+   in-flow content regardless of DOM order, so this simply covers the emoji
+   once loaded; its own onerror sets display:none, which un-covers the
+   emoji/gradient beneath with no further JS needed. ---- */
+.p79-portrait { position: relative; }
+.p79-portrait-img {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; display: block;
+}
+
+/* ---- Gacha reveal/shop cards: portrait fills the card face, a dark gradient
+   scrim keeps the name/tier-stars/archetype text readable on top of it. Only
+   applied when .has-portrait is present (createGachaCard only adds the class
+   when getPortraitUrl() resolved a URL) -- a card with no art keeps its
+   original flat gradient background untouched. ---- */
+.gacha-card-portrait {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; z-index: 0;
+}
+.gacha-card.has-portrait::after {
+    content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(180deg, rgba(8,12,22,0.10) 0%, rgba(8,12,22,0.58) 58%, rgba(8,12,22,0.94) 100%);
+}
+.gacha-card.has-portrait > *:not(.gacha-card-portrait) { position: relative; z-index: 2; }
+
+/* ---- Arena/hub/builder background image layer -- painted BELOW the
+   existing .arena-bd-horizon/.arena-bd-hexfield/.arena-bd-blob/.arena-bd-vignette
+   procedural layers (js/ui-combat.js's buildArenaBackdrop(), js/ui-hub.js's
+   buildHubCampBackdrop()), which become the tint/vignette dressing on top of
+   the photo. A 404'd background-image just paints nothing here, leaving
+   every procedural layer above it as the sole (and only ever previous)
+   visual -- no onerror handling needed for a CSS background-image. ---- */
+.arena-bd-image { position: absolute; inset: 0; background-size: cover; background-position: center; background-repeat: no-repeat; }
+
+/* ---- Boss portrait thumbnails: region map boss chip + stage list boss row
+   badge (js/ui-missions.js) -- small round icon, native title="" tooltip
+   carries the boss name. ---- */
+.p80-boss-thumb {
+    width: 18px; height: 18px; border-radius: 50%; object-fit: cover;
+    vertical-align: middle; margin-right: 4px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.3);
+}
+
+/* ---- Boss-wave intro banner portrait (js/ui-combat.js's showWaveBanner()) ---- */
+.wave-banner-boss-portrait {
+    width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
+    margin-right: 10px; vertical-align: middle;
+    box-shadow: 0 0 0 2px #ff4444, 0 0 12px rgba(255,68,68,0.6);
+}
+
+/* ---- Codex unlocked-unit thumbnail (js/ui-lore.js) ---- */
+.p79-codex-thumb {
+    width: 40px; height: 40px; border-radius: 6px; object-fit: cover; flex-shrink: 0;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.15);
+}
     </style>
 </head>
 <body>
@@ -1984,6 +2053,11 @@ body {
     <script src="js/challenges.js" defer></script>
     <!-- lore-data.js: codex content (world/region/stage/unit/hero/bond text). Data-only, no deps (Prompt 63). -->
     <script src="js/lore-data.js" defer></script>
+    <!-- assets.js: portrait/background URL helpers (Prompt 83, Phase 5.6). Reads
+         UNIT_TEMPLATES/EVOLVED_TEMPLATES/HERO_DATA/BOSS_DATA (all loaded above)
+         via typeof guards; every UI/render file below calls getPortraitUrl()/
+         getBackgroundUrl() so this must load before all of them. -->
+    <script src="js/assets.js" defer></script>
     <!-- V2 uses simplified combat in these files, not V1 combat.js. Split from main-v2.js (Prompt 58). -->
     <!-- grid.js: single source of truth for ALL spatial math (Prompt 69: hex grid
          migration). Loads before every combat-*.js file and before the pixi renderer

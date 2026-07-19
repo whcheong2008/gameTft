@@ -19,6 +19,35 @@ function p80RegionAccent(regionNum) {
     return '#e2b714';
 }
 
+// Prompt 83 (Phase 5.6): finds the bossKey (a BOSS_DATA key, e.g.
+// 'veil_warden') for the region's boss stage, if any -- STAGES entries carry
+// `boss` directly (see js/missions.js), so this just walks the region's own
+// stageIds looking for the one stage with that field set. Returns null for a
+// region with no boss stage (shouldn't happen for any real region, but every
+// caller treats null the same as "no portrait to show").
+function p80RegionBossKey(region) {
+    if (!region || !region.stageIds) return null;
+    for (var i = 0; i < region.stageIds.length; i++) {
+        var sid = region.stageIds[i];
+        for (var j = 0; j < STAGES.length; j++) {
+            if (STAGES[j].id === sid && STAGES[j].boss) return STAGES[j].boss;
+        }
+    }
+    return null;
+}
+
+// Prompt 83: small round portrait <img> + native title="" tooltip (the boss
+// name) for a boss chip/badge. Returns '' when the key is missing or
+// getPortraitUrl() can't resolve it -- callers just prepend this to the
+// existing text label, so an empty string is a no-op.
+function p80BossThumbHtml(bossKey) {
+    if (!bossKey || typeof getPortraitUrl !== 'function') return '';
+    var url = getPortraitUrl(bossKey);
+    if (!url) return '';
+    var bossName = (typeof BOSS_DATA !== 'undefined' && BOSS_DATA[bossKey]) ? BOSS_DATA[bossKey].name : '';
+    return '<img src="' + url + '" alt="" class="p80-boss-thumb" title="' + bossName + '" onerror="this.style.display=\'none\';" />';
+}
+
 // Prompt 80: one pip per stage in the region (not per star) -- filled to a
 // tier (0-3) by that stage's sd.missions.starRatings best-of-3 rating, same
 // data the stage list's own ⭐/☆ row already reads. Pure display aggregation
@@ -65,10 +94,11 @@ function renderRegionMapScreen() {
         var lockIcon = !unlocked ? ' 🔒' : '';
         var bossChipClass = 'sv-chip p80-boss-chip' + (rs.bossCleared ? ' cleared' : '');
         var bossChipText = rs.bossCleared ? '👑 Boss cleared' : '👑 Boss';
+        var bossThumb = p80BossThumbHtml(p80RegionBossKey(region));
 
         var html = '<div class="sv-panel-header p80-region-header" style="border-left:4px solid ' + accent + '; background:linear-gradient(90deg,' + accent + '2a,transparent);">';
         html += '<span class="p80-region-title">Region ' + regionNum + ': ' + rs.name + lockIcon + statusIcon + '</span>';
-        html += '<span class="' + bossChipClass + '">' + bossChipText + '</span>';
+        html += '<span class="' + bossChipClass + '">' + bossThumb + bossChipText + '</span>';
         html += '</div>';
 
         html += '<div class="sv-panel-body p80-region-body">';
@@ -314,7 +344,8 @@ function renderStageListScreen() {
         var xpReward = stage.rewards.xp || 0;
         var dropText = stage.rewards.unitDrops ? ' · ' + stage.rewards.unitDrops + ' drops' : '';
         var typeTag = stage.stageType ? '<span class="sv-chip p80-type-chip">' + stage.stageType + '</span>' : '';
-        var bossBadge = isBoss ? '<span class="sv-chip p80-boss-chip' + (completed ? ' cleared' : '') + '">👑 Boss</span>' : '';
+        var stageBossThumb = isBoss ? p80BossThumbHtml(stage.boss) : '';
+        var bossBadge = isBoss ? '<span class="sv-chip p80-boss-chip' + (completed ? ' cleared' : '') + '">' + stageBossThumb + '👑 Boss</span>' : '';
 
         // Stage narration flavor block: shown once the stage has been cleared (Prompt 63).
         var loreUnlocked = !!(sd.loreUnlocks && sd.loreUnlocks.stages && sd.loreUnlocks.stages[stageId]);

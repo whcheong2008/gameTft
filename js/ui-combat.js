@@ -78,7 +78,19 @@ function buildArenaBackdrop(regionNum, elId) {
     if (el._backdropTheme === theme) return; // unchanged since the last wave -- skip the DOM rebuild
     el._backdropTheme = theme;
 
-    el.innerHTML =
+    // Prompt 83 (Phase 5.6): real environment art, painted BELOW every
+    // procedural layer below (those become the tint/vignette dressing on top
+    // of the photo, and the sole visual -- exactly as before this prompt --
+    // when the image 404s, since a failed CSS background-image just paints
+    // nothing rather than throwing). Endless/challenges/grind (regionNum
+    // falsy/0, theme already resolved to the neutral theme 0 above) reuse
+    // region8's art per the spec ("region8 image with the neutral tint").
+    var bgRegionNum = (regionNum >= 1 && regionNum <= 8) ? regionNum : 8;
+    var bgUrl = (typeof getBackgroundUrl === 'function') ? getBackgroundUrl(bgRegionNum) : null;
+    var imageLayer = bgUrl ?
+        ('<div class="arena-bd-image" style="background-image:linear-gradient(180deg, rgba(5,7,14,0.35) 0%, rgba(5,7,14,0.5) 55%, rgba(5,7,14,0.78) 100%), url(\'' + bgUrl + '\');"></div>') : '';
+
+    el.innerHTML = imageLayer +
         '<div class="arena-bd-horizon" style="background:radial-gradient(ellipse 90% 60% at 50% 15%, ' + theme.glow + 'cc 0%, transparent 70%);"></div>' +
         '<div class="arena-bd-hexfield" style="background-image:' + arenaBdHexPatternCss(theme.accent) + ';"></div>' +
         '<div class="arena-bd-blob arena-bd-blob-a" style="background:' + theme.blobA + ';"></div>' +
@@ -126,7 +138,18 @@ function showWaveBanner() {
     var text = isBoss ? '⚠️ BOSS FIGHT' : ('WAVE ' + (progress ? progress.currentWave : ''));
     var banner = document.createElement('div');
     banner.className = 'wave-banner-sweep' + (isBoss ? ' wave-banner-boss' : '');
-    banner.textContent = text;
+    // Prompt 83 (Phase 5.6): the boss-wave banner doubles as this game's only
+    // "boss intro" moment -- a small portrait <img> alongside the text when
+    // getPortraitUrl() resolves one for this boss. onerror hides the <img>,
+    // leaving the original text-only banner exactly as before.
+    var bossPortraitUrl = (isBoss && activeMission.boss && typeof getPortraitUrl === 'function') ?
+        getPortraitUrl(activeMission.boss) : null;
+    if (bossPortraitUrl) {
+        banner.innerHTML = '<img src="' + bossPortraitUrl + '" alt="" class="wave-banner-boss-portrait" onerror="this.style.display=\'none\';" />' +
+            '<span>' + text + '</span>';
+    } else {
+        banner.textContent = text;
+    }
     area.appendChild(banner);
     var life = isBoss ? PIXI_WAVE_BANNER_BOSS_MS : PIXI_WAVE_BANNER_MS;
     setTimeout(function() { if (banner.parentNode) banner.parentNode.removeChild(banner); }, life);
@@ -364,6 +387,12 @@ function startMissionCombat(playerBoard, enemies) {
         if (unitCount > 0) { avgHp /= unitCount; avgAtk /= unitCount; }
 
         var boss = {
+            // Prompt 83 (Phase 5.6): the BOSS_DATA key itself, purely for
+            // js/render-pixi.js's getPortraitUrl(unit.key) lookup (boss_<key>
+            // portrait) -- combat-*.js never reads this field, only ui-combat.js
+            // wrote it and only the pixi renderer reads it, so it cannot affect
+            // combat resolution/RNG/goldens.
+            key: activeMission.boss,
             name: bossData.name,
             emoji: bossData.emoji,
             element: bossData.element,

@@ -4,19 +4,26 @@
 
 // ---- P79 helpers: portrait placeholder + star pips --------------------
 // Shared by the roster cards, the collection grid, and the unit detail
-// sheet. Portrait divs get a stable id="unit-portrait-<unitKey>" (load-
-// bearing for Phase 5 art integration -- swapping the placeholder for real
-// art will just mean setting this element's background-image/content) and
-// an elemental radial-gradient fallback + giant element emoji until then.
-
+// sheet. Portrait divs get a stable id="unit-portrait-<unitKey>" and an
+// elemental radial-gradient fallback + giant element emoji.
+//
+// Prompt 83 (Phase 5.6): a real portrait <img> (evolved units resolve to
+// their base unit's file via getPortraitUrl()) is layered on top -- CSS's
+// .p79-portrait-img rule (P83 ART INTEGRATION block) positions it to fully
+// cover the gradient/emoji beneath. onerror hides the <img> itself, which is
+// the entire fallback mechanism: no JS re-render needed, the placeholder was
+// already sitting there underneath the whole time.
 function p79PortraitHtml(unitKey, tmpl, sizeClass) {
     var element = tmpl && tmpl.element;
     var emoji = (element && ELEMENTS[element]) ? ELEMENTS[element].emoji : '❓';
     var grad = element ?
         ('radial-gradient(circle at 32% 26%, var(--sv-el-' + element + '), var(--sv-bg-0) 78%)') :
         'var(--sv-bg-0)';
+    var portraitUrl = (typeof getPortraitUrl === 'function') ? getPortraitUrl(unitKey) : null;
+    var img = portraitUrl ?
+        ('<img src="' + portraitUrl + '" alt="" class="p79-portrait-img" onerror="this.style.display=\'none\';" />') : '';
     return '<div id="unit-portrait-' + unitKey + '" class="p79-portrait' + (sizeClass ? ' ' + sizeClass : '') +
-        '" style="background:' + grad + ';">' + emoji + '</div>';
+        '" style="background:' + grad + ';">' + img + emoji + '</div>';
 }
 
 function p79StarPipsHtml(count, lg) {

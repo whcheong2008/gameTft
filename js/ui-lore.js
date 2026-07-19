@@ -117,9 +117,20 @@ function renderLoreUnitsTab(sd) {
         var key = keys[i];
         var tmpl = UNIT_TEMPLATES[key];
         var unlocked = !!unlocks[key];
+        // Prompt 83 (Phase 5.6): unlocked entries show the portrait thumbnail
+        // -- locked entries stay text-only (loreEntryBox already replaces the
+        // whole body with a "🔒 ???" placeholder for those, so there is
+        // nothing to spoil by resolving the URL anyway; we simply don't).
+        var thumbHtml = '';
+        if (unlocked) {
+            var url = (typeof getPortraitUrl === 'function') ? getPortraitUrl(key) : null;
+            if (url) thumbHtml = '<img src="' + url + '" alt="" class="p79-codex-thumb" onerror="this.style.display=\'none\';" />';
+        }
         html += loreEntryBox(unlocked,
-            '<div style="font-size:12px; font-weight:bold; color:var(--sv-text-1);">' + tmpl.emoji + ' ' + tmpl.name + '</div>' +
-            '<div style="font-size:11px; color:var(--sv-text-3); margin-top:3px; line-height:1.4;">' + (UNIT_LORE[key] || '') + '</div>');
+            '<div style="display:flex; align-items:center; gap:8px;">' + thumbHtml +
+            '<div><div style="font-size:12px; font-weight:bold; color:var(--sv-text-1);">' + tmpl.emoji + ' ' + tmpl.name + '</div>' +
+            '<div style="font-size:11px; color:var(--sv-text-3); margin-top:3px; line-height:1.4;">' + (UNIT_LORE[key] || '') + '</div></div>' +
+            '</div>');
     }
     html += '</div>';
     return html;
