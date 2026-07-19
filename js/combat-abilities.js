@@ -1779,6 +1779,182 @@ function executeAbility(caster) {
         }
         break;
 
+    // ===== COST 4 BASE (Prompt 74: BUGS #11 -- 12 units with ability data +
+    // mana wiring but no executeAbility case; casts were silent no-ops).
+    // Where the text is ambiguous (no engine primitive for "zone"/"seedling"/
+    // "afterimage that lingers"), each case matches the closest existing
+    // pattern for its archetype/tier -- documented inline. Innate PASSIVE_DATA
+    // entries for these 6 units are intentionally NOT touched here: BUGS #11
+    // and the executeAbility switch below are about the mana-cast ability
+    // only; the passives need new on_heal/on_crit/on_ability_cast dispatch
+    // machinery that doesn't exist anywhere in combat-passives.js yet, which
+    // is a materially larger, separate change (flagged, not implemented). =====
+
+    case 'ashen_watcher':
+        // Pyre of Renewal: heal lowest-HP ally. "300% ATK over 3s" collapsed
+        // to an instant burst -- same idiom kraken/monsoon_caller/siege_engineer
+        // already use for "damage/heal over Ns" text elsewhere in this switch
+        // (the engine has no HoT/zone primitive independent of the 'regen'
+        // status, which ticks % of max HP, not a flat ATK-scaled total).
+        // CC immunity approximated as a 3s ccImmuneUntil window on the target
+        // (matches shield_bearer/bastion's "block next CC" idiom).
+        var awAllies = getLowestHpUnits(allies, 1);
+        if (awAllies.length > 0) {
+            var awTarget = awAllies[0];
+            var awHealMult = 3.00;
+            if (hasStatus(awTarget, 'burn')) {
+                // Consume Burn: strip the stack(s) before healing for +50%.
+                for (var awi = awTarget.statusEffects.length - 1; awi >= 0; awi--) {
+                    if (awTarget.statusEffects[awi].type === 'burn') awTarget.statusEffects.splice(awi, 1);
+                }
+                awHealMult = 3.00 * 1.50;
+            }
+            dealHealing(caster, awTarget, Math.floor(atk * awHealMult));
+            if (combatState) awTarget.ccImmuneUntil = combatState.elapsed + 3;
+            if (typeof flashAbilityCells === 'function') {
+                flashAbilityCells([{row: awTarget.gridRow, col: awTarget.gridCol}], '#44ee44', 400);
+            }
+        }
+        break;
+
+    case 'abyssal_guardian':
+        // Tidal Fortress: self-centered slam (matches magma_knight/golem's
+        // "slam ground" self-radius idiom). JUDGMENT CALL: "80% ATK/s for 5s"
+        // has no persistent-zone primitive (nothing in combat-*.js tracks a
+        // ground effect independent of its caster) -- collapsed to a single
+        // instant AoE burst like kraken/monsoon_caller/siege_engineer already
+        // do for "damage over Ns in an area", sized to Crystal Mage's T2
+        // Guardian-archetype AoE burst (200% ATK) scaled up two tiers (220%),
+        // rather than the literal 5x80%=400% full-duration total -- which
+        // would make a defensive tank's kit out-damage Kraken's dedicated AoE
+        // nuke (280% total). Slow/DR/self-Root read directly off the text.
+        var agEnemies = getUnitsInRadius(caster.gridRow, caster.gridCol, 2, enemies);
+        var agAllies = getUnitsInRadius(caster.gridRow, caster.gridCol, 2, allies);
+        if (typeof flashAbilityCells === 'function') {
+            flashAbilityCells(getCellsInRadius(caster.gridRow, caster.gridCol, 2), '#2266ff', 400);
+        }
+        for (var agi = 0; agi < agEnemies.length; agi++) {
+            dealDamage(caster, agEnemies[agi], Math.floor(atk * 2.20), {isAbility:true, triggerOnHit:false});
+            addStatus(agEnemies[agi], 'slow', 5, 0.25, caster);
+        }
+        for (var agj = 0; agj < agAllies.length; agj++) {
+            if (agAllies[agj] !== caster) {
+                addStatus(agAllies[agj], 'drMod', 5, 0.10, caster);
+            }
+        }
+        addStatus(caster, 'drMod', 5, 0.20, caster);
+        addStatus(caster, 'root', 5, 0, caster); // Rooted during channel
+        break;
+
+    case 'grove_warden':
+        // Thornstorm: 5 random enemies -- mirrors inferno_fox/ninetail_blaze's
+        // getRandomAlive() dash-target pattern, without the dash (Grove Warden
+        // is the roster's one deliberately-stationary Archer; matches
+        // vfx-abilities.js's ABILITY_VFX.grove_warden comment, which already
+        // documents "real ability is 5 random projectiles; getRandomAlive is
+        // RNG-driven"). Bonus check reads pre-existing root/slow before this
+        // cast's own slow lands, per the text ("Rooted OR Slowed... take bonus").
+        var gwTargets = getRandomAlive(enemies, 5);
+        if (typeof flashAbilityCells === 'function') {
+            var gwCells = [];
+            for (var gwci = 0; gwci < gwTargets.length; gwci++) gwCells.push({row: gwTargets[gwci].gridRow, col: gwTargets[gwci].gridCol});
+            flashAbilityCells(gwCells, '#44cc44', 300);
+        }
+        for (var gwi = 0; gwi < gwTargets.length; gwi++) {
+            var gwBonus = (hasStatus(gwTargets[gwi], 'root') || hasStatus(gwTargets[gwi], 'slow')) ? 1.40 : 1.00;
+            dealDamage(caster, gwTargets[gwi], Math.floor(atk * 1.20 * gwBonus), {isAbility:true, triggerOnHit:false});
+            addStatus(gwTargets[gwi], 'slow', 2, 0.15, caster);
+        }
+        break;
+
+    case 'tempest_weaver':
+        // Cyclone Barrage: target highest-ATK enemy (getHighestAtkUnits(), the
+        // same helper terra_sage/earthweaver already use). Knockback walked
+        // manually via hexDirectionIndex()/hexStep() -- the same primitives
+        // abilityKnockback() is built from -- rather than calling
+        // abilityKnockback() directly, because the splash needs to know WHICH
+        // unit blocked the push, not just whether the push landed.
+        var twTargets = getHighestAtkUnits(enemies, 1);
+        if (twTargets.length > 0 && twTargets[0].hp > 0) {
+            var twTarget = twTargets[0];
+            dealDamage(caster, twTarget, Math.floor(atk * 2.20), {isAbility:true, triggerOnHit:false});
+            if (typeof flashAbilityCells === 'function') {
+                flashAbilityCells([{row: twTarget.gridRow, col: twTarget.gridCol}], '#88ccff', 300);
+            }
+            if (twTarget.hp > 0 && combatState) {
+                var twDir = hexDirectionIndex(caster.gridRow, caster.gridCol, twTarget.gridRow, twTarget.gridCol);
+                var twCell = hexStep(twTarget.gridRow, twTarget.gridCol, twDir, 1);
+                if (twCell) {
+                    var twBlocker = grid[twCell.row] && grid[twCell.row][twCell.col];
+                    if (twBlocker && twBlocker.hp > 0 && twBlocker !== twTarget) {
+                        if (twBlocker.side !== caster.side) {
+                            dealDamage(caster, twTarget, Math.floor(atk * 1.20), {isAbility:true, triggerOnHit:false});
+                            addStatus(twTarget, 'slow', 2, 0.20, caster);
+                            dealDamage(caster, twBlocker, Math.floor(atk * 1.20), {isAbility:true, triggerOnHit:false});
+                            addStatus(twBlocker, 'slow', 2, 0.20, caster);
+                        }
+                    } else {
+                        moveUnitToCell(twTarget, twCell.row, twCell.col, grid);
+                    }
+                }
+            }
+        }
+        break;
+
+    case 'voltfang_stalker':
+        // Lightning Pounce: lowest-HP enemy within 4 cells for the opening
+        // dash, then unrestricted range on kill-chained jumps (matches
+        // storm_sovereign's unrestricted reposition-to-lowest-HP). Afterimage
+        // approximated the same way flame_rogue's fire trail already is in
+        // this file -- an instant AoE hit at the vacated cell right after the
+        // dash -- since no "step on this cell later" primitive exists
+        // anywhere in the engine (a genuine engine gap, not unique to this
+        // ability). "Chain up to 3 kills" read as: the opening dash always
+        // happens, and each of up to 2 further dashes requires the PREVIOUS
+        // dash to have killed -- 3 dashes total, each landing at most 1 kill.
+        var vsPool = getUnitsInRadius(caster.gridRow, caster.gridCol, 4, enemies);
+        var vsFirst = getLowestHpUnits(vsPool, 1);
+        var vsTarget = vsFirst.length > 0 ? vsFirst[0] : null;
+        var vsDashes = 0;
+        while (vsTarget && vsTarget.hp > 0 && vsDashes < 3) {
+            var vsOldRow = caster.gridRow, vsOldCol = caster.gridCol;
+            var vsEmpty = findEmptyCellNear(vsTarget.gridRow, vsTarget.gridCol, grid);
+            if (vsEmpty) moveUnitToCell(caster, vsEmpty.row, vsEmpty.col, grid);
+            var vsMult = vsDashes === 0 ? 2.00 : 1.50;
+            var vsResult = dealDamage(caster, vsTarget, Math.floor(atk * vsMult), {isAbility:true, triggerOnHit:false});
+            var vsTrail = getUnitsInRadius(vsOldRow, vsOldCol, 1, enemies);
+            for (var vti = 0; vti < vsTrail.length; vti++) {
+                if (vsTrail[vti] !== vsTarget && vsTrail[vti].hp > 0) {
+                    dealDamage(caster, vsTrail[vti], Math.floor(atk * 0.50), {isAbility:true, triggerOnHit:false});
+                }
+            }
+            vsDashes++;
+            if (vsResult.killed) {
+                processOnKillPassive(caster, vsTarget, combatState.allUnits);
+                vsTarget = getLowestHpEnemy(enemies);
+            } else {
+                break;
+            }
+        }
+        break;
+
+    case 'iron_duelist':
+        // Decisive Strike: empowers the next auto-attack via the same
+        // abilityBuffs.empoweredShot* mechanism cinder_archer's Fire Arrow
+        // already uses (consumed in combat-damage.js's performAttack()).
+        // Prompt 74 extends that consumption point with DR-ignore / Rival-
+        // wound / kill-mana-refund fields for this ability and
+        // warforged_champion's -- see the performAttack() comment there for
+        // the "Rival" approximation (Challenge Protocol, the passive that
+        // would normally track it, is out of scope here).
+        caster.abilityBuffs = caster.abilityBuffs || {};
+        caster.abilityBuffs.empoweredShot = true;
+        caster.abilityBuffs.empoweredShotMult = 2.80;
+        caster.abilityBuffs.empoweredShotDrIgnore = 0.30;
+        caster.abilityBuffs.empoweredShotWoundPct = 0.30;
+        caster.abilityBuffs.empoweredShotWoundDuration = 2;
+        break;
+
     // ===== COST 4 EVOLVED =====
 
     case 'elder_wyrm':
@@ -1875,6 +2051,170 @@ function executeAbility(caster) {
                 addStatus(waCrater[i], 'slow', 3, 0.50, caster);
             }
         }
+        break;
+
+    // ===== COST 4 EVOLVED (Prompt 74: BUGS #11, see COST 4 BASE header
+    // comment above for the shared judgment-call rationale) =====
+
+    case 'phoenix_priest':
+        // Enhanced ashen_watcher: heal 2 lowest-HP allies + "leave a healing
+        // zone". JUDGMENT CALL (same collapse-to-instant reasoning as the
+        // base kit): approximated as one extra, smaller heal to allies within
+        // 2 cells of each primary target, deduped so no ally is zone-healed
+        // twice even if both targets' zones overlap.
+        var ppTargets = getLowestHpUnits(allies, 2);
+        var ppZoneSeen = {};
+        for (var ppi = 0; ppi < ppTargets.length; ppi++) {
+            var ppTarget = ppTargets[ppi];
+            var ppHealMult = 3.00;
+            if (hasStatus(ppTarget, 'burn')) {
+                for (var ppbi = ppTarget.statusEffects.length - 1; ppbi >= 0; ppbi--) {
+                    if (ppTarget.statusEffects[ppbi].type === 'burn') ppTarget.statusEffects.splice(ppbi, 1);
+                }
+                ppHealMult = 3.00 * 1.50;
+            }
+            dealHealing(caster, ppTarget, Math.floor(atk * ppHealMult));
+            if (combatState) ppTarget.ccImmuneUntil = combatState.elapsed + 3;
+            if (typeof flashAbilityCells === 'function') {
+                flashAbilityCells([{row: ppTarget.gridRow, col: ppTarget.gridCol}], '#44ee44', 400);
+            }
+            var ppZoneAllies = getUnitsInRadius(ppTarget.gridRow, ppTarget.gridCol, 2, allies);
+            for (var ppzi = 0; ppzi < ppZoneAllies.length; ppzi++) {
+                var ppZoneAlly = ppZoneAllies[ppzi];
+                if (ppTargets.indexOf(ppZoneAlly) >= 0) continue;
+                var ppZoneKey = ppZoneAlly.gridRow + ',' + ppZoneAlly.gridCol;
+                if (ppZoneSeen[ppZoneKey]) continue;
+                ppZoneSeen[ppZoneKey] = true;
+                dealHealing(caster, ppZoneAlly, Math.floor(atk * 1.50));
+            }
+        }
+        break;
+
+    case 'hadal_colossus':
+        // Enhanced abyssal_guardian: 3-cell radius, 35% slow. "Enemies leaving
+        // zone Rooted 1s" approximated as Root applied alongside Slow to
+        // enemies caught in the slam (no zone-exit tracking exists -- see
+        // base abyssal_guardian's comment for why).
+        var hcEnemies = getUnitsInRadius(caster.gridRow, caster.gridCol, 3, enemies);
+        var hcAllies = getUnitsInRadius(caster.gridRow, caster.gridCol, 3, allies);
+        if (typeof flashAbilityCells === 'function') {
+            flashAbilityCells(getCellsInRadius(caster.gridRow, caster.gridCol, 3), '#2266ff', 400);
+        }
+        for (var hci = 0; hci < hcEnemies.length; hci++) {
+            dealDamage(caster, hcEnemies[hci], Math.floor(atk * 2.60), {isAbility:true, triggerOnHit:false});
+            addStatus(hcEnemies[hci], 'slow', 5, 0.35, caster);
+            addStatus(hcEnemies[hci], 'root', 1, 0, caster);
+        }
+        for (var hcj = 0; hcj < hcAllies.length; hcj++) {
+            if (hcAllies[hcj] !== caster) {
+                addStatus(hcAllies[hcj], 'drMod', 5, 0.10, caster);
+            }
+        }
+        addStatus(caster, 'drMod', 5, 0.20, caster);
+        addStatus(caster, 'root', 5, 0, caster);
+        break;
+
+    case 'worldroot_sentinel':
+        // Enhanced grove_warden: 7 targets, same 40% bonus check. "Plant
+        // Seedlings... Root enemies stepping on them" approximated as an
+        // immediate Root on each hit target -- mirrors thornwood_ranger's
+        // (T1 evolved) "root the hit target directly" pattern -- instead of
+        // tracking ground-effect seedling cells (same engine gap as
+        // voltfang_stalker's Afterimage above; vfx-abilities.js's own
+        // worldroot_sentinel recipe comment calls this out as a VISUAL-only
+        // "seedling hazard decal" layered on top of themed shots, consistent
+        // with there being no underlying gameplay hazard-zone system).
+        var wrsTargets = getRandomAlive(enemies, 7);
+        if (typeof flashAbilityCells === 'function') {
+            var wrsCells = [];
+            for (var wrsci = 0; wrsci < wrsTargets.length; wrsci++) wrsCells.push({row: wrsTargets[wrsci].gridRow, col: wrsTargets[wrsci].gridCol});
+            flashAbilityCells(wrsCells, '#44cc44', 300);
+        }
+        for (var wrsi = 0; wrsi < wrsTargets.length; wrsi++) {
+            var wrsBonus = (hasStatus(wrsTargets[wrsi], 'root') || hasStatus(wrsTargets[wrsi], 'slow')) ? 1.40 : 1.00;
+            dealDamage(caster, wrsTargets[wrsi], Math.floor(atk * 1.20 * wrsBonus), {isAbility:true, triggerOnHit:false});
+            addStatus(wrsTargets[wrsi], 'slow', 2, 0.15, caster);
+            addStatus(wrsTargets[wrsi], 'root', 1.5, 0, caster);
+        }
+        break;
+
+    case 'stormweft_oracle':
+        // Enhanced tempest_weaver: knock 2 cells; hitting the board edge
+        // stuns, hitting another enemy splashes both -- same manual
+        // hexStep() walk as the base kit, extended to 2 steps so it can tell
+        // "ran out of board" (hexStep returns null) apart from "hit a unit".
+        var soTargets = getHighestAtkUnits(enemies, 1);
+        if (soTargets.length > 0 && soTargets[0].hp > 0) {
+            var soTarget = soTargets[0];
+            dealDamage(caster, soTarget, Math.floor(atk * 2.20), {isAbility:true, triggerOnHit:false});
+            if (typeof flashAbilityCells === 'function') {
+                flashAbilityCells([{row: soTarget.gridRow, col: soTarget.gridCol}], '#88ccff', 300);
+            }
+            if (soTarget.hp > 0 && combatState) {
+                var soDir = hexDirectionIndex(caster.gridRow, caster.gridCol, soTarget.gridRow, soTarget.gridCol);
+                var soLanded = null, soHitWall = false, soBlocker = null;
+                for (var soStep = 1; soStep <= 2; soStep++) {
+                    var soCell = hexStep(soTarget.gridRow, soTarget.gridCol, soDir, soStep);
+                    if (!soCell) { soHitWall = true; break; }
+                    var soOcc = grid[soCell.row] && grid[soCell.row][soCell.col];
+                    if (soOcc && soOcc.hp > 0 && soOcc !== soTarget) { soBlocker = soOcc; break; }
+                    soLanded = soCell;
+                }
+                if (soLanded) moveUnitToCell(soTarget, soLanded.row, soLanded.col, grid);
+                if (soBlocker && soBlocker.side !== caster.side) {
+                    dealDamage(caster, soTarget, Math.floor(atk * 1.20), {isAbility:true, triggerOnHit:false});
+                    addStatus(soTarget, 'slow', 2, 0.20, caster);
+                    dealDamage(caster, soBlocker, Math.floor(atk * 1.20), {isAbility:true, triggerOnHit:false});
+                    addStatus(soBlocker, 'slow', 2, 0.20, caster);
+                } else if (soHitWall) {
+                    addStatus(soTarget, 'stun', 1.5, 0, caster);
+                }
+            }
+        }
+        break;
+
+    case 'plasma_ravager':
+        // Enhanced voltfang_stalker: uniform 200% ATK per dash, up to 4
+        // kills. Afterimage "explosion" approximated the same instant-AoE-
+        // at-the-vacated-cell way the base kit's Afterimage is (see
+        // voltfang_stalker's comment) -- just bigger, matching the text's
+        // stronger evolved effect.
+        var prPool = getUnitsInRadius(caster.gridRow, caster.gridCol, 4, enemies);
+        var prFirst = getLowestHpUnits(prPool, 1);
+        var prTarget = prFirst.length > 0 ? prFirst[0] : null;
+        var prDashes = 0;
+        while (prTarget && prTarget.hp > 0 && prDashes < 4) {
+            var prOldRow = caster.gridRow, prOldCol = caster.gridCol;
+            var prEmpty = findEmptyCellNear(prTarget.gridRow, prTarget.gridCol, grid);
+            if (prEmpty) moveUnitToCell(caster, prEmpty.row, prEmpty.col, grid);
+            var prResult = dealDamage(caster, prTarget, Math.floor(atk * 2.00), {isAbility:true, triggerOnHit:false});
+            var prTrail = getUnitsInRadius(prOldRow, prOldCol, 1, enemies);
+            for (var pti = 0; pti < prTrail.length; pti++) {
+                if (prTrail[pti] !== prTarget && prTrail[pti].hp > 0) {
+                    dealDamage(caster, prTrail[pti], Math.floor(atk * 1.00), {isAbility:true, triggerOnHit:false});
+                }
+            }
+            prDashes++;
+            if (prResult.killed) {
+                processOnKillPassive(caster, prTarget, combatState.allUnits);
+                prTarget = getLowestHpEnemy(enemies);
+            } else {
+                break;
+            }
+        }
+        break;
+
+    case 'warforged_champion':
+        // Enhanced iron_duelist: same empoweredShot mechanism, bigger numbers,
+        // plus mana refund on kill (all consumed in combat-damage.js's
+        // performAttack()).
+        caster.abilityBuffs = caster.abilityBuffs || {};
+        caster.abilityBuffs.empoweredShot = true;
+        caster.abilityBuffs.empoweredShotMult = 3.50;
+        caster.abilityBuffs.empoweredShotDrIgnore = 0.50;
+        caster.abilityBuffs.empoweredShotWoundPct = 0.30;
+        caster.abilityBuffs.empoweredShotWoundDuration = 2;
+        caster.abilityBuffs.empoweredShotManaRefundOnKill = 0.50;
         break;
 
     // ===== COST 5 (Passives — handled via legendary system) =====

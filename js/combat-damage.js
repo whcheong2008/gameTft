@@ -591,15 +591,41 @@ function performAttack(attacker, target) {
         delete attacker.abilityBuffs.nextAtkMult;
     }
 
-    // Empowered Shot (cinder_archer ability)
+    // Empowered Shot (cinder_archer ability; Prompt 74 extends the same
+    // "buff the next auto-attack" consumption point with optional DR-ignore /
+    // Rival-wound / kill-mana-refund fields for iron_duelist/warforged_champion's
+    // Decisive Strike, rather than inventing a second empowered-next-attack
+    // mechanism -- see combat-abilities.js's iron_duelist/warforged_champion
+    // cases). empoweredDrIgnore/empoweredManaRefundOnKill read here, applied
+    // below once atkOpts/the actual dealDamage() result exist.
+    var empoweredDrIgnore = 0;
+    var empoweredManaRefundOnKill = 0;
     if (attacker.abilityBuffs && attacker.abilityBuffs.empoweredShot) {
         rawDmg = Math.floor(rawDmg * (attacker.abilityBuffs.empoweredShotMult || 1.80));
         if (attacker.abilityBuffs.empoweredShotBurn && target && target.hp > 0) {
             addStatus(target, 'burn', attacker.abilityBuffs.empoweredShotBurn.duration, attacker.abilityBuffs.empoweredShotBurn.dps, attacker);
         }
+        empoweredDrIgnore = attacker.abilityBuffs.empoweredShotDrIgnore || 0;
+        empoweredManaRefundOnKill = attacker.abilityBuffs.empoweredShotManaRefundOnKill || 0;
+        if (attacker.abilityBuffs.empoweredShotWoundPct && target && target.hp > 0) {
+            // "If target is Rival": Challenge Protocol (the passive that
+            // would track a persistent Rival) is out of scope for Prompt 74
+            // (BUGS #11 covers executeAbility only) -- approximated using the
+            // passive's OWN definition of Rival ("marks highest-ATK enemy"),
+            // checked fresh here rather than adding new persistent state.
+            var edEnemyPool = attacker.side === 'player' ? (combatState ? combatState.enemyUnits : []) : (combatState ? combatState.playerUnits : []);
+            var edRivalList = typeof getHighestAtkUnits === 'function' ? getHighestAtkUnits(edEnemyPool, 1) : [];
+            if (edRivalList.length > 0 && edRivalList[0] === target) {
+                addStatus(target, 'healReduction', attacker.abilityBuffs.empoweredShotWoundDuration || 2, attacker.abilityBuffs.empoweredShotWoundPct, attacker);
+            }
+        }
         delete attacker.abilityBuffs.empoweredShot;
         delete attacker.abilityBuffs.empoweredShotMult;
         delete attacker.abilityBuffs.empoweredShotBurn;
+        delete attacker.abilityBuffs.empoweredShotDrIgnore;
+        delete attacker.abilityBuffs.empoweredShotManaRefundOnKill;
+        delete attacker.abilityBuffs.empoweredShotWoundPct;
+        delete attacker.abilityBuffs.empoweredShotWoundDuration;
     }
 
     // First strike bonus damage (ember_scout / flame_rogue passive)
@@ -649,6 +675,11 @@ function performAttack(attacker, target) {
     // Build attack options
     var atkOpts = {isAutoAttack: true, canCrit: true, canDodge: true, applyElement: true, triggerOnHit: true};
 
+    // Prompt 74: Decisive Strike's "ignores X% of target's DR" -- reuses the
+    // same options.focusedShotIgnoreDR field Ranger's focused shot already
+    // reads in dealDamage(), rather than adding a second DR-ignore option.
+    if (empoweredDrIgnore > 0) atkOpts.focusedShotIgnoreDR = empoweredDrIgnore;
+
     // Duelist guaranteed crit every N attacks
     if (attacker.guaranteedCritEveryN && attacker.attackCounter % attacker.guaranteedCritEveryN === 0) {
         atkOpts.forceCrit = true;
@@ -675,7 +706,12 @@ function performAttack(attacker, target) {
         addStatus(target, 'slow', 2, 0.2, attacker);
         attacker.abilityBuffs.frostShot--;
     } else {
-        dealDamage(attacker, target, rawDmg, atkOpts);
+        var mainAtkResult = dealDamage(attacker, target, rawDmg, atkOpts);
+        // Prompt 74: warforged_champion's Decisive Strike Enhanced -- refund
+        // mana if the empowered auto-attack lands the kill.
+        if (empoweredManaRefundOnKill > 0 && mainAtkResult && mainAtkResult.killed && attacker.maxMana > 0) {
+            attacker.currentMana = Math.min(attacker.maxMana, Math.floor(attacker.currentMana + attacker.maxMana * empoweredManaRefundOnKill));
+        }
     }
 
     // Vanguard charge stun after attack

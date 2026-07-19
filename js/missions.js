@@ -864,11 +864,26 @@ var STAGES = [
         id: 'r8_s1', region: 8, name: 'Dawn', stageNumber: 1, stageType: 'story',
         description: 'The last morning. Mira writes in her notebook. Maximum difficulty enemies.',
         requiredLevel: 29, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
+        // Prompt 74: +2 enemy count/wave. Fixing the 12 previously-no-op unit
+        // abilities (BUGS #11) turned the R8 reference team materially
+        // stronger (T4 cost-4 slots -- abyssal_guardian, ashen_watcher, etc.
+        // -- are common reference-team picks per buildReferenceTeam()'s tier/
+        // element sort), re-flipping this stage from "near-death win" to a
+        // 0-loss freewin. `budget` is NOT an effective lever here (confirmed
+        // empirically): generateMissionWave()'s enemy loop is bounded by
+        // `count`, not by spending the whole budget -- once budget already
+        // covers count*maxCost (it does here: budget ~35-59 vs. count 6-7 *
+        // maxCost 5 = 30-35), every extra budget point is a no-op (verified:
+        // 2.1x budget on the pre-fix values produced byte-identical sim
+        // output to 1x). `count` is the only wave-data lever that actually
+        // changes difficulty; +2/wave was the smallest bump that broke the
+        // zero-loss-every-seed freewin condition while keeping a 100% clear
+        // rate (re-verified via tests/balance-sim.js).
         waves: [
-            { budget: 30, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 37, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 44, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 50, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+            { budget: 30, maxCost: 5, count: 8, enemySynergies: true, enemyEvolutions: true },
+            { budget: 37, maxCost: 5, count: 8, enemySynergies: true, enemyEvolutions: true },
+            { budget: 44, maxCost: 5, count: 9, enemySynergies: true, enemyEvolutions: true },
+            { budget: 50, maxCost: 5, count: 9, enemySynergies: true, enemyEvolutions: true }
         ],
         rewards: { ve: 2000, xp: 800, unitDrops: 4 },
         dropWeights: { t3: 15, t4: 45, t5: 40 }
@@ -919,11 +934,12 @@ var STAGES = [
         id: 'r8_s5', region: 8, name: 'The Threshold', stageNumber: 5, stageType: 'character',
         description: 'Maximum non-boss difficulty. Full synergies, evolved champions, 4 waves.',
         requiredLevel: 29, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
+        // Prompt 74: +2 enemy count/wave (BUGS #11 freewin fallout -- see r8_s1's comment for why `budget` isn't an effective lever here)
         waves: [
-            { budget: 33, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 38, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 38, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 43, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true, captain: 'voidborn_champion' }
+            { budget: 33, maxCost: 5, count: 8, enemySynergies: true, enemyEvolutions: true },
+            { budget: 38, maxCost: 5, count: 9, enemySynergies: true, enemyEvolutions: true },
+            { budget: 38, maxCost: 5, count: 9, enemySynergies: true, enemyEvolutions: true },
+            { budget: 43, maxCost: 5, count: 9, enemySynergies: true, enemyEvolutions: true, captain: 'voidborn_champion' }
         ],
         rewards: { ve: 2000, xp: 800, unitDrops: 4 },
         dropWeights: { t3: 15, t4: 45, t5: 40 }
@@ -945,11 +961,12 @@ var STAGES = [
         id: 'r8_s7', region: 8, name: 'Before the End', stageNumber: 7, stageType: 'character',
         description: 'The final camp. Senna attunes everyone one last time. Hard but manageable.',
         requiredLevel: 29, lock: null, encounterMechanic: null, isBoss: false, canRetry: true,
+        // Prompt 74: +2 enemy count/wave (BUGS #11 freewin fallout -- see r8_s1's comment for why `budget` isn't an effective lever here)
         waves: [
-            { budget: 35, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 38, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 43, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 43, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+            { budget: 35, maxCost: 5, count: 8, enemySynergies: true, enemyEvolutions: true },
+            { budget: 38, maxCost: 5, count: 9, enemySynergies: true, enemyEvolutions: true },
+            { budget: 43, maxCost: 5, count: 9, enemySynergies: true, enemyEvolutions: true },
+            { budget: 43, maxCost: 5, count: 9, enemySynergies: true, enemyEvolutions: true }
         ],
         rewards: { ve: 2000, xp: 800, unitDrops: 4 },
         dropWeights: { t3: 15, t4: 45, t5: 40 }
@@ -1670,6 +1687,14 @@ var BOSS_DATA = {
     },
 
     // Region 8 boss (updated from original)
+    // Prompt 74: atkScaling 0.75 -> 0.95. Fixing the 12 previously-no-op unit
+    // abilities (BUGS #11) made the R8 reference team strong enough that this
+    // boss's Prompt 66 tuning ("100% clear, boss ends near 1% HP, 1 of 8
+    // units lost") drifted to a 0-loss freewin. 0.95 was the smallest bump
+    // (tested via tests/balance-sim.js against the reference team, 0.75-1.5
+    // in steps) that restores a real (non-zero, non-all-seed) casualty count
+    // while keeping a 100% clear rate across all 7 seeds -- boss mechanics
+    // untouched, same as the original BUGS #10 fix.
     void_sovereign: {
         name: 'The Void Sovereign',
         emoji: '👿✨',
@@ -1678,7 +1703,7 @@ var BOSS_DATA = {
         baseHp: 65000,
         hpScaling: 2.2,
         baseAtk: 0,
-        atkScaling: 0.75,
+        atkScaling: 0.95,
         dr: 0.20,
         attackSpd: 1.0,
         range: 3,
