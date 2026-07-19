@@ -23,101 +23,101 @@ See `tests/balance-sim.js` file header for the full model derivation and documen
 
 | Stage | Region | Type | Team | Clear Rate | Avg Survivors | Avg Ticks | Avg Stars | Flag |
 |---|---|---|---|---|---|---|---|---|
-| r1_s1 | R1 | stage | 3 | 100% | 2.1/3 | 189 | 1.3 |  |
-| r1_s2 | R1 | stage | 3 | 43% | 0.9/3 | 264 | 1.0 |  |
-| r1_s3 | R1 | stage | 3 | 57% | 0.7/3 | 423 | 1.0 |  |
-| r1_s4 | R1 | stage | 3 | 43% | 0.9/3 | 349 | 1.3 |  |
-| r1_s5 | R1 | stage | 3 | 71% | 1.3/3 | 380 | 1.0 |  |
-| r1_s6 | R1 | stage | 3 | 86% | 1.6/3 | 329 | 1.0 |  |
-| r1_s7 | R1 | stage | 3 | 43% | 0.9/3 | 354 | 1.0 |  |
-| r1_s8 | R1 | stage | 3 | 43% | 0.9/3 | 381 | 1.0 |  |
+| r1_s1 | R1 | stage | 3 | 100% | 1.9/3 | 203 | 1.1 |  |
+| r1_s2 | R1 | stage | 3 | 57% | 0.9/3 | 417 | 1.0 |  |
+| r1_s3 | R1 | stage | 3 | 57% | 1.0/3 | 317 | 1.0 |  |
+| r1_s4 | R1 | stage | 3 | 29% | 0.4/3 | 325 | 1.0 | WALL |
+| r1_s5 | R1 | stage | 3 | 71% | 1.4/3 | 375 | 1.2 |  |
+| r1_s6 | R1 | stage | 3 | 86% | 1.6/3 | 370 | 1.0 |  |
+| r1_s7 | R1 | stage | 3 | 43% | 0.9/3 | 447 | 1.0 |  |
+| r1_s8 | R1 | stage | 3 | 29% | 0.6/3 | 370 | 1.0 | WALL |
 | r1_boss | R1 | boss | 3 | 100% | 1.0/3 | 1109 | 1.0 |  |
-| r2_s1 | R2 | stage | 4 | 100% | 3.9/4 | 218 | 1.9 |  |
-| r2_s2 | R2 | stage | 4 | 100% | 3.4/4 | 432 | 1.4 |  |
-| r2_s3 | R2 | stage | 4 | 100% | 4.0/4 | 370 | 2.0 |  |
-| r2_s4 | R2 | stage | 4 | 100% | 3.7/4 | 396 | 1.7 |  |
-| r2_s5 | R2 | stage | 4 | 100% | 3.7/4 | 404 | 1.7 |  |
-| r2_s6 | R2 | stage | 4 | 100% | 3.0/4 | 400 | 1.1 |  |
-| r2_s7 | R2 | stage | 4 | 100% | 3.9/4 | 249 | 1.9 |  |
-| r2_s8 | R2 | stage | 4 | 100% | 3.6/4 | 480 | 1.7 |  |
+| r2_s1 | R2 | stage | 4 | 100% | 3.9/4 | 210 | 1.9 |  |
+| r2_s2 | R2 | stage | 4 | 100% | 3.1/4 | 406 | 1.3 |  |
+| r2_s3 | R2 | stage | 4 | 100% | 3.7/4 | 344 | 1.7 |  |
+| r2_s4 | R2 | stage | 4 | 100% | 3.6/4 | 384 | 1.6 |  |
+| r2_s5 | R2 | stage | 4 | 100% | 3.9/4 | 361 | 1.9 |  |
+| r2_s6 | R2 | stage | 4 | 86% | 2.4/4 | 400 | 1.3 |  |
+| r2_s7 | R2 | stage | 4 | 100% | 3.7/4 | 234 | 1.7 |  |
+| r2_s8 | R2 | stage | 4 | 100% | 3.9/4 | 483 | 1.9 |  |
 | r2_boss | R2 | boss | 4 | 100% | 2.0/4 | 1479 | 1.0 |  |
-| r3_s1 | R3 | stage | 5 | 100% | 5.0/5 | 497 | 2.0 | FREEWIN |
-| r3_s2 | R3 | stage | 5 | 100% | 4.1/5 | 546 | 1.3 |  |
-| r3_s3 | R3 | stage | 5 | 86% | 4.0/5 | 591 | 1.8 |  |
-| r3_s4 | R3 | stage | 5 | 71% | 2.4/5 | 684 | 1.2 |  |
-| r3_s5 | R3 | stage | 5 | 57% | 2.7/5 | 636 | 1.8 |  |
-| r3_s6 | R3 | stage | 5 | 100% | 4.4/5 | 455 | 1.7 |  |
-| r3_s7 | R3 | stage | 5 | 57% | 2.4/5 | 884 | 1.5 |  |
-| r3_s8 | R3 | stage | 5 | 43% | 2.1/5 | 547 | 2.0 |  |
+| r3_s1 | R3 | stage | 5 | 100% | 4.7/5 | 468 | 1.7 |  |
+| r3_s2 | R3 | stage | 5 | 100% | 4.4/5 | 578 | 1.7 |  |
+| r3_s3 | R3 | stage | 5 | 86% | 3.1/5 | 621 | 1.3 |  |
+| r3_s4 | R3 | stage | 5 | 57% | 1.9/5 | 638 | 1.3 |  |
+| r3_s5 | R3 | stage | 5 | 71% | 3.3/5 | 631 | 1.8 |  |
+| r3_s6 | R3 | stage | 5 | 100% | 4.0/5 | 464 | 1.6 |  |
+| r3_s7 | R3 | stage | 5 | 57% | 2.7/5 | 933 | 1.8 |  |
+| r3_s8 | R3 | stage | 5 | 29% | 1.3/5 | 534 | 1.5 | WALL |
 | r3_boss | R3 | boss | 5 | 100% | 3.0/5 | 2490 | 1.0 |  |
-| r4_s1 | R4 | stage | 6 | 100% | 6.0/6 | 212 | 2.0 | FREEWIN |
-| r4_s2 | R4 | stage | 6 | 100% | 8.4/6 | 285 | 1.4 |  |
-| r4_s3 | R4 | stage | 6 | 100% | 5.3/6 | 256 | 1.4 |  |
-| r4_s4 | R4 | stage | 6 | 100% | 5.4/6 | 253 | 1.7 |  |
-| r4_s5 | R4 | stage | 6 | 100% | 4.7/6 | 295 | 1.3 |  |
-| r4_s6 | R4 | stage | 6 | 100% | 4.1/6 | 320 | 1.0 |  |
-| r4_s7 | R4 | stage | 6 | 100% | 4.4/6 | 556 | 1.1 |  |
-| r4_s8 | R4 | stage | 6 | 100% | 4.9/6 | 332 | 1.3 |  |
-| r4_boss | R4 | boss | 6 | 100% | 3.0/6 | 1588 | 1.0 |  |
-| r5_s1 | R5 | stage | 6 | 100% | 4.7/6 | 318 | 1.1 |  |
-| r5_s2 | R5 | stage | 6 | 100% | 4.1/6 | 391 | 1.0 |  |
-| r5_s3 | R5 | stage | 6 | 100% | 4.3/6 | 396 | 1.0 |  |
-| r5_s4 | R5 | stage | 6 | 100% | 4.1/6 | 441 | 1.0 |  |
-| r5_s5 | R5 | stage | 6 | 100% | 4.6/6 | 414 | 1.0 |  |
-| r5_s6 | R5 | stage | 6 | 100% | 4.1/6 | 449 | 1.0 |  |
-| r5_s7 | R5 | stage | 6 | 86% | 3.0/6 | 519 | 1.0 |  |
-| r5_s8 | R5 | stage | 6 | 100% | 3.7/6 | 484 | 1.0 |  |
-| r5_s9 | R5 | stage | 6 | 100% | 3.9/6 | 498 | 1.0 |  |
-| r5_boss | R5 | boss | 6 | 100% | 1.0/6 | 2884 | 1.0 |  |
-| r6_s1 | R6 | stage | 8 | 100% | 7.9/8 | 227 | 1.9 |  |
-| r6_s2 | R6 | stage | 8 | 100% | 7.7/8 | 246 | 1.7 |  |
-| r6_s3 | R6 | stage | 8 | 100% | 7.6/8 | 254 | 1.6 |  |
-| r6_s4 | R6 | stage | 8 | 100% | 7.7/8 | 281 | 1.7 |  |
-| r6_s5 | R6 | stage | 8 | 100% | 7.0/8 | 297 | 1.4 |  |
-| r6_s6 | R6 | stage | 8 | 100% | 7.7/8 | 309 | 1.7 |  |
-| r6_s7 | R6 | stage | 8 | 100% | 6.4/8 | 435 | 1.3 |  |
-| r6_s8 | R6 | stage | 8 | 100% | 6.3/8 | 414 | 1.1 |  |
-| r6_s9 | R6 | stage | 8 | 100% | 7.4/8 | 313 | 1.4 |  |
-| r6_boss | R6 | boss | 8 | 100% | 6.0/8 | 1103 | 1.0 |  |
-| r7_s1 | R7 | stage | 8 | 100% | 7.6/8 | 248 | 1.6 |  |
-| r7_s2 | R7 | stage | 8 | 100% | 7.3/8 | 252 | 1.7 |  |
-| r7_s3 | R7 | stage | 8 | 86% | 10.4/8 | 244 | 1.8 |  |
-| r7_s4 | R7 | stage | 8 | 86% | 4.9/8 | 344 | 1.2 |  |
-| r7_s5 | R7 | stage | 8 | 100% | 6.7/8 | 303 | 1.1 |  |
-| r7_s6 | R7 | stage | 8 | 86% | 5.6/8 | 349 | 1.2 |  |
-| r7_s7 | R7 | stage | 8 | 100% | 7.4/8 | 242 | 1.4 |  |
-| r7_s8 | R7 | stage | 8 | 86% | 5.1/8 | 361 | 1.2 |  |
-| r7_s9 | R7 | stage | 8 | 86% | 5.0/8 | 367 | 1.3 |  |
+| r4_s1 | R4 | stage | 6 | 100% | 5.9/6 | 211 | 1.9 |  |
+| r4_s2 | R4 | stage | 6 | 100% | 8.6/6 | 285 | 1.6 |  |
+| r4_s3 | R4 | stage | 6 | 100% | 5.9/6 | 237 | 1.9 |  |
+| r4_s4 | R4 | stage | 6 | 100% | 5.3/6 | 249 | 1.6 |  |
+| r4_s5 | R4 | stage | 6 | 100% | 5.1/6 | 269 | 1.4 |  |
+| r4_s6 | R4 | stage | 6 | 100% | 4.6/6 | 294 | 1.3 |  |
+| r4_s7 | R4 | stage | 6 | 100% | 4.9/6 | 517 | 1.1 |  |
+| r4_s8 | R4 | stage | 6 | 100% | 5.3/6 | 289 | 1.4 |  |
+| r4_boss | R4 | boss | 6 | 100% | 3.0/6 | 1645 | 1.0 |  |
+| r5_s1 | R5 | stage | 6 | 100% | 5.7/6 | 274 | 1.7 |  |
+| r5_s2 | R5 | stage | 6 | 100% | 4.7/6 | 335 | 1.0 |  |
+| r5_s3 | R5 | stage | 6 | 100% | 4.1/6 | 375 | 1.0 |  |
+| r5_s4 | R5 | stage | 6 | 100% | 3.7/6 | 437 | 1.0 |  |
+| r5_s5 | R5 | stage | 6 | 100% | 4.3/6 | 377 | 1.0 |  |
+| r5_s6 | R5 | stage | 6 | 100% | 4.1/6 | 415 | 1.0 |  |
+| r5_s7 | R5 | stage | 6 | 86% | 2.7/6 | 558 | 1.0 |  |
+| r5_s8 | R5 | stage | 6 | 100% | 3.6/6 | 509 | 1.0 |  |
+| r5_s9 | R5 | stage | 6 | 100% | 3.9/6 | 431 | 1.0 |  |
+| r5_boss | R5 | boss | 6 | 100% | 1.0/6 | 2793 | 1.0 |  |
+| r6_s1 | R6 | stage | 8 | 100% | 7.7/8 | 215 | 1.9 |  |
+| r6_s2 | R6 | stage | 8 | 100% | 7.6/8 | 257 | 1.6 |  |
+| r6_s3 | R6 | stage | 8 | 100% | 7.4/8 | 281 | 1.4 |  |
+| r6_s4 | R6 | stage | 8 | 100% | 7.6/8 | 271 | 1.6 |  |
+| r6_s5 | R6 | stage | 8 | 100% | 6.6/8 | 306 | 1.4 |  |
+| r6_s6 | R6 | stage | 8 | 100% | 7.7/8 | 316 | 1.7 |  |
+| r6_s7 | R6 | stage | 8 | 100% | 6.6/8 | 431 | 1.3 |  |
+| r6_s8 | R6 | stage | 8 | 100% | 6.6/8 | 383 | 1.3 |  |
+| r6_s9 | R6 | stage | 8 | 100% | 7.4/8 | 340 | 1.4 |  |
+| r6_boss | R6 | boss | 8 | 100% | 6.1/8 | 1041 | 1.0 |  |
+| r7_s1 | R7 | stage | 8 | 100% | 7.7/8 | 218 | 1.7 |  |
+| r7_s2 | R7 | stage | 8 | 86% | 6.4/8 | 266 | 1.7 |  |
+| r7_s3 | R7 | stage | 8 | 86% | 10.4/8 | 221 | 1.8 |  |
+| r7_s4 | R7 | stage | 8 | 100% | 6.9/8 | 281 | 1.4 |  |
+| r7_s5 | R7 | stage | 8 | 100% | 7.3/8 | 308 | 1.4 |  |
+| r7_s6 | R7 | stage | 8 | 100% | 7.0/8 | 361 | 1.4 |  |
+| r7_s7 | R7 | stage | 8 | 100% | 7.3/8 | 270 | 1.4 |  |
+| r7_s8 | R7 | stage | 8 | 100% | 6.0/8 | 356 | 1.0 |  |
+| r7_s9 | R7 | stage | 8 | 100% | 6.3/8 | 373 | 1.0 |  |
 | r7_boss | R7 | boss | 8 | 100% | 6.0/8 | 704 | 1.0 |  |
-| r8_s1 | R8 | stage | 8 | 100% | 8.0/8 | 551 | 2.0 | FREEWIN |
-| r8_s2 | R8 | stage | 8 | 100% | 7.9/8 | 645 | 1.9 |  |
-| r8_s3 | R8 | stage | 8 | 100% | 7.9/8 | 570 | 1.9 |  |
-| r8_s4 | R8 | stage | 8 | 86% | 11.1/8 | 686 | 1.8 |  |
-| r8_s5 | R8 | stage | 8 | 100% | 7.6/8 | 565 | 1.6 |  |
-| r8_s6 | R8 | stage | 8 | 100% | 7.7/8 | 584 | 1.7 |  |
-| r8_s7 | R8 | stage | 8 | 100% | 7.6/8 | 544 | 1.9 |  |
-| r8_boss | R8 | boss | 8 | 100% | 7.0/8 | 1735 | 1.0 |  |
+| r8_s1 | R8 | stage | 8 | 100% | 7.7/8 | 753 | 1.7 |  |
+| r8_s2 | R8 | stage | 8 | 100% | 7.7/8 | 659 | 1.7 |  |
+| r8_s3 | R8 | stage | 8 | 100% | 7.6/8 | 598 | 1.7 |  |
+| r8_s4 | R8 | stage | 8 | 86% | 11.4/8 | 722 | 2.0 |  |
+| r8_s5 | R8 | stage | 8 | 100% | 7.7/8 | 746 | 1.9 |  |
+| r8_s6 | R8 | stage | 8 | 100% | 7.4/8 | 575 | 1.9 |  |
+| r8_s7 | R8 | stage | 8 | 100% | 7.4/8 | 678 | 1.7 |  |
+| r8_boss | R8 | boss | 8 | 100% | 7.6/8 | 1486 | 1.6 |  |
 
 ### Region Clear-Rate Summary
 
 | Region | Stages | Avg Clear Rate | Walls | Freewins |
 |---|---|---|---|---|
-| R1 | 9 | 65% | 0 | 0 |
-| R2 | 9 | 100% | 0 | 0 |
-| R3 | 9 | 79% | 0 | 1 |
-| R4 | 9 | 100% | 0 | 1 |
+| R1 | 9 | 63% | 2 | 0 |
+| R2 | 9 | 98% | 0 | 0 |
+| R3 | 9 | 78% | 1 | 0 |
+| R4 | 9 | 100% | 0 | 0 |
 | R5 | 10 | 99% | 0 | 0 |
 | R6 | 10 | 100% | 0 | 0 |
-| R7 | 10 | 93% | 0 | 0 |
-| R8 | 8 | 98% | 0 | 1 |
+| R7 | 10 | 97% | 0 | 0 |
+| R8 | 8 | 98% | 0 | 0 |
 
 ### Outliers Flagged
 
-- **Walls** (clear rate < 40%): none remaining.
-- **Freewins** (100% clear, zero losses, R3+): 3
-  - r3_s1 (R3): 100% clear, 0 units lost across all seeds
-  - r4_s1 (R4): 100% clear, 0 units lost across all seeds
-  - r8_s1 (R8): 100% clear, 0 units lost across all seeds
+- **Walls** (clear rate < 40%): 3
+  - r1_s4 (R1): 29% clear rate
+  - r1_s8 (R1): 29% clear rate
+  - r3_s8 (R3): 29% clear rate
+- **Freewins** (100% clear, zero losses, R3+): none.
 
 ## Endless Mode (The Abyss) — Floors 1-30
 
@@ -125,36 +125,36 @@ Post-R8 reference team, each floor tested independently at full HP (7 seeds).
 
 | Floor | Clear Rate | Avg Survivors |
 |---|---|---|
-| 1 | 100% | 7.9 |
+| 1 | 100% | 8.0 |
 | 2 | 100% | 8.0 |
 | 3 | 100% | 8.0 |
 | 4 | 100% | 7.9 |
 | 5 | 100% | 8.0 |
-| 6 | 100% | 7.9 |
-| 7 | 100% | 7.9 |
+| 6 | 100% | 8.0 |
+| 7 | 100% | 8.0 |
 | 8 | 100% | 8.0 |
 | 9 | 100% | 7.7 |
-| 10 | 100% | 7.1 |
-| 11 | 100% | 7.1 |
-| 12 | 100% | 7.3 |
-| 13 | 100% | 7.1 |
-| 14 | 100% | 7.0 |
-| 15 | 100% | 7.1 |
+| 10 | 100% | 7.3 |
+| 11 | 100% | 7.4 |
+| 12 | 100% | 7.7 |
+| 13 | 100% | 7.3 |
+| 14 | 100% | 7.3 |
+| 15 | 100% | 7.3 |
 | 16 | 100% | 7.4 |
-| 17 | 100% | 6.6 |
-| 18 | 100% | 7.6 |
-| 19 | 100% | 6.9 |
-| 20 | 100% | 7.0 |
+| 17 | 100% | 7.0 |
+| 18 | 100% | 7.7 |
+| 19 | 100% | 7.3 |
+| 20 | 100% | 7.1 |
 | 21 | 100% | 7.0 |
-| 22 | 100% | 7.1 |
-| 23 | 100% | 6.6 |
-| 24 | 100% | 7.3 |
-| 25 | 100% | 6.4 |
-| 26 | 100% | 6.9 |
-| 27 | 100% | 6.6 |
-| 28 | 100% | 5.6 |
-| 29 | 100% | 6.6 |
-| 30 | 100% | 6.0 |
+| 22 | 100% | 7.3 |
+| 23 | 100% | 6.7 |
+| 24 | 100% | 7.1 |
+| 25 | 100% | 7.0 |
+| 26 | 100% | 7.1 |
+| 27 | 100% | 6.9 |
+| 28 | 100% | 5.4 |
+| 29 | 100% | 7.0 |
+| 30 | 100% | 5.9 |
 
 **Wall floor** (clear rate first drops below 50%): Floor 30+ (not reached within tested range)
 
@@ -164,8 +164,8 @@ R6 reference team (7 seeds each). Clear rate is computed over non-error runs onl
 
 | Boss | Element | Clear Rate | Avg Survivors | Engine Errors |
 |---|---|---|---|---|
-| infernal_wyvern | fire | 100% | 6.0 | 0/7 |
-| tidal_leviathan | water | 100% | 7.0 | 0/7 |
+| infernal_wyvern | fire | 100% | 7.0 | 0/7 |
+| tidal_leviathan | water | 100% | 7.4 | 0/7 |
 | stone_colossus | earth | 100% | 8.0 | 0/7 |
 | storm_phoenix | wind | 100% | 8.0 | 0/7 |
 
@@ -175,82 +175,82 @@ Single seeded run per stage, reference team for that region. "Beatable" = the fi
 
 | Stage | Region | Par (s) | Elapsed (s) | Beatable | Beats Par |
 |---|---|---|---|---|---|
-| r1_s1 | R1 | 15 | 6.8 | yes | yes |
-| r1_s2 | R1 | 27 | 16.2 | NO | no |
-| r1_s3 | R1 | 18 | 13.6 | yes | yes |
-| r1_s4 | R1 | 25 | 21.7 | NO | no |
-| r1_s5 | R1 | 25 | 12.5 | NO | no |
-| r1_s6 | R1 | 20 | 15.4 | NO | no |
-| r1_s7 | R1 | 20 | 21.3 | NO | no |
-| r1_s8 | R1 | 25 | 11.2 | NO | no |
+| r1_s1 | R1 | 15 | 6.6 | yes | yes |
+| r1_s2 | R1 | 27 | 19.2 | NO | no |
+| r1_s3 | R1 | 18 | 13.5 | yes | yes |
+| r1_s4 | R1 | 25 | 19.2 | yes | yes |
+| r1_s5 | R1 | 25 | 22.2 | NO | no |
+| r1_s6 | R1 | 20 | 21.2 | NO | no |
+| r1_s7 | R1 | 20 | 23.5 | NO | no |
+| r1_s8 | R1 | 25 | 22.4 | NO | no |
 | r1_boss | R1 | 45 | 55.4 | yes | no |
-| r2_s1 | R2 | 22 | 13.1 | yes | yes |
-| r2_s2 | R2 | 34 | 23.0 | yes | yes |
-| r2_s3 | R2 | 27 | 16.0 | yes | yes |
-| r2_s4 | R2 | 34 | 24.4 | yes | yes |
-| r2_s5 | R2 | 31 | 21.2 | yes | yes |
-| r2_s6 | R2 | 40 | 21.0 | yes | yes |
-| r2_s7 | R2 | 23 | 12.0 | yes | yes |
-| r2_s8 | R2 | 43 | 24.5 | yes | yes |
+| r2_s1 | R2 | 22 | 12.1 | yes | yes |
+| r2_s2 | R2 | 34 | 20.6 | yes | yes |
+| r2_s3 | R2 | 27 | 17.0 | yes | yes |
+| r2_s4 | R2 | 34 | 21.3 | yes | yes |
+| r2_s5 | R2 | 31 | 24.1 | yes | yes |
+| r2_s6 | R2 | 40 | 17.1 | yes | yes |
+| r2_s7 | R2 | 23 | 10.8 | yes | yes |
+| r2_s8 | R2 | 43 | 25.1 | yes | yes |
 | r2_boss | R2 | 60 | 73.9 | yes | no |
-| r3_s1 | R3 | 65 | 24.4 | yes | yes |
-| r3_s2 | R3 | 59 | 25.2 | yes | yes |
-| r3_s3 | R3 | 65 | 31.3 | yes | yes |
-| r3_s4 | R3 | 65 | 24.8 | yes | yes |
-| r3_s5 | R3 | 72 | 47.3 | NO | no |
-| r3_s6 | R3 | 49 | 26.6 | yes | yes |
-| r3_s7 | R3 | 110 | 37.3 | yes | yes |
-| r3_s8 | R3 | 65 | 37.7 | NO | no |
+| r3_s1 | R3 | 65 | 33.0 | yes | yes |
+| r3_s2 | R3 | 59 | 26.1 | yes | yes |
+| r3_s3 | R3 | 65 | 31.0 | yes | yes |
+| r3_s4 | R3 | 65 | 26.2 | yes | yes |
+| r3_s5 | R3 | 72 | 37.3 | NO | no |
+| r3_s6 | R3 | 49 | 22.0 | yes | yes |
+| r3_s7 | R3 | 110 | 51.6 | NO | no |
+| r3_s8 | R3 | 65 | 31.1 | yes | yes |
 | r3_boss | R3 | 66 | 124.5 | yes | no |
-| r4_s1 | R4 | 70 | 9.1 | yes | yes |
-| r4_s2 | R4 | 74 | 15.0 | yes | yes |
-| r4_s3 | R4 | 88 | 14.3 | yes | yes |
-| r4_s4 | R4 | 85 | 12.0 | yes | yes |
-| r4_s5 | R4 | 90 | 18.6 | yes | yes |
-| r4_s6 | R4 | 95 | 13.5 | yes | yes |
-| r4_s7 | R4 | 97 | 13.7 | yes | yes |
-| r4_s8 | R4 | 108 | 15.1 | yes | yes |
-| r4_boss | R4 | 72 | 75.2 | yes | no |
-| r5_s1 | R5 | 86 | 17.3 | yes | yes |
-| r5_s2 | R5 | 97 | 17.6 | yes | yes |
-| r5_s3 | R5 | 108 | 23.3 | yes | yes |
-| r5_s4 | R5 | 119 | 25.1 | yes | yes |
-| r5_s5 | R5 | 115 | 18.7 | yes | yes |
-| r5_s6 | R5 | 130 | 21.0 | yes | yes |
-| r5_s7 | R5 | 137 | 25.4 | yes | yes |
-| r5_s8 | R5 | 144 | 25.1 | yes | yes |
-| r5_s9 | R5 | 151 | 25.3 | yes | yes |
-| r5_boss | R5 | 72 | 144.3 | yes | no |
-| r6_s1 | R6 | 164 | 11.2 | yes | yes |
-| r6_s2 | R6 | 135 | 10.3 | yes | yes |
-| r6_s3 | R6 | 151 | 10.3 | yes | yes |
-| r6_s4 | R6 | 158 | 12.3 | yes | yes |
-| r6_s5 | R6 | 178 | 14.2 | yes | yes |
-| r6_s6 | R6 | 185 | 17.5 | yes | yes |
-| r6_s7 | R6 | 196 | 15.4 | yes | yes |
-| r6_s8 | R6 | 200 | 18.4 | yes | yes |
-| r6_s9 | R6 | 200 | 16.8 | yes | yes |
-| r6_boss | R6 | 78 | 55.2 | yes | yes |
-| r7_s1 | R7 | 180 | 14.5 | yes | yes |
-| r7_s2 | R7 | 203 | 7.3 | yes | yes |
-| r7_s3 | R7 | 162 | 17.5 | yes | yes |
-| r7_s4 | R7 | 229 | 12.8 | yes | yes |
-| r7_s5 | R7 | 236 | 29.6 | yes | yes |
-| r7_s6 | R7 | 236 | 13.7 | yes | yes |
-| r7_s7 | R7 | 257 | 12.2 | yes | yes |
-| r7_s8 | R7 | 207 | 15.0 | yes | yes |
-| r7_s9 | R7 | 274 | 18.1 | yes | yes |
+| r4_s1 | R4 | 70 | 10.2 | yes | yes |
+| r4_s2 | R4 | 74 | 13.0 | yes | yes |
+| r4_s3 | R4 | 88 | 11.9 | yes | yes |
+| r4_s4 | R4 | 85 | 14.3 | yes | yes |
+| r4_s5 | R4 | 90 | 14.5 | yes | yes |
+| r4_s6 | R4 | 95 | 18.1 | yes | yes |
+| r4_s7 | R4 | 97 | 11.5 | yes | yes |
+| r4_s8 | R4 | 108 | 12.6 | yes | yes |
+| r4_boss | R4 | 72 | 78.1 | yes | no |
+| r5_s1 | R5 | 86 | 14.1 | yes | yes |
+| r5_s2 | R5 | 97 | 22.9 | yes | yes |
+| r5_s3 | R5 | 108 | 19.1 | yes | yes |
+| r5_s4 | R5 | 119 | 34.0 | yes | yes |
+| r5_s5 | R5 | 115 | 21.1 | yes | yes |
+| r5_s6 | R5 | 130 | 23.7 | yes | yes |
+| r5_s7 | R5 | 137 | 21.8 | yes | yes |
+| r5_s8 | R5 | 144 | 18.9 | yes | yes |
+| r5_s9 | R5 | 151 | 26.1 | yes | yes |
+| r5_boss | R5 | 72 | 137.6 | yes | no |
+| r6_s1 | R6 | 164 | 8.4 | yes | yes |
+| r6_s2 | R6 | 135 | 10.9 | yes | yes |
+| r6_s3 | R6 | 151 | 13.5 | yes | yes |
+| r6_s4 | R6 | 158 | 13.4 | yes | yes |
+| r6_s5 | R6 | 178 | 15.9 | yes | yes |
+| r6_s6 | R6 | 185 | 15.0 | yes | yes |
+| r6_s7 | R6 | 196 | 13.8 | yes | yes |
+| r6_s8 | R6 | 200 | 20.2 | yes | yes |
+| r6_s9 | R6 | 200 | 19.9 | yes | yes |
+| r6_boss | R6 | 78 | 51.4 | yes | yes |
+| r7_s1 | R7 | 180 | 12.0 | yes | yes |
+| r7_s2 | R7 | 203 | 11.3 | yes | yes |
+| r7_s3 | R7 | 162 | 24.2 | yes | yes |
+| r7_s4 | R7 | 229 | 14.5 | yes | yes |
+| r7_s5 | R7 | 236 | 20.8 | yes | yes |
+| r7_s6 | R7 | 236 | 12.7 | yes | yes |
+| r7_s7 | R7 | 257 | 11.2 | yes | yes |
+| r7_s8 | R7 | 207 | 14.6 | yes | yes |
+| r7_s9 | R7 | 274 | 14.9 | yes | yes |
 | r7_boss | R7 | 84 | 35.2 | yes | yes |
-| r8_s1 | R8 | 290 | 27.5 | yes | yes |
-| r8_s2 | R8 | 245 | 30.2 | yes | yes |
-| r8_s3 | R8 | 256 | 29.8 | yes | yes |
-| r8_s4 | R8 | 263 | 34.3 | yes | yes |
-| r8_s5 | R8 | 274 | 26.8 | yes | yes |
-| r8_s6 | R8 | 286 | 28.3 | yes | yes |
-| r8_s7 | R8 | 286 | 28.0 | yes | yes |
-| r8_boss | R8 | 90 | 85.1 | yes | yes |
+| r8_s1 | R8 | 290 | 33.8 | yes | yes |
+| r8_s2 | R8 | 245 | 26.4 | yes | yes |
+| r8_s3 | R8 | 256 | 29.0 | yes | yes |
+| r8_s4 | R8 | 263 | 31.6 | yes | yes |
+| r8_s5 | R8 | 274 | 41.0 | yes | yes |
+| r8_s6 | R8 | 286 | 25.8 | yes | yes |
+| r8_s7 | R8 | 286 | 32.5 | yes | yes |
+| r8_boss | R8 | 90 | 73.0 | yes | yes |
 
-8 stage(s) unbeatable at reference power; 5 beatable but outside par (expected — par times are meant to reward skilled/optimized play, not the baseline reference team).
+7 stage(s) unbeatable at reference power; 5 beatable but outside par (expected — par times are meant to reward skilled/optimized play, not the baseline reference team).
 
 ## Known Issues (Prompt 65 findings, all fixed by Prompt 66 -- see "Tuning Changes" below)
 
@@ -277,6 +277,7 @@ None encountered during this run (previously 7/7 `infernal_wyvern` runs threw). 
 | Boss difficulty pass (BUGS #10 fix) | js/missions.js (BOSS_DATA) | r1_boss (veil_warden) baseHp 8000/hpScaling 10/baseAtk 40/atkScaling 2.5 -- unkillable wall (0% clear) at R1 reference power. r8_boss (void_sovereign) baseHp 40000/hpScaling 4/baseAtk 0/atkScaling 2.5 -- unkillable wall (0% clear) at R8 reference power. r3_boss (twin_heralds) baseAtk 0/atkScaling 1.6 and r4_boss (shattered_colossus) baseAtk 0/atkScaling 1.8 -- both zero-loss freewins (100% clear, 0 units lost) because most of their kit's target types (dash_random, frontal_cone, both_sides, etc.) aren't implemented in combat-boss.js's startBossTelegraph() targeting switch and silently no-op, leaving only a weak melee auto-attack as real threat. tidal_leviathan/stone_colossus/storm_phoenix (element bosses): 0% clear (unkillable) at R6 reference power. | r1_boss: baseHp 5000/hpScaling 2/baseAtk 16/atkScaling 1.0 (100% clear, 2 of 3 units lost -- a genuine near-death win, not a stomp). r8_boss: baseHp 65000/hpScaling 2.2/baseAtk 0/atkScaling 0.75 (100% clear, boss ends near 1% HP, 1 of 8 units lost). r3_boss: atkScaling 1.6 -> 4.0 (same baseHp/hpScaling; boss now actually kills through its only working auto-attack fast enough to cost 2 of 5 units before dying at ~3% HP remaining -- no longer a zero-loss freewin). r4_boss: atkScaling 1.8 -> 4.0 (3 of 6 units lost, boss dies at ~1% HP -- no longer a zero-loss freewin). tidal_leviathan: baseHp 18000->16000/hpScaling 3->2/atkScaling 1.8->1.4 (was losing to the boss's 1%/s regen outpacing team DPS; now a clean win, 1 unit lost). stone_colossus: baseHp 22000->13000/hpScaling 3->1.3/atkScaling 1.5->1.15/dr 0.35->0.25 (was hard-stalemating -- its periodic 10%-maxHP self-shield (Stone Skin) combined with 35% DR meant team DPS repeatedly bounced off a shield refresh with zero net HP progress for 40+ seconds before an inevitable wipe; cut DR and HP enough that the boss dies before the shield-refresh cadence can out-heal the team). storm_phoenix: baseHp 14000->9000/hpScaling 3->1.5/atkScaling 2.2->1.2 (was an unkillable wall; now a clean win in ~23s). | BUGS #10: BOSS_DATA's HP/ATK-scaling formula (js/ui-combat.js startMissionCombat(), out of this prompt's file scope -- only the DATA values are tunable) sums the whole team's maxHP (not an average) and multiplies by hpScaling with no cap, so a couple of points of hpScaling difference between regions produced wildly different effective difficulty once combined with each region's actual team-power curve. r1_boss and r8_boss were mathematically unkillable regardless of star level (confirmed via tests/balance-sim.js: 0% clear at any reference power); r3_boss/r4_boss were undertuned in the opposite direction (zero-loss freewins) partly because several of their kit's ability target types are unimplemented in the current engine (a combat-engine gap, not a balance issue -- left untouched per this prompt's "boss MECHANICS untouched" constraint) and their remaining working auto-attack was too weak to matter. All 8 story bosses and all 4 element bosses are now beatable at their region's/unlock tier's reference power (tests/balance-sim.js: 0 walls, 0 freewins). NOTE on "40-60% clear rate": boss fights in this engine are fully deterministic for a fixed reference team (no crit chance, no dodge chance, and no random-targeting abilities on any of the 8 story bosses' implemented ability set) -- the sim runs the identical fight on every seed and can only ever report exactly 0% or 100% for a boss stage, confirmed true of every boss in the ORIGINAL (pre-Prompt-66) report as well (every single one was already 0% or 100%, never fractional). A literal 40-60% sim readout is therefore not achievable via BOSS_DATA numbers alone without adding RNG to boss targeting, which is a mechanics change this prompt's "boss MECHANICS untouched" constraint disallows. The numbers above instead target the same underlying intent -- a genuinely close, hard-fought fight -- verified by tracing each fight tick-by-tick and tuning to a real (not zero-loss) casualty count and a slim boss-HP-remaining margin at the moment of victory. |
 | R1 stages 3, 7 (hex-melee wall fix) | js/missions.js | r1_s3 3,5,5 · r1_s7 5,6,6 (per-wave budget; counts/maxCost unchanged) | r1_s3 3,3,4 · r1_s7 3,4,4 | Both sat at exactly 43% clear pre-hex (just above the 40% wall line) and fell to 14%/29% under hex melee (6 adjacent attackers can now gang each unit of the 3-unit reference team, and every radius AoE grew ~40-46% in cell count). Budget-only trims per the Prompt 69 melee-band exception; re-verified at 57% (r1_s3) and 43% (r1_s7 -- its exact pre-hex value). |
 | r1_boss (hex-AoE wall fix) | js/missions.js (BOSS_DATA) | veil_warden baseHp 5000 | veil_warden baseHp 4800 (-4%; all other values untouched, mechanics untouched) | The deterministic R1-reference fight flipped from a 1-of-3-survivor win (pre-hex) to a loss with the boss at 0.4% HP: Ground Slam's aoeRadius-2 telegraph grew from a 13-cell Manhattan diamond to a 19-cell hex disc, out-damaging the 3-unit team by a hair over the fight. Two-part fix: (1) grid.js bossCells() deliberately uses the SE "below" direction so an even-row boss anchor reproduces the old square 2x2 footprint exactly (the first SW-direction draft shifted the boss one column toward the player's left-packed formation and cost the team another ~360 boss HP of margin); (2) the minimal BOSS_DATA numeric nudge above -- the same data-only lever Prompt 66 used on this same boss. Re-verified: 100% clear, 1 of 3 survivors (identical closeness profile to pre-hex). |
+| R8 stages 1, 5, 7 + r8_boss (BUGS #11 freewin fallout) | js/missions.js | r8_s1 count 6,6,7,7 · r8_s5 count 6,7,7,7 · r8_s7 count 6,7,7,7 (budgets unchanged) · void_sovereign atkScaling 0.75 | r8_s1 count 8,8,9,9 · r8_s5 count 8,9,9,9 · r8_s7 count 8,9,9,9 (budgets unchanged -- see why) · void_sovereign atkScaling 0.95 | Prompt 74 (BUGS #11) implemented the 12 previously-no-op unit abilities (ashen_watcher, abyssal_guardian, grove_warden, tempest_weaver, voltfang_stalker, iron_duelist + evolved forms). These are real T4 units buildReferenceTeam() already picks into R8's reference team (e.g. abyssal_guardian, ashen_watcher) -- fixing their kits made that team meaningfully stronger, flipping r8_s1/r8_s5/r8_s7/r8_boss from Prompt 66's tuned "near-death win" margin into 0-loss freewins (r4_s1's pre-existing freewin flipped the other way and self-resolved -- no action needed there). `budget` was tried first and found to be a no-op lever at these stages: generateMissionWave()'s enemy-picking loop is bounded by `count`, not by spending the full budget, and budget here already covers count*maxCost with room to spare -- confirmed empirically (2.1x budget on the pre-fix values produced byte-identical sim output to 1x). `count` (+2/wave on the 3 flagged stages) was the effective, smallest-viable lever; r8_boss got a data-only atkScaling nudge (mechanics untouched, same lever Prompt 66 used on this boss). Re-verified via tests/balance-sim.js: 0 walls introduced (still exactly the pre-existing r1_s4/r1_s8/r3_s8), 0 freewins remaining anywhere. |
 
 ## Golden Files
 
