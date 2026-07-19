@@ -19,8 +19,16 @@
 >   renderer deleted; WebGL required); hex grid migration (`js/grid.js` owns all spatial math);
 >   angled TFT-style camera + per-region procedural backdrops; canvas-first combat layout;
 >   team builder + wave repositioning happen on the Pixi arena. Suite: 168 cases green.
-> - Phase 4 IN PROGRESS: VFX framework + spectacle (prompts 72+). Phase 5 art pipeline starting in
->   parallel (ComfyUI on this machine, anchors → portraits → rigs per MASTERPLAN).
+> - Phase 4 DONE (`v0.9.0-spectacle`, prompts 72-76): VFX framework (`js/vfx.js`, 12 primitives,
+>   400-particle cap, RNG-isolated), 132/132 ability recipes (`js/vfx-abilities.js`), boss telegraph
+>   decals, animated status overlays, boss phase/enrage presentation, hit-stop/shake/banners/
+>   victory-defeat sequences. Side quests: BUGS #11 (12 dead abilities) and #12 (missing passive
+>   triggers + ALL evolved passives silently null via unset `unit.isEvolved`) found and fixed.
+>   Suite: 213 cases green.
+> - Phase 5 art: hybrid direction locked (abstract T1-T2 / humanoid T3-T5+heroes); 96 anchor
+>   candidates generated to `D:\ComfyUI\output\sv-anchors\` (REVIEW.html contact sheet) —
+>   BLOCKED on user keeper curation, then batch production.
+> - Phase 6 IN PROGRESS: UI overhaul (prompts 77+).
 > - Dev server for verification: `node scripts/serve.js` → http://localhost:8123 (no-cache headers;
 >   file:// caching serves stale js — don't verify via file://). NOTE: `alert()`/`confirm()` freeze
 >   the embedded browser pane — shim them before driving the UI programmatically.
