@@ -1,4 +1,4 @@
-// =============================================================================
+﻿// =============================================================================
 // version.js -- game version + build stamp (Prompt 82, Phase 8.3).
 //
 // GAME_VERSION is the human-facing semantic version, bumped by hand at each
@@ -12,4 +12,4 @@
 // =============================================================================
 
 var GAME_VERSION = '0.14.0';
-var GAME_BUILD = 'v0.13.0-ship-ready-6-gb67c4cd';
+var GAME_BUILD = 'v1.0.0';
