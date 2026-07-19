@@ -50,6 +50,35 @@ function toggleHubSettingsDrawer(force) {
     var show = (typeof force === 'boolean') ? force : !(drawer.classList && drawer.classList.contains('show'));
     if (drawer.classList) drawer.classList.toggle('show', show);
     if (scrim.classList) scrim.classList.toggle('show', show);
+    if (show) renderAudioSettingsUI(); // Prompt 81: sync sliders/mute to current AUDIO settings on open
+}
+
+// ---- Hub Screen: Audio Settings (Prompt 81, Phase 7) ----
+// Populates the drawer's volume sliders + mute checkbox from
+// AUDIO.getSettings() (js/audio.js) -- headless-safe (AUDIO is always
+// defined; getSettings() falls back to in-memory defaults if no save is
+// loaded yet) and a no-op if the drawer markup isn't present for any reason.
+function renderAudioSettingsUI() {
+    if (typeof AUDIO === 'undefined' || !AUDIO.getSettings) return;
+    var s = AUDIO.getSettings();
+    var master = document.getElementById('audio-vol-master');
+    var music = document.getElementById('audio-vol-music');
+    var sfx = document.getElementById('audio-vol-sfx');
+    var mute = document.getElementById('audio-mute-toggle');
+    if (master) master.value = Math.round(s.masterVolume * 100);
+    if (music) music.value = Math.round(s.musicVolume * 100);
+    if (sfx) sfx.value = Math.round(s.sfxVolume * 100);
+    if (mute) mute.checked = !!s.muted;
+}
+
+function uiSetAudioVolume(bus, sliderValue) {
+    if (typeof AUDIO === 'undefined' || !AUDIO.setVolume) return;
+    AUDIO.setVolume(bus, Number(sliderValue) / 100);
+}
+
+function uiSetAudioMuted(checked) {
+    if (typeof AUDIO === 'undefined' || !AUDIO.setMuted) return;
+    AUDIO.setMuted(!!checked);
 }
 
 // ---- Hub Screen: Building Cards ----
@@ -193,6 +222,7 @@ function uiUpgradeBuilding(buildingId) {
         function() {
             var sd2 = getSaveData();
             if (upgradeBuilding(sd2, buildingId)) {
+                if (typeof SFX !== 'undefined' && SFX.play) SFX.play('upgradeSuccess', {}); // Prompt 81
                 renderHubScreen();
                 renderTopBar();
                 // Check achievements after upgrade
@@ -619,6 +649,7 @@ function showAchievementPanel() {
 }
 
 function showAchievementToasts(newAchIds) {
+    if (newAchIds.length > 0 && typeof SFX !== 'undefined' && SFX.play) SFX.play('achievement', {}); // Prompt 81
     for (var i = 0; i < newAchIds.length; i++) {
         var ach = null;
         for (var j = 0; j < ACHIEVEMENTS.length; j++) {

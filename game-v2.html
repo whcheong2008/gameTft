@@ -251,6 +251,17 @@ body {
 .hub-settings-danger .sv-btn:hover { background: #4a2222; }
 .hub-settings-danger-label { color: var(--sv-red); font-weight: bold; font-size: 12px; margin-bottom: 6px; }
 
+/* Prompt 81 (Phase 7): audio settings block in the settings drawer --
+   master/music/sfx volume sliders + mute toggle. */
+.hub-settings-audio { border-top: 1px solid var(--sv-border); padding-top: var(--sv-sp-3); margin-top: var(--sv-sp-1); }
+.hub-settings-audio-row { display: flex; align-items: center; gap: var(--sv-sp-2); margin-bottom: var(--sv-sp-2); font-size: 12px; color: var(--sv-text-2); }
+.hub-settings-audio-row label { flex: 0 0 62px; color: var(--sv-text-3); }
+.hub-settings-audio-row input[type="range"] {
+    flex: 1; accent-color: var(--sv-gold); height: 4px; cursor: pointer;
+}
+.hub-settings-audio-mute { display: flex; align-items: center; gap: var(--sv-sp-2); font-size: 12px; cursor: pointer; user-select: none; }
+.hub-settings-audio-mute input { accent-color: var(--sv-gold); cursor: pointer; }
+
 /* === Screens (common) === */
 .screen { display: none; }
 .screen.active { display: block; }
@@ -1633,6 +1644,27 @@ body {
             </div>
             <button class="sv-btn sv-btn-block" onclick="showAchievementPanel()">🏆 Achievements</button>
             <button class="sv-btn sv-btn-block" onclick="showStatsPanel()">📊 Stats</button>
+            <!-- Prompt 81 (Phase 7): audio settings. renderAudioSettingsUI()
+                 (js/ui-hub.js) populates slider values/mute state; each
+                 control calls straight into js/audio.js's AUDIO.setVolume()/
+                 setMuted() (persisted via the save.js backfill convention). -->
+            <div class="hub-settings-audio" id="hub-settings-audio">
+                <div class="hub-settings-audio-row">
+                    <label for="audio-vol-master">Master</label>
+                    <input type="range" id="audio-vol-master" min="0" max="100" value="80" oninput="uiSetAudioVolume('master', this.value)">
+                </div>
+                <div class="hub-settings-audio-row">
+                    <label for="audio-vol-music">Music</label>
+                    <input type="range" id="audio-vol-music" min="0" max="100" value="70" oninput="uiSetAudioVolume('music', this.value)">
+                </div>
+                <div class="hub-settings-audio-row">
+                    <label for="audio-vol-sfx">SFX</label>
+                    <input type="range" id="audio-vol-sfx" min="0" max="100" value="90" oninput="uiSetAudioVolume('sfx', this.value)">
+                </div>
+                <label class="hub-settings-audio-mute">
+                    <input type="checkbox" id="audio-mute-toggle" onchange="uiSetAudioMuted(this.checked)"> Mute all audio
+                </label>
+            </div>
             <div class="hub-settings-danger">
                 <div class="hub-settings-danger-label">Danger Zone</div>
                 <button class="sv-btn sv-btn-block" onclick="uiResetGame()">Reset Game (Start Over)</button>
@@ -1913,6 +1945,12 @@ body {
     <script src="js/render-pixi.js"></script>
     <script src="js/vfx.js"></script>
     <script src="js/vfx-abilities.js"></script>
+    <!-- audio.js: WebAudio engine, synthesized SFX + generative ambient music
+         (Prompt 81, Phase 7). Loads after combat-events.js (registers combat
+         cue wiring at script-load time, same convention as vfx.js above) and
+         after save.js (settings persistence) -- placement mirrors vfx.js's
+         own "systems layer, right before the entry point" spot. -->
+    <script src="js/audio.js"></script>
     <script src="js/main-v2.js"></script>
 </body>
 </html>

@@ -340,6 +340,9 @@ function uiEndlessRetreat() {
 }
 
 function finalizeEndlessRun(wasRetreat) {
+    // Prompt 81 (Phase 7): defeat swell on an actual death; a voluntary
+    // retreat isn't a defeat, so no stinger there.
+    if (typeof AUDIO !== 'undefined' && AUDIO.onEndlessEnd) AUDIO.onEndlessEnd(!!wasRetreat);
     var sd = getSaveData();
     var endlessData = getEndlessSaveData(sd);
     var floorReached = endlessRunState.floorsCleared;

@@ -229,6 +229,10 @@ function updateEncounterMechanicHud() {
 
 function beginCombatScreen(sd) {
     showScreen('combat');
+    // Prompt 81 (Phase 7): region-tier/boss/endless-aware combat music.
+    // activeMission (js/missions.js) is already set by startMission() before
+    // this is called by every entry point (story/grind/endless/challenges).
+    if (typeof AUDIO !== 'undefined' && AUDIO.onCombatStart) AUDIO.onCombatStart(activeMission, sd);
     missionStarTracking = { totalDamageTaken: 0, unitsLostTotal: 0 };
 
     // Reset speed button display
@@ -909,6 +913,11 @@ function p80ResultsRow(innerHtml, extraClass) {
 }
 
 function showMissionResults(victory, stars) {
+    // Prompt 81 (Phase 7): victory fanfare / defeat swell + results music
+    // context. Single choke point for every story/grind/challenge mission's
+    // true end (endless/survival use AUDIO.onEndlessEnd() instead -- see
+    // js/endless.js/js/challenges.js -- since they never call this).
+    if (typeof AUDIO !== 'undefined' && AUDIO.onMissionResults) AUDIO.onMissionResults(victory, stars);
     // Hide wave transition overlay if still showing
     document.getElementById('wave-transition').className = 'wave-transition';
     if (typeof pixiExitRepositionMode === 'function') pixiExitRepositionMode();

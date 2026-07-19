@@ -30,6 +30,7 @@ var STATUS_ICONS = {
 // of hardcoded colors.
 
 function showToast(message) {
+    if (typeof SFX !== 'undefined' && SFX.play) SFX.play('toast', {}); // Prompt 81
     var toast = document.createElement('div');
     toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:var(--sv-gold); color:var(--sv-bg-1); padding:10px 20px; border-radius:var(--sv-radius-md); font-weight:bold; font-size:13px; z-index:9999; white-space:pre-line; text-align:center; box-shadow:var(--sv-shadow-lg); animation:toastIn 0.3s ease-out;';
     toast.textContent = message;
