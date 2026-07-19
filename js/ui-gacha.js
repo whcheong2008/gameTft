@@ -212,6 +212,7 @@ function uiDoSingleRoll() {
 
     renderGachaScreen();
     renderTopBar();
+    if (typeof onboardingOnGachaRoll === 'function') onboardingOnGachaRoll(); // Prompt 82
 
     runGachaSingleCeremony(result);
 }
@@ -223,6 +224,7 @@ function uiDoMultiRoll() {
 
     renderGachaScreen();
     renderTopBar();
+    if (typeof onboardingOnGachaRoll === 'function') onboardingOnGachaRoll(); // Prompt 82
 
     runGachaMultiCeremony(result.results);
 }

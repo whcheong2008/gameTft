@@ -113,6 +113,12 @@ function createDefaultSaveData() {
         challenges: { timeTrial: {}, survival: { bestWave: 0 }, restrictedRoster: {}, elementBosses: {} },
         // Audio settings (Prompt 81, Phase 7): master/music/sfx volume (0-1) + mute.
         audio: { masterVolume: 0.8, musicVolume: 0.7, sfxVolume: 0.9, muted: false },
+        // First-session onboarding flow (Prompt 82, Phase 8.2). Only a genuinely
+        // fresh save (this factory) starts active -- migrateSave()/validateSaveData()
+        // backfill any EXISTING save (one that never had this field) as already
+        // completed, so a returning player never sees the tutorial. step indexes
+        // js/onboarding.js's ONBOARDING_STEPS array (0-4).
+        onboarding: { step: 0, completed: false, dismissed: false },
         // Stats tracking
         stats: {
             totalMissionsCompleted: 0,
@@ -736,7 +742,14 @@ function migrateSave(data) {
                 }
             }
         }
-        // Ensure all 8 regions exist in regionProgress
+        // Ensure all 8 regions exist in regionProgress. Prompt 82: guard
+        // regionProgress itself, not just each region entry -- a save
+        // missing the whole object (BUGS.md: found via a Prompt 82 test
+        // fixture; also now user-reachable through the new save-import
+        // feature, which accepts arbitrary hand-edited/corrupted JSON) used
+        // to throw "Cannot read properties of undefined" here instead of
+        // being backfilled like every other version-agnostic default below.
+        if (!data.missions.regionProgress) data.missions.regionProgress = {};
         for (var rp12b = 1; rp12b <= 8; rp12b++) {
             if (!data.missions.regionProgress[rp12b]) {
                 data.missions.regionProgress[rp12b] = { completed: [], bossCleared: false };
@@ -799,6 +812,13 @@ function migrateSave(data) {
     if (typeof data.audio.musicVolume !== 'number') data.audio.musicVolume = 0.7;
     if (typeof data.audio.sfxVolume !== 'number') data.audio.sfxVolume = 0.9;
     if (typeof data.audio.muted !== 'boolean') data.audio.muted = false;
+
+    // Prompt 82: first-session onboarding (version-agnostic backfill). A save
+    // that reaches this point already went through at least one numbered
+    // migration step above -- i.e. it's a pre-existing save, never a fresh
+    // one (createDefaultSaveData() already stamps the field for those) --
+    // so it's backfilled as already-completed rather than active.
+    if (!data.onboarding) data.onboarding = { step: 0, completed: true, dismissed: true };
 
     return data;
 }
@@ -949,6 +969,18 @@ function validateSaveData(data) {
     if (typeof data.audio.musicVolume !== 'number') data.audio.musicVolume = 0.7;
     if (typeof data.audio.sfxVolume !== 'number') data.audio.sfxVolume = 0.9;
     if (typeof data.audio.muted !== 'boolean') data.audio.muted = false;
+
+    // Onboarding (Prompt 82). Any save reaching validateSaveData() without
+    // this field already set is a pre-existing save loaded for the first
+    // time after this feature shipped (a genuinely fresh save always has it
+    // already set by createDefaultSaveData(), and loadGame() returns null
+    // -- skipping validateSaveData() entirely -- for a true first-ever run)
+    // -- default it to already-completed so the tutorial never surfaces for
+    // a returning player.
+    if (!data.onboarding) data.onboarding = { step: 0, completed: true, dismissed: true };
+    if (typeof data.onboarding.step !== 'number') data.onboarding.step = 0;
+    if (typeof data.onboarding.completed !== 'boolean') data.onboarding.completed = false;
+    if (typeof data.onboarding.dismissed !== 'boolean') data.onboarding.dismissed = false;
 
     console.log('Validation complete. Valid entries:', Object.keys(data.collection).length);
     return data;

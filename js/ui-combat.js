@@ -229,6 +229,7 @@ function updateEncounterMechanicHud() {
 
 function beginCombatScreen(sd) {
     showScreen('combat');
+    if (typeof onboardingOnCombatStart === 'function') onboardingOnCombatStart(); // Prompt 82
     // Prompt 81 (Phase 7): region-tier/boss/endless-aware combat music.
     // activeMission (js/missions.js) is already set by startMission() before
     // this is called by every entry point (story/grind/endless/challenges).
@@ -918,6 +919,7 @@ function showMissionResults(victory, stars) {
     // true end (endless/survival use AUDIO.onEndlessEnd() instead -- see
     // js/endless.js/js/challenges.js -- since they never call this).
     if (typeof AUDIO !== 'undefined' && AUDIO.onMissionResults) AUDIO.onMissionResults(victory, stars);
+    if (typeof onboardingOnMissionResults === 'function') onboardingOnMissionResults(); // Prompt 82
     // Hide wave transition overlay if still showing
     document.getElementById('wave-transition').className = 'wave-transition';
     if (typeof pixiExitRepositionMode === 'function') pixiExitRepositionMode();

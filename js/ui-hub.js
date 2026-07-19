@@ -51,6 +51,7 @@ function toggleHubSettingsDrawer(force) {
     if (drawer.classList) drawer.classList.toggle('show', show);
     if (scrim.classList) scrim.classList.toggle('show', show);
     if (show) renderAudioSettingsUI(); // Prompt 81: sync sliders/mute to current AUDIO settings on open
+    if (show) renderHubSettingsVersion(); // Prompt 82: version display
 }
 
 // ---- Hub Screen: Audio Settings (Prompt 81, Phase 7) ----
@@ -548,6 +549,78 @@ function showEvolutionLabPanel() {
             }
         });
     }
+}
+
+// ---- Save Export / Import (Prompt 82, Phase 8.3) ----
+// Export: versioned JSON download of the live save. Import: file picker ->
+// parse -> the EXISTING migrateSave()/validateSaveData() pipeline (same path
+// loadGame() itself uses) -> confirm dialog before it overwrites anything.
+
+function uiExportSave() {
+    var sd = getSaveData();
+    if (!sd) return null;
+    var payload = JSON.stringify(sd, null, 2);
+    // Headless/test environments (tests/harness.js) have no real Blob/URL/
+    // document.body.appendChild-driven download machinery -- return the
+    // payload without touching the DOM rather than throwing.
+    if (typeof Blob === 'undefined' || typeof URL === 'undefined' || !URL.createObjectURL) {
+        return payload;
+    }
+    var blob = new Blob([payload], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    var stamp = new Date().toISOString().slice(0, 10);
+    a.download = 'shattered-veil-save-v' + (sd.version || SAVE_VERSION) + '-' + stamp + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+    if (typeof showToast === 'function') showToast('Save exported.');
+    return payload;
+}
+
+function uiImportSaveFile(file) {
+    if (!file) return;
+    if (typeof FileReader === 'undefined') {
+        if (typeof showToast === 'function') showToast('Import is not supported in this environment.');
+        return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var parsed;
+        try {
+            parsed = JSON.parse(e.target.result);
+        } catch (err) {
+            if (typeof showToast === 'function') showToast('Import failed: not a valid save file.');
+            return;
+        }
+        if (!parsed || typeof parsed !== 'object' || !parsed.collection) {
+            if (typeof showToast === 'function') showToast('Import failed: not a Shattered Veil save.');
+            return;
+        }
+        showConfirmDialog('This will overwrite your current save with the imported one. Continue?', function() {
+            var migrated = migrateSave(parsed);
+            var validated = validateSaveData(migrated);
+            saveData = validated;
+            saveGame(saveData);
+            if (typeof showToast === 'function') showToast('Save imported.');
+            showScreen('hub');
+        });
+    };
+    reader.readAsText(file);
+}
+
+// ---- Version Display (Prompt 82, Phase 8.3) ----
+// GAME_VERSION/GAME_BUILD live in js/version.js -- GAME_BUILD is only ever
+// updated by hand via `node scripts/stamp-version.js` (no build system).
+
+function renderHubSettingsVersion() {
+    var el = document.getElementById('hub-settings-version');
+    if (!el) return;
+    var version = (typeof GAME_VERSION !== 'undefined') ? GAME_VERSION : '?';
+    var build = (typeof GAME_BUILD !== 'undefined') ? GAME_BUILD : 'dev';
+    el.textContent = 'Shattered Veil v' + version + ' (' + build + ')';
 }
 
 // ---- Reset Game ----
