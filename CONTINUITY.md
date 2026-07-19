@@ -34,8 +34,19 @@
 >   heroes/codex restyled with portrait placeholder ids (unit-portrait-<key>/hero-portrait-<key> —
 >   Phase 5 art drops in there), mission select + combat chrome + results sequence restyled.
 >   Suite: 248 cases green.
-> - Phase 7 IN PROGRESS: audio (prompt 81) — synthesized SFX/ambient (no external assets; licensed
->   music can replace later).
+> - Phase 7 DONE (`v0.12.0-audio`, prompt 81): WebAudio engine (`js/audio.js`), 24 synthesized SFX
+>   cues (element-distinct, per-cue `src` override path for licensed audio later), generative
+>   ambient music (8 contexts, crossfades), settings drawer sliders, persisted.
+> - Phase 8 CODE-COMPLETE (`v0.13.0-ship-ready`, prompt 82): perf pass (DPR cap, PIXI.Text
+>   re-rasterize guards, deferred script fetch), 5-step dismissable onboarding (`js/onboarding.js`),
+>   PWA (manifest + version-keyed service worker + icons), index.html alias, save export/import
+>   (with migration hardening — BUGS #13 fixed), version stamping, `DEPLOY.md`.
+>   Suite: 266 cases green.
+>
+> **REMAINING TO v1.0.0 — both user-gated:**
+> 1. **Art production** (Phase 5): user curates anchor keepers from
+>    `D:\ComfyUI\output\sv-anchors\REVIEW.html` → then batch portraits (132) → rigs → integration.
+> 2. **Public deploy** (Phase 8.3): user enables GitHub Pages per `DEPLOY.md` → tag `v1.0.0`.
 > - Dev server for verification: `node scripts/serve.js` → http://localhost:8123 (no-cache headers;
 >   file:// caching serves stale js — don't verify via file://). NOTE: `alert()`/`confirm()` freeze
 >   the embedded browser pane — shim them before driving the UI programmatically.
