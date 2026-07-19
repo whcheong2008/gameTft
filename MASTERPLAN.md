@@ -158,8 +158,13 @@ deleted. Tag `v0.8.0-arena`.
 Orchestrator drives ComfyUI (local API, RTX 5080) using GRAPHICS-PLAN.md's locked style + prompts.
 User curates keepers (taste gate). No LoRA training.
 
-- **5.1 Finish anchors (G1)**: 6 Echo + 6 Voidspawn anchors — fire Echo keepers already exist.
-  Style bible finalized: exact prompts + seeds recorded.
+- **5.1 Finish anchors (G1)**: **HYBRID ART DIRECTION (user decision 2026-07-19)** — abstract
+  elemental forms for T1-T2 Echoes (36 units; matches the curated fire keepers), painterly humanoid
+  characters for T3-T5 Echoes + the 6 heroes. Lore framing: lesser Echoes are raw element; greater
+  Echoes take form. Anchors needed per element: 1 abstract + 1 humanoid (fire abstract keepers
+  exist). Voidspawn stay biological-alien per GRAPHICS-PLAN. Style bible: exact prompts + seeds
+  recorded per keeper. Pipeline driver: `scripts/comfy-gen.js` (ComfyUI API, port 8188 —
+  launch note: strip AVG's SSLKEYLOGFILE env var, see memory/START-COMFYUI.bat).
 - **5.2 Portraits**: 132 Echo + 6 heroes + 8 bosses (Voidspawn portraits deferred until needed by UI).
 - **5.3 Six type rigs**: Warrior/Tank/Archer/Mage/Assassin/Healer — idle/walk/attack/cast/death
   spritesheets. The only animated assets in the game.
