@@ -29,7 +29,15 @@ function buildHubCampBackdrop() {
         ? arenaBdHexPatternCss(theme.accent)
         : ('repeating-linear-gradient(60deg, ' + theme.accent + '22 0px, ' + theme.accent + '22 1px, transparent 1px, transparent 42px), ' +
            'repeating-linear-gradient(-60deg, ' + theme.accent + '22 0px, ' + theme.accent + '22 1px, transparent 1px, transparent 42px)');
-    el.innerHTML =
+
+    // Prompt 83 (Phase 5.6): camp.webp painted BELOW the procedural layers
+    // below, same recipe as js/ui-combat.js's buildArenaBackdrop() -- see
+    // that function's comment for why a 404 needs no onerror handling here.
+    var bgUrl = (typeof getBackgroundUrl === 'function') ? getBackgroundUrl('camp') : null;
+    var imageLayer = bgUrl ?
+        ('<div class="arena-bd-image" style="background-image:linear-gradient(180deg, rgba(10,10,20,0.3) 0%, rgba(10,10,20,0.5) 55%, rgba(10,10,20,0.8) 100%), url(\'' + bgUrl + '\');"></div>') : '';
+
+    el.innerHTML = imageLayer +
         '<div class="arena-bd-horizon" style="background:radial-gradient(ellipse 90% 60% at 50% 10%, ' + theme.glow + 'cc 0%, transparent 70%);"></div>' +
         '<div class="arena-bd-hexfield" style="background-image:' + hexCss + ';"></div>' +
         '<div class="arena-bd-blob arena-bd-blob-a" style="background:' + theme.blobA + ';"></div>' +

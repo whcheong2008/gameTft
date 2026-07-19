@@ -468,6 +468,107 @@ function pixiHideUnitTooltip() {
     if (el) el.style.display = 'none';
 }
 
+// ---- Prompt 83 (Phase 5.6): portrait texture loading + token-face draw ----
+//
+// Lazy, per-combat: RENDER_PIXI.init() below calls pixiPreloadCombatPortraits()
+// once per wave, kicking off PIXI.Assets.load() for every unit/boss actually
+// fighting (per the spec: "lazy per-combat preload of the units actually
+// fighting -- await before first frame or swap in when loaded"). This file
+// takes the "swap in when loaded" half: loads are fire-and-forget promises,
+// so the first frame(s) of a wave may still show the placeholder box+emoji
+// while a texture is in flight; pixiApplyPortraitToToken() below is called
+// every redraw and picks up the texture the instant it lands in
+// PIXI_PORTRAIT_TEXTURES, no extra wiring needed. Builder-mode tokens (team
+// builder + wave-transition reposition, js/ui-builder.js) never go through
+// RENDER_PIXI.init() -- pixiUnitPortraitTexture()'s opportunistic
+// pixiRequestPortraitTexture() call covers them too, just without the
+// upfront batch.
+//
+// typeof PIXI.Sprite/PIXI.Assets guards (pixiPortraitsSupported()): the real
+// vendored PixiJS (js/vendor/pixi.min.js) always has both, but several test
+// files register a deliberately minimal fake PIXI stub (tests/test-vfx.js's
+// makeFakePixi(), reused by tests/test-ability-vfx.js) that defines neither
+// -- portrait support degrades to a total no-op there, which is exactly the
+// "missing texture -> current placeholder rendering, must remain fully
+// functional" contract this file has to satisfy for ANY PIXI-shaped object,
+// real or stubbed. Because pixiCreateTokenBase() only creates the sprite/mask
+// pair when pixiPortraitsSupported() was true AT TOKEN-CREATION time, every
+// downstream check is a cheap `if (vis.portraitSprite)` rather than
+// re-checking PIXI's shape every frame.
+var PIXI_PORTRAIT_TEXTURES = {}; // url -> Texture | null (null = load failed)
+var PIXI_PORTRAIT_LOADING = {};  // url -> true while a load is in flight
+
+function pixiPortraitsSupported() {
+    return typeof PIXI !== 'undefined' && typeof PIXI.Sprite === 'function' &&
+        typeof PIXI.Assets !== 'undefined' && typeof PIXI.Assets.load === 'function';
+}
+
+function pixiRequestPortraitTexture(url) {
+    if (!url || !pixiPortraitsSupported()) return;
+    if (PIXI_PORTRAIT_TEXTURES.hasOwnProperty(url) || PIXI_PORTRAIT_LOADING[url]) return;
+    PIXI_PORTRAIT_LOADING[url] = true;
+    PIXI.Assets.load(url).then(function(tex) {
+        PIXI_PORTRAIT_LOADING[url] = false;
+        PIXI_PORTRAIT_TEXTURES[url] = tex || null;
+    }).catch(function() {
+        // Missing file (404) or decode failure -- cache as `null` so this
+        // url is only ever attempted once, not retried every frame.
+        PIXI_PORTRAIT_LOADING[url] = false;
+        PIXI_PORTRAIT_TEXTURES[url] = null;
+    });
+}
+
+// Called once per wave from RENDER_PIXI.init() -- see file-header comment
+// above for why this is the "per-combat preload" half of the spec.
+function pixiPreloadCombatPortraits(cs) {
+    if (!cs || !pixiPortraitsSupported() || typeof getPortraitUrl !== 'function') return;
+    var units = (cs.playerUnits || []).concat(cs.enemyUnits || []);
+    for (var i = 0; i < units.length; i++) {
+        if (!units[i] || !units[i].key) continue;
+        var url = getPortraitUrl(units[i].key);
+        if (url) pixiRequestPortraitTexture(url);
+    }
+}
+
+// `unitLike` needs only `.key` (every combat unit -- including the boss
+// object js/ui-combat.js's startMissionCombat() builds -- and every
+// builder-mode unitLike, js/ui-builder.js's builderUnitLikeFromSlot(), carry
+// one). Returns a real Texture when loaded, null while pending/failed/
+// unsupported -- callers treat null exactly like "no portrait" (current
+// placeholder rendering).
+function pixiUnitPortraitTexture(unitLike) {
+    if (!unitLike || !unitLike.key || !pixiPortraitsSupported() || typeof getPortraitUrl !== 'function') return null;
+    var url = getPortraitUrl(unitLike.key);
+    if (!url) return null;
+    pixiRequestPortraitTexture(url); // opportunistic -- no-op once cached/in flight
+    return PIXI_PORTRAIT_TEXTURES[url] || null;
+}
+
+// Draws (or hides) a token's portrait sprite for the current frame. `vis`
+// must carry the `portraitSprite`/`portraitMask` pair pixiCreateTokenBase()
+// only creates when portraits are supported (see above) -- callers must
+// guard with `if (vis.portraitSprite)` before calling this, which doubles as
+// this function's own no-texture-support short circuit. w/h is the token's
+// current box (already accounts for boss span/evolved size). Returns true
+// when a portrait was actually drawn -- callers use this to switch the base
+// fill to a border-only outline (keeping the element-colored border per
+// spec) instead of the flat tint box, and to hide the redundant element
+// emoji glyph the portrait replaces.
+function pixiApplyPortraitToToken(vis, unitLike, w, h) {
+    var tex = pixiUnitPortraitTexture(unitLike);
+    if (!tex) {
+        vis.portraitSprite.visible = false;
+        return false;
+    }
+    vis.portraitSprite.texture = tex;
+    vis.portraitSprite.width = w;
+    vis.portraitSprite.height = h;
+    vis.portraitSprite.visible = true;
+    vis.portraitMask.clear();
+    vis.portraitMask.roundRect(-w / 2, -h / 2, w, h, 4).fill(0xffffff);
+    return true;
+}
+
 // ---- unit-token factory (Prompt 71, Phase 3.5: reusable outside combat) ----
 //
 // pixiCreateTokenBase() builds the visual chrome every token needs regardless
@@ -487,6 +588,28 @@ function pixiHideUnitTooltip() {
 // tokens use it for the pick-up/swap/move click model.
 function pixiCreateTokenBase(unitLike, layer, rs, onTap) {
     var container = new PIXI.Container();
+
+    // Prompt 83 (Phase 5.6): portrait sprite + its rounded-rect clip mask,
+    // created only when this PIXI (real or stubbed) actually supports them --
+    // see pixiPortraitsSupported()'s comment above. Added BELOW `base` on
+    // purpose: `base` keeps drawing its border/cast-flash/phase-transition-
+    // shimmer/enrage-glow overlays every frame (pixiRedrawToken/
+    // pixiRedrawBuilderToken skip only the OPAQUE tint fill when a portrait
+    // is active, per pixiApplyPortraitToToken's return value), so all of
+    // that existing VFX composites on top of the art instead of being hidden
+    // behind an opaque sprite -- "VFX/animations unchanged" per the spec.
+    // Starts hidden; pixiApplyPortraitToToken() (called every redraw) reveals
+    // it once a texture is actually available.
+    var portraitSprite = null, portraitMask = null;
+    if (pixiPortraitsSupported()) {
+        portraitMask = new PIXI.Graphics();
+        container.addChild(portraitMask);
+        portraitSprite = new PIXI.Sprite();
+        portraitSprite.anchor.set(0.5);
+        portraitSprite.visible = false;
+        portraitSprite.mask = portraitMask;
+        container.addChild(portraitSprite);
+    }
 
     var base = new PIXI.Graphics();
     container.addChild(base);
@@ -530,7 +653,7 @@ function pixiCreateTokenBase(unitLike, layer, rs, onTap) {
 
     layer.addChild(container);
 
-    return { container: container, base: base, ring: ring, emojiText: emojiText, nameText: nameText };
+    return { container: container, base: base, ring: ring, emojiText: emojiText, nameText: nameText, portraitSprite: portraitSprite, portraitMask: portraitMask };
 }
 
 // Builder-mode token (Task 1/Task 2): name/stars/items chip, no hp/mana bars.
@@ -581,7 +704,18 @@ function pixiRedrawBuilderToken(vis, unitLike, row, col, rs, opts) {
 
     var tint = pixiUnitElementColor(unitLike);
     vis.base.clear();
-    vis.base.roundRect(-w / 2, -h / 2, w, h, 4).fill({ color: tint, alpha: 0.85 });
+    // Prompt 83 (Phase 5.6): portrait fills the token when its texture has
+    // loaded (vis.portraitSprite is only non-null when this file's PIXI
+    // supports Sprite/Assets -- see pixiCreateTokenBase's comment); the base
+    // fill drops to a border-only outline so the portrait shows through,
+    // keeping the element-colored border. Falls straight back to the
+    // original flat tint box otherwise -- unchanged behavior.
+    var portraitDrawn = vis.portraitSprite ? pixiApplyPortraitToToken(vis, unitLike, w, h) : false;
+    if (portraitDrawn) {
+        vis.base.roundRect(-w / 2, -h / 2, w, h, 4).stroke({ width: 1.5, color: tint, alpha: 0.95 });
+    } else {
+        vis.base.roundRect(-w / 2, -h / 2, w, h, 4).fill({ color: tint, alpha: 0.85 });
+    }
     if (unitLike.evolved) {
         vis.base.roundRect(-w / 2, -h / 2, w, h, 4).stroke({ width: 1.5, color: 0xe2b714, alpha: 0.9 });
     }
@@ -589,6 +723,7 @@ function pixiRedrawBuilderToken(vis, unitLike, row, col, rs, opts) {
         vis.base.roundRect(-w / 2 - 2, -h / 2 - 2, w + 4, h + 4, 5).stroke({ width: 2.5, color: 0xffffff, alpha: 0.95 });
     }
 
+    vis.emojiText.visible = !portraitDrawn;
     pixiSetTextIfChanged(vis.emojiText, pixiUnitEmoji(unitLike));
     pixiSetFontSizeIfChanged(vis.emojiText, Math.floor(h * 0.4));
     vis.emojiText.y = -h * 0.12;
@@ -744,6 +879,7 @@ function pixiCreateVisual(unit) {
         }
     });
     var container = base0.container, base = base0.base, ring = base0.ring, emojiText = base0.emojiText, nameText = base0.nameText;
+    var portraitSprite = base0.portraitSprite, portraitMask = base0.portraitMask; // Prompt 83 (Phase 5.6)
 
     var hpBack = new PIXI.Graphics();
     var hpChunk = new PIXI.Graphics();
@@ -790,6 +926,8 @@ function pixiCreateVisual(unit) {
         ring: ring,
         emojiText: emojiText,
         nameText: nameText,
+        portraitSprite: portraitSprite,
+        portraitMask: portraitMask,
         hpBack: hpBack,
         hpChunk: hpChunk,
         hpFront: hpFront,
@@ -966,7 +1104,17 @@ function pixiRedrawToken(vis, unit, dtMs) {
     vis.container.scale.set(depthScale * deathScale, depthScale * deathScale * bobScaleY);
 
     vis.base.clear();
-    vis.base.roundRect(-w / 2, -h / 2, w, h, 4).fill({ color: tint, alpha: 0.85 });
+    // Prompt 83 (Phase 5.6): draw the portrait (if its texture has loaded)
+    // filling the token; the base fill drops to a border-only outline so the
+    // element-colored border is kept and the art shows through the hollow
+    // center. Falls straight back to the original flat tint box when
+    // unsupported/not-yet-loaded/no-art -- unchanged behavior.
+    var portraitDrawn = vis.portraitSprite ? pixiApplyPortraitToToken(vis, unit, w, h) : false;
+    if (portraitDrawn) {
+        vis.base.roundRect(-w / 2, -h / 2, w, h, 4).stroke({ width: 2, color: tint, alpha: 0.95 });
+    } else {
+        vis.base.roundRect(-w / 2, -h / 2, w, h, 4).fill({ color: tint, alpha: 0.85 });
+    }
     if (unit.evolved) {
         vis.base.roundRect(-w / 2, -h / 2, w, h, 4).stroke({ width: 1.5, color: 0xe2b714, alpha: 0.9 });
     }
@@ -996,6 +1144,13 @@ function pixiRedrawToken(vis, unit, dtMs) {
         vis.base.roundRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, 6).stroke({ width: 3, color: 0xff2222, alpha: enrageAlpha });
     }
 
+    // Prompt 83: the element emoji is redundant (and visually cluttered) once
+    // a real portrait is filling the token -- hidden rather than removed
+    // (pixiRedrawBuilderToken does the same) so it just reappears if the
+    // texture is ever missing on a later frame (it never is in practice --
+    // PIXI_PORTRAIT_TEXTURES only ever moves from "pending" to a settled
+    // value once -- but this keeps the two states trivially reversible).
+    vis.emojiText.visible = !portraitDrawn;
     pixiSetTextIfChanged(vis.emojiText, pixiUnitEmoji(unit));
     pixiSetFontSizeIfChanged(vis.emojiText, Math.floor(h * 0.4));
     vis.emojiText.y = -h * 0.18;
@@ -1791,6 +1946,14 @@ var RENDER_PIXI = {
         pixiPhaseOverlayShownFor = null;
         PIXI_R.hoveredUnit = null; // Task 4: don't carry a hover/tooltip from the previous wave's now-destroyed token
         pixiHideUnitTooltip();
+
+        // Prompt 83 (Phase 5.6): kick off portrait texture loads for every
+        // unit fighting THIS wave, up front -- "lazy per-combat preload of
+        // the units actually fighting" per the spec. Fire-and-forget: this
+        // never blocks init() or delays the first frame() call, tokens just
+        // draw their placeholder until pixiApplyPortraitToToken() picks up
+        // the resolved texture on a later frame.
+        pixiPreloadCombatPortraits(cs);
 
         // Prompt 76: combat-juice render state is per-wave-session cosmetic
         // only -- reset here so a hit-stop/shake left mid-flight by a wave

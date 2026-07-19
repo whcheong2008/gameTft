@@ -11,5 +11,5 @@
 // js/service-worker.js (cache-name versioning).
 // =============================================================================
 
-var GAME_VERSION = '0.13.0';
+var GAME_VERSION = '0.14.0';
 var GAME_BUILD = 'v0.13.0-ship-ready-1-gcb44dd8';

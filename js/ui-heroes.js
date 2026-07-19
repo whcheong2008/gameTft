@@ -5,10 +5,18 @@
 // ---- P79 helper: hero portrait placeholder ----
 // Heroes have no element, so this is a flat gold-tinted gradient rather than
 // the elemental one units get -- id="hero-portrait-<heroKey>" is the stable
-// hook for Phase 5 art, same convention as js/ui-roster.js's unit portraits.
+// hook, same convention as js/ui-roster.js's unit portraits.
+//
+// Prompt 83 (Phase 5.6): real hero art (assets/portraits/hero_<key>.webp,
+// resolved via getPortraitUrl()) layers over the gradient/emoji exactly like
+// js/ui-roster.js's p79PortraitHtml() -- see that function's comment for the
+// onerror-hides-itself fallback mechanism, identical here.
 function p79HeroPortraitHtml(heroKey, sizeClass) {
+    var portraitUrl = (typeof getPortraitUrl === 'function') ? getPortraitUrl(heroKey) : null;
+    var img = portraitUrl ?
+        ('<img src="' + portraitUrl + '" alt="" class="p79-portrait-img" onerror="this.style.display=\'none\';" />') : '';
     return '<div id="hero-portrait-' + heroKey + '" class="p79-portrait' + (sizeClass ? ' ' + sizeClass : '') +
-        '" style="background:radial-gradient(circle at 32% 26%, rgba(226,183,20,0.35), var(--sv-bg-0) 78%);">👑</div>';
+        '" style="background:radial-gradient(circle at 32% 26%, rgba(226,183,20,0.35), var(--sv-bg-0) 78%);">' + img + '👑</div>';
 }
 
 // ---- Hero Management Screen (Philosophy-Based) ----
