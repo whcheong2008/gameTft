@@ -1100,6 +1100,170 @@ body {
 .text-muted { color: var(--sv-text-3); }
 .mt-sm { margin-top: 6px; }
 .mt-md { margin-top: 12px; }
+
+/* =============================================================================
+   P79 COLLECTION -- Prompt 79 (Phase 6.4): Collection / Items / Heroes / Codex
+   screens onto the design system. Scope: js/ui-roster.js, js/ui-items.js,
+   js/ui-heroes.js, js/ui-lore.js. Every rule below is either (a) a brand-new
+   .p79-* class those files now emit, or (b) a same-specificity override of a
+   handful of pre-existing id rules earlier in this stylesheet -- appended
+   here rather than edited in place so this prompt's diff stays confined to
+   new lines only (parallel workers own ui-gacha.js and ui-combat.js/
+   ui-missions.js + their own appended blocks). Cascade order (this block
+   loads last) is what makes the (b) overrides win over the earlier
+   same-specificity id rules without touching them.
+   ============================================================================= */
+
+/* ---- Shared: element-tinted portrait placeholder (Phase 5 art hook).
+   Unit cards/detail get id="unit-portrait-<unitKey>" (stable across
+   restyles, per-unit gradient via inline style using --sv-el-<element>);
+   heroes get id="hero-portrait-<heroKey>" (no element, flat gold gradient).
+   Both show a giant emoji glyph as the placeholder "art" until Phase 5. ---- */
+.p79-portrait {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; aspect-ratio: 1 / 1; border-radius: var(--sv-radius-sm);
+    background: var(--sv-bg-0);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+    font-size: 26px; line-height: 1; overflow: hidden; flex-shrink: 0;
+}
+.p79-portrait-modal { font-size: 52px; border-radius: var(--sv-radius-md); }
+.p79-portrait-sm { font-size: 18px; }
+
+/* ---- Roster / Collection unit cards (.sv-chip family: tier-bordered tiles) ---- */
+.p79-unit-card {
+    background: var(--sv-bg-2); border: 2px solid var(--sv-border);
+    border-radius: var(--sv-radius-md); padding: var(--sv-sp-2);
+    display: flex; flex-direction: column; gap: 4px; cursor: pointer;
+    transition: border-color var(--sv-transition-fast), transform var(--sv-transition-fast), box-shadow var(--sv-transition-fast);
+}
+.p79-unit-card:hover { border-color: var(--sv-gold); transform: translateY(-2px); box-shadow: var(--sv-shadow-sm); }
+.p79-unit-card.tier-1 { border-color: var(--sv-tier-1); }
+.p79-unit-card.tier-2 { border-color: var(--sv-tier-2); }
+.p79-unit-card.tier-3 { border-color: var(--sv-tier-3); }
+.p79-unit-card.tier-4 { border-color: var(--sv-tier-4); }
+.p79-unit-card.tier-5 { border-color: var(--sv-tier-5); box-shadow: 0 0 8px rgba(255,215,0,0.2); }
+.p79-unit-card.p79-evolved { border-color: var(--sv-gold); box-shadow: 0 0 10px rgba(226,183,20,0.5); }
+.p79-unit-card.p79-not-owned { opacity: 0.42; }
+.p79-unit-card.p79-not-owned:hover { transform: none; }
+
+.p79-card-head { display: flex; gap: 8px; align-items: flex-start; }
+.p79-card-body { flex: 1; min-width: 0; }
+.p79-card-name { font-weight: bold; font-size: 13px; color: var(--sv-text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p79-card-meta { font-size: 11px; color: var(--sv-text-3); }
+.p79-card-stats { font-size: 11px; color: var(--sv-text-2); }
+.p79-card-ability { font-size: 10px; color: var(--sv-blue); margin-top: 2px; line-height: 1.3; }
+.p79-card-ability-desc { font-size: 9px; color: var(--sv-text-3); line-height: 1.2; }
+.p79-card-tag { font-size: 10px; color: var(--sv-gold); margin-top: 2px; }
+.p79-card-tag-muted { font-size: 10px; color: var(--sv-text-3); margin-top: 4px; }
+
+.p79-star-pips { display: flex; gap: 2px; }
+.p79-star-pip {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(255,255,255,0.12); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18);
+}
+.p79-star-pip.filled { background: var(--sv-gold); box-shadow: 0 0 4px rgba(226,183,20,0.75); }
+.p79-star-pip.lg { width: 12px; height: 12px; }
+
+.p79-btn-row { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+.p79-btn-green { background: var(--sv-green); color: var(--sv-bg-1); }
+.p79-btn-green:hover { background: #7de88a; }
+.p79-btn-danger { background: #3a1a1a; color: #ff8877; }
+.p79-btn-danger:hover { background: #4a2222; }
+
+/* ---- Filter/sort bar (.sv-tab family) ---- */
+.p79-filter-bar { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.p79-filter-row { display: flex; flex-wrap: wrap; gap: 2px; align-items: center; }
+.p79-filter-label { font-size: 11px; color: var(--sv-text-3); margin-right: 4px; }
+.p79-filter-row .sv-tab {
+    font-size: 11px; padding: 3px 9px; border: 1px solid var(--sv-border);
+    border-radius: var(--sv-radius-sm); border-bottom: 1px solid var(--sv-border);
+}
+.p79-filter-row .sv-tab.active { background: var(--sv-gold); color: var(--sv-bg-1); border-color: var(--sv-gold); }
+.p79-filter-input, .p79-filter-select {
+    background: var(--sv-bg-2); color: var(--sv-text-2); border: 1px solid var(--sv-border);
+    border-radius: var(--sv-radius-sm); padding: 3px 6px; font-size: 11px;
+}
+
+/* ---- Unit detail: two-column .sv-modal sheet ----
+   Overrides the pre-existing #unit-detail-panel rule (same id, this block
+   loads later -- see the header note) to widen the sheet for the new
+   portrait+stats layout; .p79-ud-grid only splits into 2 columns >=560px so
+   narrow viewports keep a single readable column. ---- */
+#unit-detail-panel { max-width: 640px; }
+.p79-ud-grid { display: flex; flex-direction: column; gap: var(--sv-sp-4); }
+@media (min-width: 560px) {
+    .p79-ud-grid { display: grid; grid-template-columns: 180px 1fr; align-items: start; }
+}
+.p79-ud-left { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.p79-ud-left .p79-portrait { width: 140px; }
+.p79-ud-right { min-width: 0; }
+
+/* ---- Item bench / forge / gem workshop / codex ---- */
+.p79-modal-md { max-width: 600px; }
+.p79-modal-lg { max-width: 760px; }
+.p79-item-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 6px 10px; margin-bottom: 4px; background: var(--sv-bg-2);
+    border: 1px solid var(--sv-border); border-radius: var(--sv-radius-sm);
+}
+.p79-item-row.tier-1 { border-color: var(--sv-tier-1); }
+.p79-item-row.tier-2 { border-color: var(--sv-tier-2); }
+.p79-item-row.tier-3 { border-color: var(--sv-tier-3); }
+.p79-item-row.tier-4 { border-color: var(--sv-tier-4); }
+.p79-item-row.tier-5 { border-color: var(--sv-tier-5); }
+.p79-item-row.p79-mythic { box-shadow: 0 0 8px rgba(255,69,0,0.35); }
+
+.p79-item-tile {
+    background: var(--sv-bg-2); border: 2px solid var(--sv-border); border-radius: var(--sv-radius-sm);
+    padding: 6px; text-align: center; cursor: pointer; position: relative;
+}
+.p79-item-tile.tier-1 { border-color: var(--sv-tier-1); }
+.p79-item-tile.tier-2 { border-color: var(--sv-tier-2); }
+.p79-item-tile.tier-3 { border-color: var(--sv-tier-3); }
+.p79-item-tile.tier-4 { border-color: var(--sv-tier-4); }
+.p79-item-tile.tier-5 { border-color: var(--sv-tier-5); }
+.p79-item-tile.selected { box-shadow: 0 0 8px var(--sv-gold); }
+.p79-item-tile.equipped { opacity: 0.6; }
+
+.p79-affix-line { font-size: 11px; color: var(--sv-blue); padding-left: 4px; }
+.p79-cap-line { font-size: 12px; margin-bottom: 4px; }
+
+/* ---- Hero cards + skill tree connected pips ---- */
+.p79-hero-card {
+    background: var(--sv-bg-2); border: 1px solid var(--sv-border); border-radius: var(--sv-radius-md);
+    padding: 12px; cursor: pointer; display: flex; gap: 10px;
+    transition: border-color var(--sv-transition-fast);
+}
+.p79-hero-card:hover { border-color: var(--sv-gold); }
+.p79-hero-card.selected { border-color: var(--sv-gold); box-shadow: var(--sv-shadow-sm); }
+.p79-hero-card .p79-portrait { width: 56px; }
+.p79-hero-card-body { flex: 1; min-width: 0; }
+
+.p79-skill-branch { flex: 1; background: var(--sv-bg-2); border: 1px solid var(--sv-border); border-radius: var(--sv-radius-sm); padding: 10px; }
+.p79-skill-tier { position: relative; padding-left: 16px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--sv-border); }
+.p79-skill-tier:last-child { border-bottom: none; }
+.p79-skill-tier::before {
+    content: ''; position: absolute; left: 4px; top: 2px; bottom: -6px; width: 2px; background: var(--sv-border);
+}
+.p79-skill-tier:last-child::before { bottom: 2px; }
+.p79-skill-node { position: relative; padding: 6px 6px 6px 4px; border-radius: var(--sv-radius-sm); font-size: 10px; border: 1px solid var(--sv-border); background: var(--sv-bg-0); margin-bottom: 4px; }
+.p79-skill-node:last-child { margin-bottom: 0; }
+.p79-skill-node::before {
+    content: ''; position: absolute; left: -16px; top: 9px; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--sv-border); box-shadow: 0 0 0 2px var(--sv-bg-2);
+}
+.p79-skill-node.is-learned { background: #1a3a1a; border-color: var(--sv-green); }
+.p79-skill-node.is-learned::before { background: var(--sv-green); box-shadow: 0 0 4px var(--sv-green), 0 0 0 2px var(--sv-bg-2); }
+.p79-skill-node.is-available { border-color: var(--sv-blue); cursor: pointer; }
+.p79-skill-node.is-available:hover { border-color: var(--sv-gold); }
+.p79-skill-node.is-available::before { background: var(--sv-blue); box-shadow: 0 0 0 2px var(--sv-bg-2); }
+.p79-skill-node.is-locked { color: var(--sv-text-3); }
+.p79-skill-node.is-locked::before { background: #444; box-shadow: 0 0 0 2px var(--sv-bg-2); }
+
+/* ---- Lore Codex: light pass -- tokens + consistent tabs only ---- */
+.p79-modal-accent-purple { border-color: #b388ff; }
+.p79-lore-entry { margin-bottom: 10px; padding: 10px 12px; background: var(--sv-bg-2); border-radius: var(--sv-radius-sm); border: 1px solid var(--sv-border); }
+.p79-lore-entry.locked { background: var(--sv-bg-0); border-color: #222; }
     </style>
 </head>
 <body>

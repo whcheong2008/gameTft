@@ -1,4 +1,15 @@
 // ui-heroes.js -- hero management screens (split from ui-v2.js)
+// Prompt 79 (Phase 6.4): restyled onto the design system (game-v2.html's
+// "P79 COLLECTION" CSS block) -- structure/logic unchanged, presentation only.
+
+// ---- P79 helper: hero portrait placeholder ----
+// Heroes have no element, so this is a flat gold-tinted gradient rather than
+// the elemental one units get -- id="hero-portrait-<heroKey>" is the stable
+// hook for Phase 5 art, same convention as js/ui-roster.js's unit portraits.
+function p79HeroPortraitHtml(heroKey, sizeClass) {
+    return '<div id="hero-portrait-' + heroKey + '" class="p79-portrait' + (sizeClass ? ' ' + sizeClass : '') +
+        '" style="background:radial-gradient(circle at 32% 26%, rgba(226,183,20,0.35), var(--sv-bg-0) 78%);">👑</div>';
+}
 
 // ---- Hero Management Screen (Philosophy-Based) ----
 
@@ -25,25 +36,34 @@ function renderHeroScreen() {
         if (heroState._away) continue;
 
         var heroCard = document.createElement('div');
-        heroCard.style.cssText = 'background:#16213e; border:1px solid ' + (selectedHeroKey === hKey ? '#e2b714' : '#2a3a5e') + '; border-radius:8px; padding:12px; cursor:pointer;';
+        heroCard.className = 'p79-hero-card' + (selectedHeroKey === hKey ? ' selected' : '');
         heroCard.onclick = (function(hk) {
             return function() { showHeroSkillTree(hk); };
         })(hKey);
 
+        heroCard.innerHTML = p79HeroPortraitHtml(hKey);
+
+        var body = document.createElement('div');
+        body.className = 'p79-hero-card-body';
+
         var title = document.createElement('div');
-        title.style.cssText = 'font-weight:bold; font-size:14px; margin-bottom:4px;';
+        title.className = 'p79-card-name';
+        title.style.fontSize = '14px';
         title.textContent = heroData.name + ' (Lv ' + heroState.level + ')';
 
         var philo = document.createElement('div');
-        philo.style.cssText = 'font-size:11px; color:#e2b714; margin-bottom:2px;';
+        philo.className = 'text-gold';
+        philo.style.cssText = 'font-size:11px; margin-bottom:2px;';
         philo.textContent = heroData.philosophy;
 
         var quote = document.createElement('div');
-        quote.style.cssText = 'font-size:12px; color:#aaa; font-style:italic; margin-bottom:4px;';
+        quote.className = 'text-muted';
+        quote.style.cssText = 'font-size:12px; font-style:italic; margin-bottom:4px;';
         quote.textContent = '"' + heroData.quote + '"';
 
         var desc = document.createElement('div');
-        desc.style.cssText = 'font-size:10px; color:#777; margin-bottom:4px;';
+        desc.className = 'text-muted';
+        desc.style.cssText = 'font-size:10px; margin-bottom:4px;';
         desc.textContent = heroData.description;
 
         // XP bar
@@ -51,30 +71,30 @@ function renderHeroScreen() {
         if (heroState.level < HERO_LEVEL_CAP && !heroState.isDead) {
             var xpNeeded = getHeroXPToNext(heroState.level);
             var xpPct = xpNeeded > 0 ? Math.floor((heroState.xp / xpNeeded) * 100) : 100;
-            xpBarDiv.innerHTML = '<div style="background:#333; height:4px; border-radius:2px; margin-top:4px;">' +
-                '<div style="background:#e2b714; height:100%; width:' + xpPct + '%; border-radius:2px;"></div></div>' +
-                '<div style="font-size:9px; color:#888;">' + heroState.xp + '/' + xpNeeded + ' XP</div>';
+            xpBarDiv.innerHTML = '<div class="sv-bar sv-bar-xp" style="margin-top:4px;"><div class="sv-bar-fill" style="width:' + xpPct + '%;"></div></div>' +
+                '<div class="text-muted" style="font-size:9px;">' + heroState.xp + '/' + xpNeeded + ' XP</div>';
         } else if (heroState.isDead) {
-            xpBarDiv.innerHTML = '<div style="font-size:9px; color:#ff6666;">FALLEN</div>';
+            xpBarDiv.innerHTML = '<div class="text-red" style="font-size:9px;">FALLEN</div>';
         } else {
-            xpBarDiv.innerHTML = '<div style="font-size:9px; color:#e2b714;">MAX LEVEL</div>';
+            xpBarDiv.innerHTML = '<div class="text-gold" style="font-size:9px;">MAX LEVEL</div>';
         }
 
         var status = document.createElement('div');
-        status.style.cssText = 'font-size:11px; color:#888; margin-top:4px;';
+        status.style.cssText = 'font-size:11px; margin-top:4px;';
         if (heroState.isDead) {
             status.textContent = 'Lost in R4';
-            status.style.color = '#ff6666';
+            status.className = 'text-red';
         } else if (heroState.assignedUnit) {
             status.textContent = 'Assigned to ' + getUnitDisplayName(heroState.assignedUnit);
-            status.style.color = '#6bcb77';
+            status.className = 'text-green';
         } else {
             status.textContent = 'Not assigned';
+            status.className = 'text-muted';
         }
 
         // Equipment summary on hero card
         var equipDiv = document.createElement('div');
-        equipDiv.style.cssText = 'font-size:10px; color:#8bbcff; margin-top:4px;';
+        equipDiv.style.cssText = 'font-size:10px; color:var(--sv-blue); margin-top:4px;';
         if (heroState.assignedUnit && !heroState.isDead) {
             var eqItems = getEquippedItems(sd, heroState.assignedUnit);
             if (eqItems.length > 0) {
@@ -82,19 +102,20 @@ function renderHeroScreen() {
                 for (var eq = 0; eq < eqItems.length; eq++) {
                     eqParts.push(getItemEmoji(eqItems[eq]) + getItemName(eqItems[eq]));
                 }
-                equipDiv.innerHTML = '\u2694 ' + eqParts.join(' · ');
+                equipDiv.innerHTML = '⚔ ' + eqParts.join(' · ');
             } else {
-                equipDiv.innerHTML = '<span style="color:#666;">No equipment</span>';
+                equipDiv.innerHTML = '<span class="text-muted">No equipment</span>';
             }
         }
 
-        heroCard.appendChild(title);
-        heroCard.appendChild(philo);
-        heroCard.appendChild(quote);
-        heroCard.appendChild(desc);
-        heroCard.appendChild(xpBarDiv);
-        heroCard.appendChild(status);
-        heroCard.appendChild(equipDiv);
+        body.appendChild(title);
+        body.appendChild(philo);
+        body.appendChild(quote);
+        body.appendChild(desc);
+        body.appendChild(xpBarDiv);
+        body.appendChild(status);
+        body.appendChild(equipDiv);
+        heroCard.appendChild(body);
         heroList.appendChild(heroCard);
     }
 
@@ -102,8 +123,9 @@ function renderHeroScreen() {
 
     // === EQUIPMENT OVERVIEW PANEL ===
     var eqOverview = document.createElement('div');
-    eqOverview.style.cssText = 'margin-top:16px; padding:12px; background:#16213e; border:1px solid #2a3a5e; border-radius:8px;';
-    eqOverview.innerHTML = '<div style="font-weight:bold; color:#e2b714; margin-bottom:8px; font-size:14px;">\u2694 Equipment Overview</div>';
+    eqOverview.className = 'sv-panel';
+    eqOverview.style.cssText = 'margin-top:16px; padding:12px;';
+    eqOverview.innerHTML = '<div style="font-weight:bold; color:var(--sv-gold); margin-bottom:8px; font-size:14px;">⚔ Equipment Overview</div>';
 
     var roster = getRoster(sd);
     var anyEquipment = false;
@@ -117,32 +139,32 @@ function renderHeroScreen() {
 
         anyEquipment = true;
         var unitTmpl = rUnit.template;
-        var heroLabel = unitHeroKey ? (' \u2014 ' + HERO_DATA[unitHeroKey].name) : ' \u2014 No Hero';
+        var heroLabel = unitHeroKey ? (' — ' + HERO_DATA[unitHeroKey].name) : ' — No Hero';
         var canEquip = !!unitHeroKey;
 
         var unitRow = document.createElement('div');
-        unitRow.style.cssText = 'margin-bottom:8px; padding:6px; border-bottom:1px solid #222;';
+        unitRow.style.cssText = 'margin-bottom:8px; padding:6px; border-bottom:1px solid var(--sv-border);';
 
-        var unitHeader = '<div style="font-size:12px; font-weight:bold; color:' + (canEquip ? '#ccc' : '#666') + ';">' +
-            ELEMENTS[unitTmpl.element].emoji + ' ' + unitTmpl.name + ' ' + rUnit.stars + '\u2605' +
-            '<span style="color:#e2b714; font-weight:normal;">' + heroLabel + '</span></div>';
+        var unitHeader = '<div style="font-size:12px; font-weight:bold; color:' + (canEquip ? 'var(--sv-text-2)' : 'var(--sv-text-3)') + ';">' +
+            ELEMENTS[unitTmpl.element].emoji + ' ' + unitTmpl.name + ' ' + rUnit.stars + '★' +
+            '<span class="text-gold" style="font-weight:normal;">' + heroLabel + '</span></div>';
 
         var slotNames = ['weapon', 'helm', 'chest', 'gauntlets', 'boots', 'offhand', 'accessory1', 'accessory2'];
-        var slotLabels = { weapon: '\u2694Wpn', helm: '\u{1F3A9}Hlm', chest: '\u{1F6E1}Chest', gauntlets: '\u{1F94A}Glt', boots: '\u{1F462}Bts', offhand: '\u{1F52E}Off', accessory1: '\u{1F48D}Acc1', accessory2: '\u{1F4FF}Acc2' };
+        var slotLabels = { weapon: '⚔Wpn', helm: '\u{1F3A9}Hlm', chest: '\u{1F6E1}Chest', gauntlets: '\u{1F94A}Glt', boots: '\u{1F462}Bts', offhand: '\u{1F52E}Off', accessory1: '\u{1F48D}Acc1', accessory2: '\u{1F4FF}Acc2' };
         var slotsHtml = '<div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:4px;">';
 
         for (var si = 0; si < slotNames.length; si++) {
             var slotItem = getEquipmentInSlot(sd, rUnit.key, slotNames[si]);
             if (slotItem) {
                 var rc = getItemRarityColor(slotItem);
-                slotsHtml += '<div style="padding:2px 5px; background:#1a2a4e; border:1px solid ' + rc + '; border-radius:3px; font-size:9px;">' +
+                slotsHtml += '<div class="sv-chip" style="border-color:' + rc + ';">' +
                     '<span style="color:' + rc + ';">' + getItemEmoji(slotItem) + '</span> ' +
-                    '<span style="color:#ccc;">' + getItemName(slotItem) + '</span>' +
-                    (slotItem.enhancement > 0 ? '<span style="color:#6bcb77;">+' + slotItem.enhancement + '</span>' : '') +
+                    '<span style="color:var(--sv-text-2);">' + getItemName(slotItem) + '</span>' +
+                    (slotItem.enhancement > 0 ? '<span class="text-green">+' + slotItem.enhancement + '</span>' : '') +
                     '</div>';
             } else if (canEquip) {
-                slotsHtml += '<div style="padding:2px 5px; background:#111; border:1px solid #333; border-radius:3px; font-size:9px; color:#555;">' +
-                    (slotLabels[slotNames[si]] || slotNames[si]) + ' \u2014</div>';
+                slotsHtml += '<div class="sv-chip text-muted">' +
+                    (slotLabels[slotNames[si]] || slotNames[si]) + ' —</div>';
             }
         }
         slotsHtml += '</div>';
@@ -151,7 +173,7 @@ function renderHeroScreen() {
         var unequippedItems = sd.equipment && sd.equipment.inventory ? sd.equipment.inventory.filter(function(it) { return !it.equipped; }) : [];
         var equipBtnHtml = '';
         if (canEquip && unequippedItems.length > 0) {
-            equipBtnHtml = '<button class="hero-equip-btn" data-unit="' + rUnit.key + '" style="margin-top:4px; font-size:10px; padding:2px 8px; background:#2a3a5e; color:#e2b714; border:1px solid #4a5a7e; border-radius:3px; cursor:pointer;">Equip Item</button>';
+            equipBtnHtml = '<button class="sv-btn hero-equip-btn" data-unit="' + rUnit.key + '" style="margin-top:4px; font-size:10px; padding:2px 8px;">Equip Item</button>';
         }
 
         unitRow.innerHTML = unitHeader + slotsHtml + equipBtnHtml;
@@ -159,7 +181,7 @@ function renderHeroScreen() {
     }
 
     if (!anyEquipment) {
-        eqOverview.innerHTML += '<div style="color:#666; font-size:12px;">No hero-equipped units yet. Assign heroes to units to enable equipment.</div>';
+        eqOverview.innerHTML += '<div class="text-muted" style="font-size:12px;">No hero-equipped units yet. Assign heroes to units to enable equipment.</div>';
     }
 
     container.appendChild(eqOverview);
@@ -182,23 +204,24 @@ function showQuickEquipPanel(unitKey) {
     var unitName = unitTmpl ? unitTmpl.name : unitKey;
 
     var overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:1000;';
+    overlay.className = 'sv-modal-backdrop';
+    overlay.style.display = 'flex';
 
     var panel = document.createElement('div');
-    panel.style.cssText = 'background:#1a1a2e; border:1px solid #444; border-radius:10px; padding:20px; max-width:500px; width:90%; max-height:80vh; overflow-y:auto;';
+    panel.className = 'sv-modal-panel p79-modal-md';
 
-    panel.innerHTML = '<div style="font-weight:bold; color:#e2b714; margin-bottom:12px; font-size:14px;">\u2694 Equip Item on ' + unitName + '</div>';
+    panel.innerHTML = '<div style="font-weight:bold; color:var(--sv-gold); margin-bottom:12px; font-size:14px;">⚔ Equip Item on ' + unitName + '</div>';
 
     // Show currently equipped
     var equipped = getEquippedItems(sd, unitKey);
     if (equipped.length > 0) {
-        panel.innerHTML += '<div style="font-size:11px; color:#888; margin-bottom:8px;">Currently Equipped:</div>';
+        panel.innerHTML += '<div class="text-muted" style="font-size:11px; margin-bottom:8px;">Currently Equipped:</div>';
         for (var ce = 0; ce < equipped.length; ce++) {
             var ceq = equipped[ce];
             var rc = getItemRarityColor(ceq);
-            panel.innerHTML += '<div style="padding:4px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222;">' +
+            panel.innerHTML += '<div style="padding:4px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--sv-border);">' +
                 '<span style="font-size:11px; color:' + rc + ';">' + getItemEmoji(ceq) + ' ' + getItemName(ceq) + ' [' + ceq.slot + ']</span>' +
-                '<button class="qe-unequip" data-item-id="' + ceq.id + '" style="font-size:10px; padding:1px 6px; background:#553333; color:#fff; border:1px solid #884444; border-radius:3px; cursor:pointer;">Unequip</button>' +
+                '<button class="sv-btn p79-btn-danger qe-unequip" data-item-id="' + ceq.id + '" style="font-size:10px; padding:1px 6px;">Unequip</button>' +
                 '</div>';
         }
     }
@@ -206,23 +229,23 @@ function showQuickEquipPanel(unitKey) {
     // Show available items
     var available = sd.equipment && sd.equipment.inventory ? sd.equipment.inventory.filter(function(it) { return !it.equipped; }) : [];
     if (available.length > 0) {
-        panel.innerHTML += '<div style="font-size:11px; color:#888; margin-top:8px; margin-bottom:4px;">Available (' + available.length + '):</div>';
+        panel.innerHTML += '<div class="text-muted" style="font-size:11px; margin-top:8px; margin-bottom:4px;">Available (' + available.length + '):</div>';
         for (var ai = 0; ai < available.length; ai++) {
             var avItem = available[ai];
             var arc = getItemRarityColor(avItem);
             var statDesc = typeof getItemStatDescription === 'function' ? getItemStatDescription(avItem) : '';
-            panel.innerHTML += '<div class="qe-equip-item" data-item-id="' + avItem.id + '" style="padding:4px 6px; cursor:pointer; border-bottom:1px solid #222; font-size:11px;">' +
+            panel.innerHTML += '<div class="qe-equip-item" data-item-id="' + avItem.id + '" style="padding:4px 6px; cursor:pointer; border-bottom:1px solid var(--sv-border); font-size:11px;">' +
                 '<span style="color:' + arc + ';">' + getItemEmoji(avItem) + ' ' + getItemName(avItem) + '</span>' +
-                ' <span style="color:#888;">[' + avItem.slot + '] T' + (avItem.tier || '?') + '</span>' +
-                (statDesc ? '<div style="font-size:9px; color:#666; margin-top:1px;">' + statDesc + '</div>' : '') +
+                ' <span class="text-muted">[' + avItem.slot + '] T' + (avItem.tier || '?') + '</span>' +
+                (statDesc ? '<div class="text-muted" style="font-size:9px; margin-top:1px;">' + statDesc + '</div>' : '') +
                 '</div>';
         }
     } else {
-        panel.innerHTML += '<div style="font-size:11px; color:#666; margin-top:8px;">No unequipped items available.</div>';
+        panel.innerHTML += '<div class="text-muted" style="font-size:11px; margin-top:8px;">No unequipped items available.</div>';
     }
 
     var closeBtn = document.createElement('button');
-    closeBtn.className = 'btn-secondary';
+    closeBtn.className = 'sv-btn';
     closeBtn.style.cssText = 'margin-top:12px; padding:8px 16px; font-size:12px;';
     closeBtn.textContent = 'Done';
     closeBtn.onclick = function() { overlay.remove(); renderHeroScreen(); };
@@ -277,30 +300,36 @@ function showHeroSkillTree(heroKey) {
     if (!heroState || !heroData || !tree) return;
 
     var overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:1000;';
+    overlay.className = 'sv-modal-backdrop';
+    overlay.style.display = 'flex';
 
     var panel = document.createElement('div');
-    panel.style.cssText = 'background:#1a1a2e; border:1px solid #444; border-radius:10px; padding:20px; max-width:700px; width:90%; max-height:80vh; overflow-y:auto;';
+    panel.className = 'sv-modal-panel p79-modal-lg';
 
     // Header
     var pointsSpent = getHeroPointsSpent(heroState);
     var header = document.createElement('div');
-    header.style.cssText = 'text-align:center; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid #333;';
-    header.innerHTML = '<div style="font-size:20px; font-weight:bold;">' + heroData.name + '</div>' +
-        '<div style="color:#e2b714; font-size:12px;">' + heroData.philosophy + '</div>' +
-        '<div style="color:#aaa; font-size:13px;">Lv ' + heroState.level + ' / 20</div>' +
-        '<div style="color:#e2b714; font-size:12px; margin-top:4px;">Points Available: ' + (20 - pointsSpent) + ' / 20</div>';
+    header.style.cssText = 'text-align:center; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--sv-border);';
+    header.innerHTML = p79HeroPortraitHtml(heroKey, 'p79-portrait-sm') +
+        '<div style="font-size:20px; font-weight:bold; color:var(--sv-text-1); margin-top:6px;">' + heroData.name + '</div>' +
+        '<div class="text-gold" style="font-size:12px;">' + heroData.philosophy + '</div>' +
+        '<div class="text-muted" style="font-size:13px;">Lv ' + heroState.level + ' / 20</div>' +
+        '<div class="text-gold" style="font-size:12px; margin-top:4px;">Points Available: ' + (20 - pointsSpent) + ' / 20</div>';
 
     // Assigned unit
     if (heroState.assignedUnit) {
-        header.innerHTML += '<div style="color:#6bcb77; font-size:11px; margin-top:4px;">Assigned to: ' + getUnitDisplayName(heroState.assignedUnit) + '</div>';
+        header.innerHTML += '<div class="text-green" style="font-size:11px; margin-top:4px;">Assigned to: ' + getUnitDisplayName(heroState.assignedUnit) + '</div>';
     }
     if (heroState.isDead) {
-        header.innerHTML += '<div style="color:#ff6666; font-size:12px; margin-top:4px; font-weight:bold;">FALLEN - Skills preserved</div>';
+        header.innerHTML += '<div class="text-red" style="font-size:12px; margin-top:4px; font-weight:bold;">FALLEN - Skills preserved</div>';
     }
     panel.appendChild(header);
 
-    // Two branches side by side
+    // Two branches side by side -- rendered as .p79-skill-branch columns,
+    // each tier a .p79-skill-tier with a connector line, each node a
+    // .p79-skill-node "pip" whose ::before dot carries the
+    // learned/available/locked state color (see the P79 COLLECTION CSS
+    // block). Click wiring (investPoint) is unchanged.
     var branchesContainer = document.createElement('div');
     branchesContainer.style.cssText = 'display:flex; gap:12px; margin-bottom:16px;';
 
@@ -311,15 +340,16 @@ function showHeroSkillTree(heroKey) {
         if (!branchData || !tree[branch]) continue;
 
         var branchPanel = document.createElement('div');
-        branchPanel.style.cssText = 'flex:1; background:#16213e; border:1px solid #2a3a5e; border-radius:6px; padding:10px;';
+        branchPanel.className = 'p79-skill-branch';
 
         var branchTitle = document.createElement('div');
-        branchTitle.style.cssText = 'font-weight:bold; font-size:12px; color:#e2b714; margin-bottom:4px; text-align:center;';
+        branchTitle.style.cssText = 'font-weight:bold; font-size:12px; color:var(--sv-gold); margin-bottom:4px; text-align:center;';
         branchTitle.textContent = branch + ': ' + branchData.name;
         branchPanel.appendChild(branchTitle);
 
         var branchDesc = document.createElement('div');
-        branchDesc.style.cssText = 'font-size:9px; color:#888; margin-bottom:8px; text-align:center;';
+        branchDesc.className = 'text-muted';
+        branchDesc.style.cssText = 'font-size:9px; margin-bottom:8px; text-align:center;';
         branchDesc.textContent = branchData.description;
         branchPanel.appendChild(branchDesc);
 
@@ -329,38 +359,31 @@ function showHeroSkillTree(heroKey) {
             if (!tierNodes) continue;
 
             var tierDiv = document.createElement('div');
-            tierDiv.style.cssText = 'margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid #2a3a5e;';
+            tierDiv.className = 'p79-skill-tier';
 
             var tierLabel = document.createElement('div');
-            tierLabel.style.cssText = 'font-size:10px; color:#888; margin-bottom:4px; font-weight:bold;';
+            tierLabel.className = 'text-muted';
+            tierLabel.style.cssText = 'font-size:10px; margin-bottom:4px; font-weight:bold;';
             tierLabel.textContent = 'T' + tier + ' (Cost: ' + getHeroSkillCost(tier) + ', Req: L' + getHeroTierLevelReq(tier) + ')';
             tierDiv.appendChild(tierLabel);
-
-            var choicesDiv = document.createElement('div');
-            choicesDiv.style.cssText = 'display:flex; flex-direction:column; gap:4px;';
 
             for (var ci = 0; ci < tierNodes.length; ci++) {
                 var node = tierNodes[ci];
                 var nodeDiv = document.createElement('div');
-                nodeDiv.style.cssText = 'padding:6px; border-radius:4px; font-size:10px; border:1px solid #444; background:#0d0d1a;';
 
                 var isInvested = heroState.investedNodes && heroState.investedNodes.indexOf(node.id) >= 0;
                 var canInvest = !heroState.isDead && canUnlockNode(sd, heroKey, node.id);
                 var levelLocked = heroState.level < node.levelReq;
 
                 if (isInvested) {
-                    nodeDiv.style.background = '#1a3a1a';
-                    nodeDiv.style.borderColor = '#6bcb77';
-                    nodeDiv.style.color = '#6bcb77';
-                    nodeDiv.style.fontWeight = 'bold';
-                    nodeDiv.innerHTML = '<div>' + node.name + '</div><div style="font-size:9px; color:#8bc78b; margin-top:2px;">' + node.effect + '</div>';
+                    nodeDiv.className = 'p79-skill-node is-learned';
+                    nodeDiv.innerHTML = '<div style="color:var(--sv-green); font-weight:bold;">' + node.name + '</div><div style="font-size:9px; color:#8bc78b; margin-top:2px;">' + node.effect + '</div>';
                 } else if (levelLocked) {
-                    nodeDiv.style.color = '#666';
+                    nodeDiv.className = 'p79-skill-node is-locked';
                     nodeDiv.textContent = '? (Requires Lv ' + node.levelReq + ')';
                 } else if (canInvest) {
-                    nodeDiv.style.cursor = 'pointer';
-                    nodeDiv.style.borderColor = '#4488ff';
-                    nodeDiv.innerHTML = '<div style="color:#88bbff;">' + node.name + '</div><div style="font-size:9px; color:#aaa; margin-top:2px;">' + node.effect + '</div>';
+                    nodeDiv.className = 'p79-skill-node is-available';
+                    nodeDiv.innerHTML = '<div style="color:var(--sv-blue);">' + node.name + '</div><div class="text-muted" style="font-size:9px; margin-top:2px;">' + node.effect + '</div>';
                     nodeDiv.onclick = (function(hk, nId, ov) {
                         return function() {
                             var sdd = getSaveData();
@@ -371,14 +394,13 @@ function showHeroSkillTree(heroKey) {
                         };
                     })(heroKey, node.id, overlay);
                 } else {
-                    nodeDiv.style.color = '#666';
+                    nodeDiv.className = 'p79-skill-node is-locked';
                     nodeDiv.innerHTML = '<div>' + node.name + '</div><div style="font-size:9px; color:#555; margin-top:2px;">' + node.effect + '</div>';
                 }
 
-                choicesDiv.appendChild(nodeDiv);
+                tierDiv.appendChild(nodeDiv);
             }
 
-            tierDiv.appendChild(choicesDiv);
             branchPanel.appendChild(tierDiv);
         }
 
@@ -393,7 +415,7 @@ function showHeroSkillTree(heroKey) {
     if (!heroState.isDead) {
         // Assign button
         var assignBtn = document.createElement('button');
-        assignBtn.className = 'btn-primary';
+        assignBtn.className = 'sv-btn sv-btn-primary';
         assignBtn.style.cssText = 'padding:8px 16px; font-size:12px;';
         assignBtn.textContent = heroState.assignedUnit ? 'Reassign' : 'Assign to Unit';
         assignBtn.onclick = (function(hk, ov) {
@@ -403,7 +425,7 @@ function showHeroSkillTree(heroKey) {
 
         if (heroState.assignedUnit) {
             var unassignBtn = document.createElement('button');
-            unassignBtn.className = 'btn-secondary';
+            unassignBtn.className = 'sv-btn';
             unassignBtn.style.cssText = 'padding:8px 16px; font-size:12px;';
             unassignBtn.textContent = 'Unassign';
             unassignBtn.onclick = (function(hk, ov) {
@@ -417,7 +439,7 @@ function showHeroSkillTree(heroKey) {
     if (heroState.investedNodes && heroState.investedNodes.length > 0 && !heroState.isDead) {
         var respecCost = getRespecCost(heroState);
         var respecBtn = document.createElement('button');
-        respecBtn.className = 'btn-secondary';
+        respecBtn.className = 'sv-btn';
         respecBtn.style.cssText = 'padding:8px 16px; font-size:12px;';
         respecBtn.textContent = 'Respec (' + respecCost + ' VE)';
         respecBtn.onclick = (function(hk, ov) {
@@ -436,7 +458,7 @@ function showHeroSkillTree(heroKey) {
     }
 
     var closeBtn = document.createElement('button');
-    closeBtn.className = 'btn-secondary';
+    closeBtn.className = 'sv-btn';
     closeBtn.style.cssText = 'padding:8px 16px; font-size:12px;';
     closeBtn.textContent = 'Done';
     closeBtn.onclick = function() { overlay.remove(); renderHeroScreen(); };
@@ -457,12 +479,15 @@ function showHeroAssignPanel(heroKey) {
     var sd = getSaveData();
 
     var overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:1000;';
+    overlay.className = 'sv-modal-backdrop';
+    overlay.style.display = 'flex';
 
     var panel = document.createElement('div');
-    panel.style.cssText = 'background:#1a1a2e; border:1px solid #444; border-radius:10px; padding:20px; max-width:400px; width:90%; max-height:70vh; overflow-y:auto;';
+    panel.className = 'sv-modal-panel';
+    panel.style.maxHeight = '70vh';
+    panel.style.overflowY = 'auto';
 
-    panel.innerHTML = '<div style="font-weight:bold; color:#e2b714; margin-bottom:12px; font-size:14px;">Assign ' + HERO_DATA[heroKey].name + ' to Unit</div>';
+    panel.innerHTML = '<div style="font-weight:bold; color:var(--sv-gold); margin-bottom:12px; font-size:14px;">Assign ' + HERO_DATA[heroKey].name + ' to Unit</div>';
 
     var roster = getRoster(sd);
     for (var i = 0; i < roster.length; i++) {
@@ -474,8 +499,8 @@ function showHeroAssignPanel(heroKey) {
             assignedLabel = existingDef ? ' <span style="color:#ff8844;">(' + existingDef.name + ')</span>' : '';
         }
         var unitDiv = document.createElement('div');
-        unitDiv.style.cssText = 'padding:6px; cursor:pointer; border-bottom:1px solid #222; font-size:12px;';
-        unitDiv.innerHTML = ELEMENTS[r.template.element].emoji + ' ' + r.template.name + ' ' + r.stars + '\u2605' + assignedLabel;
+        unitDiv.style.cssText = 'padding:6px; cursor:pointer; border-bottom:1px solid var(--sv-border); font-size:12px;';
+        unitDiv.innerHTML = ELEMENTS[r.template.element].emoji + ' ' + r.template.name + ' ' + r.stars + '★' + assignedLabel;
         unitDiv.onclick = (function(hk, uk, ov) {
             return function() {
                 var sdd = getSaveData();
@@ -488,7 +513,7 @@ function showHeroAssignPanel(heroKey) {
     }
 
     var cancelBtn = document.createElement('button');
-    cancelBtn.className = 'btn-secondary';
+    cancelBtn.className = 'sv-btn';
     cancelBtn.style.cssText = 'margin-top:12px; padding:8px 16px; font-size:12px;';
     cancelBtn.textContent = 'Cancel';
     cancelBtn.onclick = function() { overlay.remove(); renderHeroScreen(); };
@@ -497,4 +522,3 @@ function showHeroAssignPanel(heroKey) {
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
 }
-
