@@ -1,12 +1,75 @@
 // ui-hub.js -- hub/camp screen, buildings, upgrade panels (split from ui-v2.js)
 
-// ---- Hub Screen ----
+// ---- Hub Screen: Camp Backdrop (Prompt 77, Phase 6.2) ----
+// Reuses the arena-backdrop CSS "recipe family" js/ui-combat.js's
+// buildArenaBackdrop() already established (same .arena-bd-horizon/
+// .arena-bd-hexfield/.arena-bd-blob/.arena-bd-vignette layers combat and the
+// team builder use) painted with a night-camp/gold theme into a dedicated
+// #hub-camp-backdrop element -- combat's own ARENA_BACKDROP_THEMES table is
+// untouched (this stays self-contained to ui-hub.js per the task's file
+// scope). arenaBdHexPatternCss() (defined in js/ui-combat.js, which loads
+// AFTER this file) is only ever called once the hub is actually rendered --
+// by then every script has finished loading, so the forward reference is
+// safe (same reasoning as any other cross-file function call in this
+// codebase's plain-global-scope model).
+var HUB_CAMP_THEME = { glow: '#1a2440', accent: '#e2b714', blobA: '#0f1730', blobB: '#141d3a', blobC: '#0a0f22' };
+
+function buildHubCampBackdrop() {
+    var el = document.getElementById('hub-camp-backdrop');
+    // innerHTML starts out empty on a freshly-created element (both in a real
+    // browser and in tests/harness.js's stub) -- using that as the
+    // "already built" signal instead of a custom flag property avoids a trap
+    // with the test harness's permissive element Proxy, where reading ANY
+    // never-before-set custom property returns a (truthy) stub function
+    // rather than undefined, which would make a boolean flag check always
+    // look "already built" on the very first call.
+    if (!el || el.innerHTML) return;
+    var theme = HUB_CAMP_THEME;
+    var hexCss = (typeof arenaBdHexPatternCss === 'function')
+        ? arenaBdHexPatternCss(theme.accent)
+        : ('repeating-linear-gradient(60deg, ' + theme.accent + '22 0px, ' + theme.accent + '22 1px, transparent 1px, transparent 42px), ' +
+           'repeating-linear-gradient(-60deg, ' + theme.accent + '22 0px, ' + theme.accent + '22 1px, transparent 1px, transparent 42px)');
+    el.innerHTML =
+        '<div class="arena-bd-horizon" style="background:radial-gradient(ellipse 90% 60% at 50% 10%, ' + theme.glow + 'cc 0%, transparent 70%);"></div>' +
+        '<div class="arena-bd-hexfield" style="background-image:' + hexCss + ';"></div>' +
+        '<div class="arena-bd-blob arena-bd-blob-a" style="background:' + theme.blobA + ';"></div>' +
+        '<div class="arena-bd-blob arena-bd-blob-b" style="background:' + theme.blobB + ';"></div>' +
+        '<div class="arena-bd-blob arena-bd-blob-c" style="background:' + theme.blobC + ';"></div>' +
+        '<div class="arena-bd-vignette"></div>';
+}
+
+// ---- Hub Screen: Settings Drawer (Prompt 77, Phase 6.2) ----
+// Achievements/Stats/Reset relocated off the button grid into a slide-out
+// drawer behind the top bar's gear icon (game-v2.html). No new behavior --
+// each button still calls the exact same function (showAchievementPanel/
+// showStatsPanel/uiResetGame) the old hub-nav buttons called.
+function toggleHubSettingsDrawer(force) {
+    var drawer = document.getElementById('hub-settings-drawer');
+    var scrim = document.getElementById('hub-settings-scrim');
+    if (!drawer || !scrim) return;
+    var show = (typeof force === 'boolean') ? force : !(drawer.classList && drawer.classList.contains('show'));
+    if (drawer.classList) drawer.classList.toggle('show', show);
+    if (scrim.classList) scrim.classList.toggle('show', show);
+}
+
+// ---- Hub Screen: Building Cards ----
+// Purely presentational size hint for the camp grid's dense/varied layout
+// (game-v2.html's .hub-camp-grid uses grid-auto-flow:dense) -- does not
+// affect upgrade/panel logic at all, only how large a building's card reads
+// on the scene.
+var HUB_CARD_SIZE = {
+    attunement_rite: 'lg',
+    echo_shaping: 'lg'
+};
 
 function renderHubScreen() {
     var sd = getSaveData();
     // Achievement catch-all check
     var newAch = checkAchievements(sd);
     if (newAch.length > 0) { autoSave(sd); showAchievementToasts(newAch); }
+
+    buildHubCampBackdrop();
+
     var grid = document.getElementById('buildings-grid');
     grid.innerHTML = '';
 
@@ -17,6 +80,8 @@ function renderHubScreen() {
         var level = getBuildingLevel(sd, id);
         var canUp = canUpgradeBuilding(sd, id);
         var cost = getBuildingUpgradeCost(id, level);
+        var maxed = level >= bld.maxLevel;
+        var sizeClass = 'hub-bld-' + (HUB_CARD_SIZE[id] || 'sm');
 
         // Check prereq locks (buildings have prereq.level in BUILDINGS)
         var prereqLocked = false;
@@ -27,38 +92,49 @@ function renderHubScreen() {
         }
 
         var div = document.createElement('div');
-        div.className = 'hub-building';
         div.setAttribute('data-building', id);
 
         if (prereqLocked) {
-            div.style.opacity = '0.5';
+            div.className = 'hub-building sv-panel ' + sizeClass + ' is-locked';
+            div.setAttribute('data-tooltip', prereqText);
             div.innerHTML =
-                '<div class="emoji">' + bld.emoji + '</div>' +
-                '<div class="bld-name">' + bld.name + '</div>' +
-                '<div class="bld-level" style="color:#888;">Locked</div>' +
-                '<div class="bld-effect" style="color:#666;">' + prereqText + '</div>' +
-                '<div class="mt-sm text-muted" style="font-size:11px;">' + bld.description + '</div>';
+                '<div class="hub-bld-icon">' + bld.emoji + '</div>' +
+                '<div class="hub-bld-name">' + bld.name + '</div>' +
+                '<div class="hub-bld-lockline">🔒 Locked</div>';
             grid.appendChild(div);
             continue;
         }
 
-        var costText = level >= bld.maxLevel ? 'MAX' : (cost + ' VE to upgrade');
-
-        div.innerHTML =
-            '<div class="emoji">' + bld.emoji + '</div>' +
-            '<div class="bld-name">' + bld.name + '</div>' +
-            '<div class="bld-level">Level ' + level + ' / ' + bld.maxLevel + '</div>' +
-            '<div class="bld-effect">' + getBuildingEffect(id, level) + '</div>' +
-            '<div class="mt-sm text-muted" style="font-size:11px;">' + costText + '</div>';
-
         // Buildings with panels get click-to-open; all others get upgrade-on-click
+        // (exactly the same routing as before the redesign -- only the card
+        // markup/classes around it changed).
         var hasPanel = (id === 'deep_resonance' && level >= 1) ||
                        (id === 'echo_shaping' && level >= 1) ||
                        (id === 'prism_focus') ||
                        (id === 'veil_wellspring') ||
                        (id === 'kindred_circle');
+        var clickable = hasPanel || canUp;
+
+        var stateClass = maxed ? 'is-maxed' : (canUp ? 'is-upgradeable' : '');
+        div.className = 'hub-building sv-panel ' + sizeClass +
+            (clickable ? ' is-clickable' : '') +
+            (stateClass ? ' ' + stateClass : '');
+
+        var tooltip = getBuildingEffect(id, level) + (maxed ? ' (MAX)' : ' — ' + cost + ' VE to upgrade');
+        div.setAttribute('data-tooltip', tooltip);
+
+        var pips = '';
+        for (var pi = 1; pi <= bld.maxLevel; pi++) {
+            pips += '<span class="hub-bld-pip' + (pi <= level ? ' filled' : '') + '"></span>';
+        }
+
+        div.innerHTML =
+            '<div class="hub-bld-icon">' + bld.emoji + '</div>' +
+            '<div class="hub-bld-name">' + bld.name + '</div>' +
+            '<div class="hub-bld-pips">' + pips + '</div>' +
+            '<div class="hub-bld-level">Lv. ' + level + ' / ' + bld.maxLevel + '</div>';
+
         if (hasPanel) {
-            div.style.cursor = 'pointer';
             div.onclick = (function(bId) {
                 return function() { openBuildingPanel(bId); };
             })(id);
@@ -88,13 +164,13 @@ function renderEndlessChallengesNav(saveData) {
     var endlessBest = (typeof getEndlessSaveData === 'function') ? getEndlessSaveData(saveData).bestFloor : 0;
 
     nav.innerHTML =
-        '<div class="hub-nav-btn" id="hub-endless-btn"' + (endlessOn ? '' : ' style="opacity:0.5;"') + '>' +
+        '<div class="hub-beyond-btn' + (endlessOn ? '' : ' locked') + '" id="hub-endless-btn">' +
             '<span class="nav-emoji">🕳️</span> The Abyss' +
-            (endlessOn ? '<div style="font-size:10px; color:#e2b714;">Best: Floor ' + endlessBest + '</div>' : '<div style="font-size:10px; color:#888;">🔒 Clear Region 8</div>') +
+            (endlessOn ? '<div style="font-size:10px; color:var(--sv-gold);">Best: Floor ' + endlessBest + '</div>' : '<div style="font-size:10px; color:var(--sv-text-3);">🔒 Clear Region 8</div>') +
         '</div>' +
-        '<div class="hub-nav-btn" id="hub-challenges-btn"' + (challengesOn ? '' : ' style="opacity:0.5;"') + '>' +
+        '<div class="hub-beyond-btn' + (challengesOn ? '' : ' locked') + '" id="hub-challenges-btn">' +
             '<span class="nav-emoji">🏆</span> Challenges' +
-            (challengesOn ? '' : '<div style="font-size:10px; color:#888;">🔒 Clear Region 4 boss</div>') +
+            (challengesOn ? '' : '<div style="font-size:10px; color:var(--sv-text-3);">🔒 Clear Region 4 boss</div>') +
         '</div>';
 
     document.getElementById('hub-endless-btn').onclick = function() {

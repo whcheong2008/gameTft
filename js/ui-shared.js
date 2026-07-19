@@ -24,10 +24,14 @@ var STATUS_ICONS = {
 };
 
 // ---- Toast Notification ----
+// Prompt 77 (Phase 6.1, Task 1): migrated onto the design-system tokens
+// (var(--sv-*) in place of literal hex) -- same element/animation/timing
+// contract as before, just sourced from game-v2.html's :root tokens instead
+// of hardcoded colors.
 
 function showToast(message) {
     var toast = document.createElement('div');
-    toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#e2b714; color:#1a1a2e; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:13px; z-index:9999; white-space:pre-line; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,0.5); animation:toastIn 0.3s ease-out;';
+    toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:var(--sv-gold); color:var(--sv-bg-1); padding:10px 20px; border-radius:var(--sv-radius-md); font-weight:bold; font-size:13px; z-index:9999; white-space:pre-line; text-align:center; box-shadow:var(--sv-shadow-lg); animation:toastIn 0.3s ease-out;';
     toast.textContent = message;
     document.body.appendChild(toast);
     setTimeout(function() {
@@ -38,24 +42,35 @@ function showToast(message) {
 }
 
 // ---- Confirm Dialog (non-blocking replacement for native confirm()) ----
+// Migrated onto .sv-modal-backdrop/.sv-modal-panel/.sv-btn-primary/.sv-btn --
+// same two-button contract (#confirm-ok/#confirm-cancel), same call signature.
 
 function showConfirmDialog(message, onConfirm, onCancel) {
     var overlay = document.getElementById('confirm-overlay');
     if (!overlay) {
         overlay = document.createElement('div');
         overlay.id = 'confirm-overlay';
-        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:2000;';
+        overlay.className = 'sv-modal-backdrop';
         document.body.appendChild(overlay);
     }
-    overlay.innerHTML = '<div style="background:#1a1a2e; border:2px solid #e2b714; border-radius:10px; padding:20px; max-width:400px; text-align:center;">' +
+    overlay.innerHTML = '<div class="sv-modal-panel" style="text-align:center;">' +
         '<div style="font-size:14px; margin-bottom:16px; white-space:pre-line;">' + message + '</div>' +
         '<div style="display:flex; gap:10px; justify-content:center;">' +
-        '<button id="confirm-ok" class="btn-primary" style="padding:8px 20px;">OK</button>' +
-        '<button id="confirm-cancel" class="btn-secondary" style="padding:8px 20px;">Cancel</button>' +
+        '<button id="confirm-ok" class="sv-btn sv-btn-primary" style="padding:8px 20px;">OK</button>' +
+        '<button id="confirm-cancel" class="sv-btn" style="padding:8px 20px;">Cancel</button>' +
         '</div></div>';
+    if (overlay.classList) overlay.classList.add('show');
     overlay.style.display = 'flex';
-    document.getElementById('confirm-ok').onclick = function() { overlay.style.display = 'none'; onConfirm(); };
-    document.getElementById('confirm-cancel').onclick = function() { overlay.style.display = 'none'; if (onCancel) onCancel(); };
+    document.getElementById('confirm-ok').onclick = function() {
+        overlay.style.display = 'none';
+        if (overlay.classList) overlay.classList.remove('show');
+        onConfirm();
+    };
+    document.getElementById('confirm-cancel').onclick = function() {
+        overlay.style.display = 'none';
+        if (overlay.classList) overlay.classList.remove('show');
+        if (onCancel) onCancel();
+    };
 }
 
 // ---- Top Bar ----

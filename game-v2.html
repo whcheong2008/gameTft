@@ -6,83 +6,415 @@
     <title>Auto Battler V2</title>
     <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* =============================================================================
+   Design System Tokens (Prompt 77, Phase 6.1)
+   Single source of truth for color/spacing/radius/shadow across game-v2.html.
+   Existing screens are progressively migrated to reference these (Task 1);
+   full visual restyles of non-hub screens are later prompts' work -- most
+   rules below still carry their original literal values, just referenced via
+   var() so a value only needs to change in one place.
+   ============================================================================= */
+:root {
+    /* Backgrounds -- 3 depths, darkest to lightest */
+    --sv-bg-0: #0d1117;   /* deepest: arena/combat canvas, deep overlay wells */
+    --sv-bg-1: #1a1a2e;   /* base: body background, panel bodies */
+    --sv-bg-2: #16213e;   /* raised: cards, panel headers, the top bar */
+    --sv-panel: var(--sv-bg-2);
+
+    --sv-border: #2a3a5e;
+    --sv-border-strong: #3a4a7e;
+
+    --sv-gold: #e2b714;
+    --sv-gold-bright: #f0c830;
+
+    /* Text -- 3 emphasis levels */
+    --sv-text-1: #ffffff;  /* high emphasis: names, stat values, headings */
+    --sv-text-2: #e0e0e0;  /* body default */
+    --sv-text-3: #8899aa;  /* muted/meta -- unifies the file's prior #888/#999/#aaa/#aac family */
+
+    /* Canonical element palette (GRAPHICS-SESSION-HANDOFF.md "Element Color
+       Palette (canonical)" table) -- matches js/ui-shared.js's getElementColor() */
+    --sv-el-fire: #FF4500;
+    --sv-el-water: #1E90FF;
+    --sv-el-earth: #228B22;
+    --sv-el-wind: #87CEEB;
+    --sv-el-lightning: #FFD700;
+    --sv-el-force: #9370DB;
+
+    /* Rarity/cost tiers T1 (gray) -> T5 (gold) -- same values as the existing
+       .cost-1..5 border convention below, now named tokens */
+    --sv-tier-1: #667788;
+    --sv-tier-2: #4488ff;
+    --sv-tier-3: #aa44ff;
+    --sv-tier-4: #ff4488;
+    --sv-tier-5: #ffd700;
+
+    /* Semantic status colors (existing usage across log/results/stat text) */
+    --sv-green: #6bcb77;
+    --sv-red: #ff6b6b;
+    --sv-blue: #8bbcff;
+
+    /* Spacing scale */
+    --sv-sp-1: 4px;
+    --sv-sp-2: 8px;
+    --sv-sp-3: 12px;
+    --sv-sp-4: 16px;
+    --sv-sp-5: 24px;
+    --sv-sp-6: 32px;
+
+    /* Radius scale */
+    --sv-radius-sm: 6px;
+    --sv-radius-md: 8px;
+    --sv-radius-lg: 12px;
+
+    /* Shadows */
+    --sv-shadow-sm: 0 2px 6px rgba(0,0,0,0.35);
+    --sv-shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+
+    /* Motion */
+    --sv-transition-fast: 150ms ease;
+    --sv-transition-med: 180ms ease;
+}
+
 body {
-    background: #1a1a2e; color: #e0e0e0;
+    background: var(--sv-bg-1); color: var(--sv-text-2);
     font-family: 'Segoe UI', system-ui, sans-serif;
     min-height: 100vh; display: flex; justify-content: center;
     align-items: flex-start; padding: 10px;
 }
 #game-container { width: 100%; max-width: 960px; display: flex; flex-direction: column; gap: 6px; }
 
+/* =============================================================================
+   Design System Components (Prompt 77, Phase 6.1)
+   Applied progressively -- new screens/elements use these classes directly;
+   existing screens keep their own selectors (above/below) for now.
+   ============================================================================= */
+
+/* ---- Panels ---- */
+.sv-panel {
+    background: linear-gradient(180deg, var(--sv-bg-2) 0%, var(--sv-bg-1) 100%);
+    border: 1px solid var(--sv-border);
+    border-radius: var(--sv-radius-md);
+    box-shadow: var(--sv-shadow-sm);
+}
+.sv-panel-header {
+    background: linear-gradient(90deg, rgba(226,183,20,0.16), rgba(226,183,20,0.02));
+    border-bottom: 1px solid var(--sv-border);
+    border-radius: var(--sv-radius-md) var(--sv-radius-md) 0 0;
+    padding: var(--sv-sp-2) var(--sv-sp-3);
+    font-weight: bold; color: var(--sv-gold);
+}
+.sv-panel-body { padding: var(--sv-sp-3); }
+
+/* ---- Buttons ---- */
+.sv-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    background: var(--sv-border); color: var(--sv-text-2);
+    border: none; border-radius: var(--sv-radius-sm);
+    padding: var(--sv-sp-2) var(--sv-sp-4);
+    font-weight: 600; font-size: 14px; cursor: pointer;
+    transition: background var(--sv-transition-fast), transform var(--sv-transition-fast), box-shadow var(--sv-transition-fast);
+}
+.sv-btn:hover { background: var(--sv-border-strong); }
+.sv-btn:active { transform: translateY(1px) scale(0.98); }
+.sv-btn:disabled, .sv-btn.disabled {
+    background: #444; color: var(--sv-text-3); cursor: not-allowed; opacity: 0.7; transform: none; box-shadow: none;
+}
+.sv-btn-block { width: 100%; justify-content: flex-start; }
+.sv-btn-primary { background: var(--sv-gold); color: var(--sv-bg-1); }
+.sv-btn-primary:hover { background: var(--sv-gold-bright); }
+.sv-btn-primary:disabled { background: #555; color: var(--sv-text-3); }
+.sv-btn-gold {
+    background: linear-gradient(180deg, var(--sv-gold-bright), var(--sv-gold));
+    color: var(--sv-bg-1); box-shadow: 0 0 10px rgba(226,183,20,0.35);
+}
+.sv-btn-gold:hover { box-shadow: 0 0 16px rgba(226,183,20,0.55); }
+
+/* ---- Chips (unit/item chips, rarity-bordered) ---- */
+.sv-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--sv-bg-2); border: 1px solid var(--sv-border); color: var(--sv-text-2);
+    border-radius: var(--sv-radius-sm); padding: 3px 8px; font-size: 12px;
+}
+.sv-chip.tier-1 { border-color: var(--sv-tier-1); }
+.sv-chip.tier-2 { border-color: var(--sv-tier-2); }
+.sv-chip.tier-3 { border-color: var(--sv-tier-3); }
+.sv-chip.tier-4 { border-color: var(--sv-tier-4); }
+.sv-chip.tier-5 { border-color: var(--sv-tier-5); box-shadow: 0 0 8px rgba(255,215,0,0.25); }
+
+/* ---- Bars (hp/xp/progress) ---- */
+.sv-bar { position: relative; width: 100%; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.sv-bar-fill { height: 100%; border-radius: inherit; transition: width var(--sv-transition-med); }
+.sv-bar-hp .sv-bar-fill { background: linear-gradient(90deg, #3a9a44, var(--sv-green)); }
+.sv-bar-xp .sv-bar-fill { background: linear-gradient(90deg, #4488ff, var(--sv-blue)); }
+.sv-bar-gold .sv-bar-fill { background: linear-gradient(90deg, var(--sv-gold), var(--sv-gold-bright)); }
+
+/* ---- Tabs ---- */
+.sv-tab {
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    color: var(--sv-text-3); padding: var(--sv-sp-2) var(--sv-sp-3); cursor: pointer; font-weight: 600;
+}
+.sv-tab.active { color: var(--sv-gold); border-bottom-color: var(--sv-gold); }
+
+/* ---- Modal (backdrop + panel + close) ---- */
+.sv-modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    display: none; align-items: center; justify-content: center; z-index: 2000;
+}
+.sv-modal-backdrop.show { display: flex; }
+.sv-modal-panel {
+    background: var(--sv-panel); border: 2px solid var(--sv-gold); border-radius: var(--sv-radius-lg);
+    padding: var(--sv-sp-4); max-width: 420px; width: 90%; box-shadow: var(--sv-shadow-lg); position: relative;
+}
+.sv-modal-close {
+    position: absolute; top: 8px; right: 12px; background: none; border: none;
+    color: var(--sv-text-3); font-size: 18px; cursor: pointer;
+}
+.sv-modal-close:hover { color: var(--sv-text-1); }
+
+/* ---- Tooltip (attach via data-tooltip="...") ---- */
+[data-tooltip] { position: relative; }
+[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(-6px);
+    background: rgba(10,10,18,0.96); color: var(--sv-text-2); border: 1px solid var(--sv-border);
+    padding: 6px 10px; border-radius: var(--sv-radius-sm); font-size: 11px; line-height: 1.35;
+    white-space: normal; width: max-content; max-width: 200px; text-align: center;
+    opacity: 0; pointer-events: none; transition: opacity var(--sv-transition-fast);
+    z-index: 50;
+}
+[data-tooltip]:hover::after, [data-tooltip]:focus::after { opacity: 1; }
+
+/* ---- Screen-transition framework -- 180ms fade/slide between showScreen()
+   targets (js/hub.js hooks this centrally by toggling .sv-screen-enter
+   alongside its existing inline display flip). Wrapped in a
+   prefers-reduced-motion media query so JS never needs to branch on it --
+   reduced-motion users get the same instant display:block/none they always
+   had. ---- */
+@media (prefers-reduced-motion: no-preference) {
+    .screen.active.sv-screen-enter { animation: svScreenIn var(--sv-transition-med) ease both; }
+}
+@keyframes svScreenIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 /* === Top Bar === */
 #top-bar {
     display: flex; justify-content: space-between; align-items: center;
-    background: #16213e; padding: 10px 20px; border-radius: 8px; font-size: 15px;
-    flex-wrap: wrap; gap: 6px;
+    background: var(--sv-bg-2); padding: 10px 20px; border-radius: var(--sv-radius-md); font-size: 15px;
+    flex-wrap: wrap; gap: var(--sv-sp-2);
+    border: 1px solid var(--sv-border); box-shadow: var(--sv-shadow-sm);
 }
-#player-info { display: flex; gap: 14px; }
+#player-info { display: flex; gap: 14px; flex-wrap: wrap; }
 #player-gold { color: #b388ff; font-weight: bold; }
-#player-level { color: #6bcb77; font-weight: bold; }
-#player-xp { color: #8bbcff; font-size: 13px; }
-#nav-back { cursor: pointer; background: #2a3a5e; border: none; color: #e0e0e0;
-    padding: 5px 14px; border-radius: 6px; font-size: 14px; display: none; }
-#nav-back:hover { background: #3a4a7e; }
+#player-level { color: var(--sv-green); font-weight: bold; }
+#player-xp { color: var(--sv-blue); font-size: 13px; }
+#nav-back { cursor: pointer; background: var(--sv-border); border: none; color: var(--sv-text-2);
+    padding: 5px 14px; border-radius: var(--sv-radius-sm); font-size: 14px; display: none;
+    transition: background var(--sv-transition-fast); }
+#nav-back:hover { background: var(--sv-border-strong); }
+
+/* Settings gear (Prompt 77, Task 2): top-right of the persistent top bar,
+   opens the settings drawer (Achievements/Stats/Reset -- relocated off the
+   hub's button grid). Available from any screen since the drawer's contents
+   (showAchievementPanel/showStatsPanel/uiResetGame) already work from
+   anywhere -- they build their own full-screen overlays. */
+.hub-settings-gear {
+    background: var(--sv-border); border: none; color: var(--sv-text-2);
+    width: 34px; height: 34px; border-radius: 50%; font-size: 16px; cursor: pointer; line-height: 1;
+    transition: background var(--sv-transition-fast), transform var(--sv-transition-fast);
+}
+.hub-settings-gear:hover { background: var(--sv-border-strong); transform: rotate(25deg); }
+.hub-settings-scrim {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1500; display: none;
+}
+.hub-settings-scrim.show { display: block; }
+.hub-settings-drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 260px; max-width: 82vw;
+    background: var(--sv-panel); border-left: 1px solid var(--sv-border);
+    box-shadow: var(--sv-shadow-lg); z-index: 1501; padding: var(--sv-sp-4);
+    display: flex; flex-direction: column; gap: var(--sv-sp-2);
+    transform: translateX(100%); transition: transform var(--sv-transition-med);
+}
+.hub-settings-drawer.show { transform: translateX(0); }
+@media (prefers-reduced-motion: reduce) {
+    .hub-settings-drawer { transition: none; }
+}
+.hub-settings-drawer-header {
+    display: flex; justify-content: space-between; align-items: center;
+    font-weight: bold; color: var(--sv-gold); margin-bottom: var(--sv-sp-2);
+}
+.hub-settings-danger { margin-top: auto; border-top: 1px solid var(--sv-border); padding-top: var(--sv-sp-3); }
+.hub-settings-danger .sv-btn { background: #3a1a1a; color: #ff6644; }
+.hub-settings-danger .sv-btn:hover { background: #4a2222; }
+.hub-settings-danger-label { color: var(--sv-red); font-weight: bold; font-size: 12px; margin-bottom: 6px; }
 
 /* === Screens (common) === */
 .screen { display: none; }
 .screen.active { display: block; }
-.screen-title { font-size: 22px; font-weight: bold; color: #e2b714; margin: 12px 0 8px; }
-.section-title { font-size: 16px; font-weight: 600; color: #aac; margin: 10px 0 6px; }
+.screen-title { font-size: 22px; font-weight: bold; color: var(--sv-gold); margin: 12px 0 8px; }
+.section-title { font-size: 16px; font-weight: 600; color: var(--sv-text-3); margin: 10px 0 6px; }
 
-/* === Hub Screen === */
-.hub-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-    margin-top: 10px;
+/* === Hub Screen -- Camp Scene (Prompt 77, Phase 6.2) ===
+   Full-viewport layered backdrop (js/ui-hub.js's buildHubCampBackdrop()
+   reuses the arena-backdrop CSS "recipe family" below -- same
+   .arena-bd-horizon/.arena-bd-hexfield/.arena-bd-blob/.arena-bd-vignette
+   layers combat/team-builder already use, painted with a night-camp/gold
+   theme into #hub-camp-backdrop) behind an absolute-grid "camp" of building
+   cards (js/ui-hub.js's renderHubScreen()), a docked bottom nav, and a
+   settings drawer (Achievements/Stats/Reset) off the top bar's gear icon. */
+.hub-camp-scene {
+    position: relative;
+    min-height: 60vh;
+    padding: var(--sv-sp-3) var(--sv-sp-2) 84px;
+    margin-top: 8px;
+    border-radius: var(--sv-radius-lg);
+    overflow: hidden;
+    isolation: isolate; /* keeps the backdrop's z-index:0 layer from bleeding above sibling screens */
+}
+#hub-camp-backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: var(--sv-bg-0); }
+.hub-camp-topline {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; justify-content: space-between; gap: var(--sv-sp-2);
+}
+/* Decorative silhouettes -- pure CSS clip-path shapes, no image assets (no
+   approved camp art exists yet per GRAPHICS-SESSION-HANDOFF.md's production
+   phases; Phase 5/6 art swaps this in later). Purely cosmetic, pointer-events
+   none, layered between the blob glow and the vignette. */
+.hub-camp-silhouette { position: absolute; left: 0; right: 0; pointer-events: none; }
+.hub-camp-silhouette-mountains {
+    bottom: 0; height: 26%; opacity: 0.5;
+    background: rgba(8,11,22,0.9);
+    clip-path: polygon(0% 100%, 0% 62%, 10% 42%, 22% 60%, 34% 32%, 48% 56%, 60% 24%, 74% 52%, 86% 36%, 100% 58%, 100% 100%);
+}
+.hub-camp-silhouette-tents {
+    bottom: 0; height: 15%; opacity: 0.7;
+    background: rgba(5,6,14,0.88);
+    clip-path: polygon(2% 100%, 8% 42%, 14% 100%, 20% 100%, 26% 32%, 32% 100%, 60% 100%, 66% 46%, 72% 100%, 80% 100%, 86% 36%, 92% 100%, 100% 100%, 0% 100%);
+}
+.hub-camp-silhouette-banner {
+    top: 4%; left: 50%; width: 2px; height: 22%; opacity: 0.3;
+    background: linear-gradient(180deg, var(--sv-gold), transparent);
+}
+
+/* ---- Building cards: a dense, varied-size CSS grid ("camp" arrangement)
+   rather than a uniform 3-column list. Sizes are hinted per-building in
+   js/ui-hub.js's HUB_CARD_SIZE (purely presentational -- upgrade/panel logic
+   is unchanged). A faint curved SVG path (inline in the hub screen markup)
+   sits behind the grid as a connective motif. ---- */
+.hub-camp-path { position: absolute; z-index: 0; left: 0; right: 0; top: 60px; width: 100%; height: calc(100% - 60px); pointer-events: none; opacity: 0.5; }
+.hub-camp-grid {
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-auto-rows: minmax(96px, auto);
+    grid-auto-flow: dense;
+    gap: var(--sv-sp-3);
+    margin-top: var(--sv-sp-3);
 }
 .hub-building {
-    background: #16213e; border: 2px solid #2a3a5e; border-radius: 10px;
-    padding: 16px; text-align: center; cursor: pointer;
-    transition: border-color 0.2s, transform 0.1s;
+    grid-column: span 2;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: var(--sv-sp-3); cursor: default;
+    border: 2px solid var(--sv-border);
+    transition: transform var(--sv-transition-fast), box-shadow var(--sv-transition-fast), border-color var(--sv-transition-fast);
 }
-.hub-building:hover { border-color: #e2b714; transform: translateY(-2px); }
-.hub-building .emoji { font-size: 36px; }
-.hub-building .bld-name { font-weight: bold; margin-top: 6px; }
-.hub-building .bld-level { color: #6bcb77; font-size: 13px; }
-.hub-building .bld-effect { color: #999; font-size: 12px; margin-top: 4px; }
+.hub-bld-lg { grid-column: span 3; grid-row: span 2; }
+.hub-building.is-clickable { cursor: pointer; }
+.hub-building.is-clickable:hover { transform: translateY(-4px); box-shadow: var(--sv-shadow-lg); border-color: var(--sv-gold); }
+.hub-building.is-upgradeable { border-color: rgba(226,183,20,0.55); box-shadow: 0 0 12px rgba(226,183,20,0.18); }
+.hub-building.is-maxed { border-color: var(--sv-gold); background: linear-gradient(180deg, rgba(226,183,20,0.14), var(--sv-bg-1)); }
+.hub-building.is-locked { opacity: 0.45; filter: grayscale(0.65); cursor: default; }
+.hub-bld-icon { font-size: 32px; line-height: 1; }
+.hub-bld-name { font-weight: bold; margin-top: 4px; font-size: 13px; color: var(--sv-text-1); }
+.hub-bld-level { color: var(--sv-text-3); font-size: 11px; margin-top: 2px; }
+.hub-bld-lockline { color: var(--sv-text-3); font-size: 11px; margin-top: 6px; }
+.hub-bld-pips { display: flex; gap: 2px; justify-content: center; margin: 4px 0 2px; }
+.hub-bld-pip { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.15); }
+.hub-bld-pip.filled { background: var(--sv-gold); box-shadow: 0 0 4px rgba(226,183,20,0.6); }
 
-.hub-nav {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-    margin-top: 16px;
+/* ---- "Beyond the Veil" row: endless/challenges entry (js/ui-hub.js's
+   renderEndlessChallengesNav()) -- same token language as the building
+   cards, kept as its own row since these aren't buildings. ---- */
+.hub-camp-beyond {
+    position: relative; z-index: 1;
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sv-sp-3);
+    margin-top: var(--sv-sp-4);
 }
-.hub-nav-btn {
-    background: #0f3460; border: 2px solid #1a5276; border-radius: 10px;
-    padding: 18px 10px; text-align: center; cursor: pointer; color: #e0e0e0;
-    font-size: 15px; font-weight: 600;
-    transition: background 0.2s, border-color 0.2s;
+.hub-beyond-btn {
+    background: var(--sv-bg-2); border: 2px solid var(--sv-border-strong); border-radius: var(--sv-radius-md);
+    padding: var(--sv-sp-3); text-align: center; cursor: pointer; color: var(--sv-text-2);
+    font-size: 14px; font-weight: 600;
+    transition: background var(--sv-transition-fast), border-color var(--sv-transition-fast), transform var(--sv-transition-fast);
 }
-.hub-nav-btn:hover { background: #1a5276; border-color: #e2b714; }
-.hub-nav-btn .nav-emoji { font-size: 28px; display: block; margin-bottom: 6px; }
+.hub-beyond-btn:hover { border-color: var(--sv-gold); transform: translateY(-2px); }
+.hub-beyond-btn .nav-emoji { font-size: 26px; display: block; margin-bottom: 4px; }
+.hub-beyond-btn.locked { opacity: 0.55; cursor: default; }
+.hub-beyond-btn.locked:hover { transform: none; border-color: var(--sv-border-strong); }
+
+/* ---- Docked bottom nav (Summon/Collection/Team/Missions/Heroes/Codex/Item
+   Bench). Fixed to the viewport bottom, width-matched to #game-container so
+   it reads as part of the same shell at any viewport width; hidden along
+   with the rest of #screen-hub whenever a display:none ancestor applies
+   (showScreen() still fully controls screen visibility -- this is chrome
+   nested inside the hub screen, not a global overlay). ---- */
+.hub-bottom-nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    display: flex; justify-content: center; pointer-events: none;
+}
+.hub-bottom-nav-inner {
+    pointer-events: auto;
+    width: 100%; max-width: 940px;
+    display: flex; gap: var(--sv-sp-1); overflow-x: auto;
+    background: linear-gradient(0deg, rgba(13,17,23,0.97), rgba(13,17,23,0.88));
+    border: 1px solid var(--sv-border); border-bottom: none;
+    border-radius: var(--sv-radius-md) var(--sv-radius-md) 0 0;
+    padding: var(--sv-sp-2); box-shadow: var(--sv-shadow-lg);
+}
+.hub-nav-dock-btn {
+    flex: 1 1 0; min-width: 76px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: transparent; border: none; color: var(--sv-text-2);
+    padding: var(--sv-sp-2) var(--sv-sp-1); border-radius: var(--sv-radius-sm);
+    cursor: pointer; font-size: 11px; font-weight: 600;
+    transition: background var(--sv-transition-fast), color var(--sv-transition-fast), transform var(--sv-transition-fast);
+}
+.hub-nav-dock-btn .nav-emoji { font-size: 22px; line-height: 1; }
+.hub-nav-dock-btn:hover { background: rgba(226,183,20,0.14); color: var(--sv-gold); transform: translateY(-2px); }
+
+/* Responsive breakpoints (verify: 1280 and 960 viewport widths). */
+@media (max-width: 960px) {
+    .hub-camp-grid { grid-template-columns: repeat(4, 1fr); }
+    .hub-bld-lg { grid-column: span 4; grid-row: span 1; }
+}
+@media (max-width: 640px) {
+    .hub-camp-grid { grid-template-columns: repeat(2, 1fr); }
+    .hub-bld-lg { grid-column: span 2; grid-row: span 1; }
+    .hub-camp-beyond { grid-template-columns: 1fr; }
+}
 
 /* === Gacha Screen === */
 .gacha-controls { display: flex; gap: 10px; margin: 12px 0; }
 .gacha-btn {
-    background: #e2b714; color: #1a1a2e; border: none; border-radius: 8px;
+    background: var(--sv-gold); color: var(--sv-bg-1); border: none; border-radius: 8px;
     padding: 12px 24px; font-size: 16px; font-weight: bold; cursor: pointer;
 }
-.gacha-btn:hover { background: #f0c830; }
-.gacha-btn:disabled { background: #555; color: #999; cursor: not-allowed; }
-.gacha-rates { color: #888; font-size: 13px; margin: 6px 0; }
+.gacha-btn:hover { background: var(--sv-gold-bright); }
+.gacha-btn:disabled { background: #555; color: var(--sv-text-3); cursor: not-allowed; }
+.gacha-rates { color: var(--sv-text-3); font-size: 13px; margin: 6px 0; }
 .gacha-results {
     display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; min-height: 0;
     justify-content: center;
 }
 .gacha-roll-header {
-    width: 100%; text-align: center; font-size: 14px; color: #aaa;
-    margin-bottom: 4px; padding-bottom: 6px; border-bottom: 1px solid #2a3a5e;
+    width: 100%; text-align: center; font-size: 14px; color: var(--sv-text-3);
+    margin-bottom: 4px; padding-bottom: 6px; border-bottom: 1px solid var(--sv-border);
 }
 .gacha-card {
-    background: linear-gradient(135deg, #16213e 0%, #1a2744 100%);
-    border: 2px solid #2a3a5e; border-radius: 10px;
+    background: linear-gradient(135deg, var(--sv-bg-2) 0%, #1a2744 100%);
+    border: 2px solid var(--sv-border); border-radius: 10px;
     padding: 12px 10px 10px; text-align: center; width: 110px;
     animation: cardReveal 0.4s ease-out both;
     position: relative; overflow: hidden;
@@ -90,35 +422,36 @@ body {
 }
 .gacha-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.4); }
 .gacha-card .card-element-icon { font-size: 26px; margin-bottom: 4px; line-height: 1; }
-.gacha-card .card-unit-name { font-size: 12px; font-weight: bold; color: #fff; margin: 3px 0; line-height: 1.2; }
-.gacha-card .card-tier-stars { font-size: 11px; color: #e2b714; letter-spacing: 1px; margin: 2px 0; }
-.gacha-card .card-archetype { font-size: 10px; color: #8899aa; margin: 2px 0; }
+.gacha-card .card-unit-name { font-size: 12px; font-weight: bold; color: var(--sv-text-1); margin: 3px 0; line-height: 1.2; }
+.gacha-card .card-tier-stars { font-size: 11px; color: var(--sv-gold); letter-spacing: 1px; margin: 2px 0; }
+.gacha-card .card-archetype { font-size: 10px; color: var(--sv-text-3); margin: 2px 0; }
 .gacha-card .card-type { font-size: 9px; color: #667; text-transform: uppercase; letter-spacing: 0.5px; }
 .gacha-card .card-new-badge {
     position: absolute; top: 4px; right: 4px;
-    background: #4caf50; color: #fff; font-size: 9px; font-weight: bold;
+    background: #4caf50; color: var(--sv-text-1); font-size: 9px; font-weight: bold;
     padding: 1px 5px; border-radius: 4px;
 }
 .gacha-card .card-evolved-badge {
     position: absolute; top: 4px; left: 4px;
-    font-size: 9px; color: #e2b714; font-weight: bold;
+    font-size: 9px; color: var(--sv-gold); font-weight: bold;
 }
 @keyframes cardReveal {
     from { opacity: 0; transform: scale(0.7) rotateY(90deg); }
     to { opacity: 1; transform: scale(1) rotateY(0); }
 }
 
-/* Cost tier colors — border + subtle top glow */
-.cost-1 { border-color: #667788; }
-.cost-1::before { content:''; position:absolute; top:0; left:10%; right:10%; height:2px; background:#667788; border-radius:0 0 4px 4px; }
-.cost-2 { border-color: #4488ff; }
-.cost-2::before { content:''; position:absolute; top:0; left:10%; right:10%; height:2px; background:#4488ff; border-radius:0 0 4px 4px; }
-.cost-3 { border-color: #aa44ff; }
-.cost-3::before { content:''; position:absolute; top:0; left:10%; right:10%; height:2px; background:#aa44ff; border-radius:0 0 4px 4px; }
-.cost-4 { border-color: #ff4488; }
-.cost-4::before { content:''; position:absolute; top:0; left:10%; right:10%; height:2px; background:#ff4488; border-radius:0 0 4px 4px; }
-.cost-5 { border-color: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.2); }
-.cost-5::before { content:''; position:absolute; top:0; left:10%; right:10%; height:2px; background:#ffd700; border-radius:0 0 4px 4px; }
+/* Cost tier colors — border + subtle top glow (values now sourced from the
+   --sv-tier-1..5 tokens; same T1-gray -> T5-gold convention as before) */
+.cost-1 { border-color: var(--sv-tier-1); }
+.cost-1::before { content:''; position:absolute; top:0; left:10%; right:10%; height:2px; background:var(--sv-tier-1); border-radius:0 0 4px 4px; }
+.cost-2 { border-color: var(--sv-tier-2); }
+.cost-2::before { content:''; position:absolute; top:0; left:10%; right:10%; height:2px; background:var(--sv-tier-2); border-radius:0 0 4px 4px; }
+.cost-3 { border-color: var(--sv-tier-3); }
+.cost-3::before { content:''; position:absolute; top:0; left:10%; right:10%; height:2px; background:var(--sv-tier-3); border-radius:0 0 4px 4px; }
+.cost-4 { border-color: var(--sv-tier-4); }
+.cost-4::before { content:''; position:absolute; top:0; left:10%; right:10%; height:2px; background:var(--sv-tier-4); border-radius:0 0 4px 4px; }
+.cost-5 { border-color: var(--sv-tier-5); box-shadow: 0 0 10px rgba(255,215,0,0.2); }
+.cost-5::before { content:''; position:absolute; top:0; left:10%; right:10%; height:2px; background:var(--sv-tier-5); border-radius:0 0 4px 4px; }
 
 /* === Roster Screen === */
 .roster-grid {
@@ -126,22 +459,22 @@ body {
     margin-top: 10px;
 }
 .roster-card {
-    background: #16213e; border: 2px solid #2a3a5e; border-radius: 8px;
+    background: var(--sv-bg-2); border: 2px solid var(--sv-border); border-radius: 8px;
     padding: 10px; cursor: pointer;
     transition: border-color 0.2s;
 }
-.roster-card:hover { border-color: #e2b714; }
+.roster-card:hover { border-color: var(--sv-gold); }
 .roster-card .r-name { font-weight: bold; font-size: 13px; }
-.roster-card .r-info { color: #aaa; font-size: 11px; }
+.roster-card .r-info { color: var(--sv-text-3); font-size: 11px; }
 .roster-card .r-stars { color: #ffd93d; font-size: 14px; }
-.roster-card .r-copies { color: #6bcb77; font-size: 11px; }
+.roster-card .r-copies { color: var(--sv-green); font-size: 11px; }
 .star-up-btn {
-    background: #6bcb77; color: #1a1a2e; border: none; border-radius: 4px;
+    background: var(--sv-green); color: var(--sv-bg-1); border: none; border-radius: 4px;
     padding: 3px 8px; font-size: 11px; cursor: pointer; font-weight: bold; margin-top: 4px;
 }
 .star-up-btn:hover { background: #7de88a; }
 .sell-btn {
-    background: #2a2a3e; color: #e2b714; border: 1px solid #555; border-radius: 4px;
+    background: #2a2a3e; color: var(--sv-gold); border: 1px solid #555; border-radius: 4px;
     padding: 3px 8px; font-size: 11px; cursor: pointer; margin-top: 4px;
 }
 .sell-btn:hover { background: #3a3a5e; }
@@ -152,7 +485,7 @@ body {
 .team-builder-layout { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 .team-board-panel { display: flex; flex-direction: column; gap: 8px; }
 .team-synergy-preview {
-    background: #16213e; padding: 8px 12px; border-radius: 6px;
+    background: var(--sv-bg-2); padding: 8px 12px; border-radius: 6px;
     font-size: 13px; flex: 0 0 240px; max-height: 420px; overflow-y: auto;
 }
 @media (min-width: 700px) {
@@ -170,13 +503,13 @@ body {
     display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto; padding-bottom: 4px;
 }
 .team-roster-item {
-    background: #16213e; border: 1px solid #2a3a5e; border-radius: 6px;
+    background: var(--sv-bg-2); border: 1px solid var(--sv-border); border-radius: 6px;
     padding: 6px 8px; cursor: pointer; font-size: 12px;
     transition: background 0.15s; flex: 0 0 auto; width: 150px;
 }
 .team-roster-item:hover { background: #1e2d50; }
-.team-roster-item.on-team { border-color: #6bcb77; background: #1a3328; }
-.team-roster-item.held { border-color: #e2b714; box-shadow: 0 0 8px rgba(226,183,20,0.5); }
+.team-roster-item.on-team { border-color: var(--sv-green); background: #1a3328; }
+.team-roster-item.held { border-color: var(--sv-gold); box-shadow: 0 0 8px rgba(226,183,20,0.5); }
 
 /* ---- Builder arena: same layer/CSS shape as the combat arena (#combat-area
    above) so the Pixi projection reads identically -- backdrop, then a
@@ -187,9 +520,9 @@ body {
    never visible at once, but each needs its own sized/backdropped canvas). */
 #builder-arena {
     position: relative; height: 58vh; min-height: 360px; max-height: 640px;
-    background: #0d1117; border-radius: 8px; overflow: hidden;
+    background: var(--sv-bg-0); border-radius: 8px; overflow: hidden;
 }
-#builder-backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #0d1117; }
+#builder-backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: var(--sv-bg-0); }
 #builder-board-frame {
     position: absolute; inset: 0; z-index: 1;
     display: flex; align-items: center; justify-content: center; padding: 12px;
@@ -199,22 +532,22 @@ body {
     aspect-ratio: 6 / 5; max-width: 100%; min-width: min(60vw, 100%);
 }
 #team-builder-deploy { display: flex; justify-content: center; }
-#team-builder-deploy .btn-primary:disabled { background: #555; color: #999; cursor: not-allowed; }
+#team-builder-deploy .btn-primary:disabled { background: #555; color: var(--sv-text-3); cursor: not-allowed; }
 
 /* === Mission Select Screen === */
 .mission-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .mission-card {
-    background: #16213e; border: 2px solid #2a3a5e; border-radius: 8px;
+    background: var(--sv-bg-2); border: 2px solid var(--sv-border); border-radius: 8px;
     padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
     transition: border-color 0.2s;
 }
-.mission-card:hover { border-color: #e2b714; }
+.mission-card:hover { border-color: var(--sv-gold); }
 .mission-card.completed { border-color: #2a5a3e; }
 .mission-card.locked { opacity: 0.5; cursor: not-allowed; }
 .mission-card .m-name { font-weight: bold; }
-.mission-card .m-desc { color: #999; font-size: 12px; }
+.mission-card .m-desc { color: var(--sv-text-3); font-size: 12px; }
 .mission-card .m-stars { color: #ffd93d; font-size: 18px; }
-.mission-card .m-reward { color: #6bcb77; font-size: 12px; }
+.mission-card .m-reward { color: var(--sv-green); font-size: 12px; }
 .grind-section { margin-top: 20px; }
 
 /* === Combat Screen (Prompt 70: Phase 3.4 canvas-first arena presentation) ===
@@ -234,7 +567,7 @@ body {
     height: 85vh;
     min-height: 460px;
     max-height: 900px;
-    background: #0d1117;
+    background: var(--sv-bg-0);
     border-radius: 8px;
     overflow: hidden;
 }
@@ -243,7 +576,7 @@ body {
    in js/ui-combat.js, reused by js/ui-builder.js's team-builder arena against
    its own #builder-backdrop element (Prompt 71). Plain DOM/CSS, no Pixi
    involved -- painted behind the canvas either way. ---- */
-#arena-backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #0d1117; }
+#arena-backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: var(--sv-bg-0); }
 .arena-bd-horizon { position: absolute; inset: 0; }
 .arena-bd-hexfield { position: absolute; inset: 0; opacity: 0.5; background-size: 84px 84px; }
 .arena-bd-blob { position: absolute; border-radius: 50%; filter: blur(40px); opacity: 0.55; }
@@ -292,11 +625,11 @@ body {
 .webgl-required-notice {
     position: absolute; inset: 0; display: flex; flex-direction: column;
     align-items: center; justify-content: center; text-align: center;
-    padding: 24px; gap: 8px; background: #0d1117;
+    padding: 24px; gap: 8px; background: var(--sv-bg-0);
 }
 .webgl-required-icon { font-size: 36px; }
-.webgl-required-title { font-size: 18px; font-weight: bold; color: #e2b714; }
-.webgl-required-desc { font-size: 13px; color: #aaa; max-width: 360px; }
+.webgl-required-title { font-size: 18px; font-weight: bold; color: var(--sv-gold); }
+.webgl-required-desc { font-size: 13px; color: var(--sv-text-3); max-width: 360px; }
 
 /* Results overlay */
 .combat-results {
@@ -307,16 +640,16 @@ body {
 }
 .combat-results.show { display: flex; }
 .results-title { font-size: 28px; font-weight: bold; margin-bottom: 12px; animation: resultsBounce 0.5s ease-out; }
-.results-title.victory { color: #6bcb77; }
-.results-title.defeat { color: #ff6b6b; }
+.results-title.victory { color: var(--sv-green); }
+.results-title.defeat { color: var(--sv-red); }
 .results-stars { font-size: 36px; margin: 8px 0; }
 .results-rewards { font-size: 16px; margin: 8px 0; }
 .results-btn {
-    background: #e2b714; color: #1a1a2e; border: none; border-radius: 8px;
+    background: var(--sv-gold); color: var(--sv-bg-1); border: none; border-radius: 8px;
     padding: 10px 28px; font-size: 16px; font-weight: bold; cursor: pointer;
     margin-top: 12px;
 }
-.results-btn:hover { background: #f0c830; }
+.results-btn:hover { background: var(--sv-gold-bright); }
 
 /* Combat start overlay */
 .combat-start-overlay {
@@ -325,8 +658,8 @@ body {
     align-items: center; justify-content: center; border-radius: 8px; z-index: 5;
 }
 .combat-start-overlay.show { display: flex; }
-.combat-start-overlay .wave-text { font-size: 24px; font-weight: bold; color: #e2b714; }
-.combat-start-overlay .wave-subtext { color: #aaa; margin-top: 6px; }
+.combat-start-overlay .wave-text { font-size: 24px; font-weight: bold; color: var(--sv-gold); }
+.combat-start-overlay .wave-subtext { color: var(--sv-text-3); margin-top: 6px; }
 
 /* Wave transition */
 .wave-transition {
@@ -335,8 +668,8 @@ body {
     align-items: center; justify-content: center; border-radius: 8px; z-index: 5;
 }
 .wave-transition.show { display: flex; }
-.wave-transition .wave-text { font-size: 24px; font-weight: bold; color: #e2b714; }
-.wave-transition .wave-subtext { color: #aaa; margin-top: 6px; }
+.wave-transition .wave-text { font-size: 24px; font-weight: bold; color: var(--sv-gold); }
+.wave-transition .wave-subtext { color: var(--sv-text-3); margin-top: 6px; }
 
 /* === Combat Controls (wave banner + speed) -- floats over the top corners
    of the arena (Task 1) === */
@@ -372,8 +705,8 @@ body {
     position: absolute; top: 38%; left: 0; right: 0;
     display: flex; justify-content: center; align-items: center;
     padding: 8px 0; font-size: 20px; font-weight: bold; letter-spacing: 2px;
-    color: #fff; background: rgba(20,20,30,0.75);
-    border-top: 2px solid #e2b714; border-bottom: 2px solid #e2b714;
+    color: var(--sv-text-1); background: rgba(20,20,30,0.75);
+    border-top: 2px solid var(--sv-gold); border-bottom: 2px solid var(--sv-gold);
     z-index: 28; pointer-events: none; text-align: center;
     animation: waveBannerSweep 1.3s cubic-bezier(.2,.9,.3,1) forwards;
 }
@@ -439,9 +772,9 @@ body {
 #combat-log:not(.expanded) .log-entry:nth-last-child(3) { opacity: 0.45; }
 #combat-log:not(.expanded) .log-entry:nth-last-child(2) { opacity: 0.7; }
 #combat-log:not(.expanded) .log-entry:nth-last-child(1) { opacity: 1; }
-.log-info { color: #8bbcff; }
-.log-damage { color: #ff6b6b; }
-.log-heal { color: #6bcb77; }
+.log-info { color: var(--sv-blue); }
+.log-damage { color: var(--sv-red); }
+.log-heal { color: var(--sv-green); }
 .log-kill { color: #ffd93d; }
 .log-combat { color: #ccc; }
 .log-warning { color: #ff8844; }
@@ -460,15 +793,15 @@ body {
 /* === Utility === */
 .btn-row { display: flex; gap: 8px; margin: 8px 0; }
 .btn-primary {
-    background: #e2b714; color: #1a1a2e; border: none; border-radius: 6px;
+    background: var(--sv-gold); color: var(--sv-bg-1); border: none; border-radius: 6px;
     padding: 8px 18px; font-weight: bold; cursor: pointer;
 }
-.btn-primary:hover { background: #f0c830; }
+.btn-primary:hover { background: var(--sv-gold-bright); }
 .btn-secondary {
-    background: #2a3a5e; color: #e0e0e0; border: none; border-radius: 6px;
+    background: var(--sv-border); color: var(--sv-text-2); border: none; border-radius: 6px;
     padding: 8px 18px; cursor: pointer;
 }
-.btn-secondary:hover { background: #3a4a7e; }
+.btn-secondary:hover { background: var(--sv-border-strong); }
 /* === Sell Panel === */
 #sell-overlay {
     display: none;
@@ -480,7 +813,7 @@ body {
     z-index: 1000;
 }
 .sell-panel {
-    background: #1a1a2e;
+    background: var(--sv-bg-1);
     border: 1px solid #444;
     border-radius: 8px;
     padding: 20px;
@@ -488,23 +821,23 @@ body {
     text-align: center;
 }
 .sell-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; }
-.sell-info { color: #aaa; font-size: 13px; margin-bottom: 12px; }
+.sell-info { color: var(--sv-text-3); font-size: 13px; margin-bottom: 12px; }
 .sell-amount { margin-bottom: 12px; }
 .sell-amt-btn {
     background: #2a2a3e;
     border: 1px solid #555;
-    color: #fff;
+    color: var(--sv-text-1);
     padding: 6px 14px;
     margin: 0 4px;
     border-radius: 4px;
     cursor: pointer;
 }
 .sell-amt-btn:hover { background: #3a3a5e; }
-.sell-preview { font-size: 15px; color: #e2b714; margin-bottom: 14px; }
+.sell-preview { font-size: 15px; color: var(--sv-gold); margin-bottom: 14px; }
 .sell-actions button { margin: 0 6px; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
-.btn-green { background: #44aa44; border: none; color: #fff; }
+.btn-green { background: #44aa44; border: none; color: var(--sv-text-1); }
 .btn-green:hover { background: #55bb55; }
-#sell-cancel { background: #555; border: none; color: #fff; }
+#sell-cancel { background: #555; border: none; color: var(--sv-text-1); }
 #sell-cancel:hover { background: #666; }
 
 /* === Unit Detail Panel === */
@@ -522,7 +855,7 @@ body {
     display: flex !important;
 }
 #unit-detail-panel {
-    background: #1a1a2e;
+    background: var(--sv-bg-1);
     border: 1px solid #444;
     border-radius: 10px;
     padding: 20px;
@@ -538,11 +871,11 @@ body {
     right: 12px;
     background: none;
     border: none;
-    color: #888;
+    color: var(--sv-text-3);
     font-size: 18px;
     cursor: pointer;
 }
-#unit-detail-close:hover { color: #fff; }
+#unit-detail-close:hover { color: var(--sv-text-1); }
 
 .ud-header {
     text-align: center;
@@ -552,7 +885,7 @@ body {
 }
 .ud-name { font-size: 20px; font-weight: bold; }
 .ud-stars { font-size: 16px; margin: 4px 0; }
-.ud-meta { font-size: 12px; color: #aaa; }
+.ud-meta { font-size: 12px; color: var(--sv-text-3); }
 
 .ud-section {
     margin-bottom: 12px;
@@ -563,7 +896,7 @@ body {
 .ud-section-title {
     font-size: 13px;
     font-weight: bold;
-    color: #e2b714;
+    color: var(--sv-gold);
     margin-bottom: 6px;
 }
 .ud-stat-row {
@@ -572,9 +905,9 @@ body {
     font-size: 12px;
     padding: 2px 0;
 }
-.ud-stat-label { color: #aaa; }
-.ud-stat-value { color: #fff; }
-.ud-stat-bonus { color: #6bcb77; font-size: 11px; }
+.ud-stat-label { color: var(--sv-text-3); }
+.ud-stat-value { color: var(--sv-text-1); }
+.ud-stat-bonus { color: var(--sv-green); font-size: 11px; }
 
 .ud-type-desc {
     font-size: 12px;
@@ -592,15 +925,15 @@ body {
 }
 
 .ud-evo-box {
-    background: #16213e;
+    background: var(--sv-bg-2);
     border-radius: 6px;
     padding: 8px;
 }
-.ud-evo-met { color: #6bcb77; }
-.ud-evo-unmet { color: #e2b714; }
+.ud-evo-met { color: var(--sv-green); }
+.ud-evo-unmet { color: var(--sv-gold); }
 .ud-evo-ability {
     font-size: 12px;
-    color: #8bbcff;
+    color: var(--sv-blue);
     margin-top: 4px;
 }
 
@@ -618,7 +951,7 @@ body {
 .combat-scoreboard .sb-header {
     font-size: 12px;
     font-weight: bold;
-    color: #ffd700;
+    color: var(--sv-tier-5);
     text-align: center;
     padding-bottom: 4px;
     border-bottom: 1px solid #1b2838;
@@ -636,19 +969,19 @@ body {
 }
 .combat-scoreboard .sb-name {
     font-weight: bold;
-    color: #e0e0e0;
+    color: var(--sv-text-2);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 .combat-scoreboard .sb-name.enemy {
-    color: #ff6b6b;
+    color: var(--sv-red);
 }
 .combat-scoreboard .sb-stats {
     display: flex;
     gap: 6px;
     font-size: 10px;
-    color: #888;
+    color: var(--sv-text-3);
 }
 .combat-scoreboard .sb-stats .dmg { color: #ff7043; }
 .combat-scoreboard .sb-stats .taken { color: #ef5350; }
@@ -680,8 +1013,8 @@ body {
 /* Speed button */
 .speed-btn {
     background: #1b2838;
-    color: #ffd700;
-    border: 1px solid #ffd700;
+    color: var(--sv-tier-5);
+    border: 1px solid var(--sv-tier-5);
     border-radius: 4px;
     padding: 2px 10px;
     font-size: 12px;
@@ -707,7 +1040,7 @@ body {
     transform: translate(-50%, -50%);
     font-size: 36px;
     font-weight: bold;
-    color: #ffd700;
+    color: var(--sv-tier-5);
     text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
     z-index: 30;
     pointer-events: none;
@@ -727,13 +1060,17 @@ body {
     100% { transform: scale(1); }
 }
 
-/* Element colors */
-.element-fire { color: #ff4444; }
-.element-water { color: #4488ff; }
-.element-earth { color: #44aa44; }
-.element-wind { color: #aa44ff; }
-.element-lightning { color: #ffcc00; }
-.element-force { color: #cc8844; }
+/* Element colors -- canonical palette (GRAPHICS-SESSION-HANDOFF.md), matching
+   js/ui-shared.js's getElementColor(). These classes have no current markup
+   call sites (verified via repo-wide grep), so re-pointing them at the
+   canonical hexes (previously ad hoc placeholder values) is a zero-risk
+   consistency fix, not a visible redesign. */
+.element-fire { color: var(--sv-el-fire); }
+.element-water { color: var(--sv-el-water); }
+.element-earth { color: var(--sv-el-earth); }
+.element-wind { color: var(--sv-el-wind); }
+.element-lightning { color: var(--sv-el-lightning); }
+.element-force { color: var(--sv-el-force); }
 
 /* Prismatic highlight for 10-count element synergy */
 .synergy-item.prismatic {
@@ -758,9 +1095,9 @@ body {
 }
 
 .text-gold { color: #ffd93d; }
-.text-green { color: #6bcb77; }
-.text-red { color: #ff6b6b; }
-.text-muted { color: #888; }
+.text-green { color: var(--sv-green); }
+.text-red { color: var(--sv-red); }
+.text-muted { color: var(--sv-text-3); }
 .mt-sm { margin-top: 6px; }
 .mt-md { margin-top: 12px; }
     </style>
@@ -771,78 +1108,114 @@ body {
         <div id="top-bar">
             <button id="nav-back" onclick="goBack()">← Back</button>
             <div id="player-info">
-                <span id="player-level">Lv. 1</span>
-                <span id="player-xp">XP: 0/100</span>
-                <span id="player-gold">✨ 100 VE</span>
+                <span id="player-level" class="sv-chip">Lv. 1</span>
+                <span id="player-xp" class="sv-chip">XP: 0/100</span>
+                <span id="player-gold" class="sv-chip">✨ 100 VE</span>
+            </div>
+            <!-- Prompt 77 (Phase 6.2): Achievements/Stats/Reset relocated here,
+                 off a settings drawer, instead of living as hub-only buttons.
+                 Available from any screen (toggleHubSettingsDrawer(), ui-hub.js)
+                 since the drawer's own contents (showAchievementPanel/
+                 showStatsPanel/uiResetGame) already build their own full-screen
+                 overlays regardless of currentScreen. -->
+            <button id="hub-settings-gear" class="hub-settings-gear" onclick="toggleHubSettingsDrawer()" aria-label="Settings" data-tooltip="Achievements · Stats · Reset">⚙️</button>
+        </div>
+
+        <!-- Settings Drawer (Prompt 77) -->
+        <div class="hub-settings-scrim" id="hub-settings-scrim" onclick="toggleHubSettingsDrawer(false)"></div>
+        <div class="hub-settings-drawer" id="hub-settings-drawer">
+            <div class="hub-settings-drawer-header">
+                <span>⚙️ Settings</span>
+                <button class="sv-modal-close" onclick="toggleHubSettingsDrawer(false)">✕</button>
+            </div>
+            <button class="sv-btn sv-btn-block" onclick="showAchievementPanel()">🏆 Achievements</button>
+            <button class="sv-btn sv-btn-block" onclick="showStatsPanel()">📊 Stats</button>
+            <div class="hub-settings-danger">
+                <div class="hub-settings-danger-label">Danger Zone</div>
+                <button class="sv-btn sv-btn-block" onclick="uiResetGame()">Reset Game (Start Over)</button>
             </div>
         </div>
 
-        <!-- ============ HUB SCREEN ============ -->
+        <!-- ============ HUB SCREEN ============
+             Prompt 77 (Phase 6.2): from a button-grid to a base-camp scene --
+             DOM/CSS only, no Pixi (see the "Hub Screen -- Camp Scene" CSS
+             block). js/ui-hub.js's renderHubScreen() populates #buildings-grid
+             and #endless-challenges-nav exactly as before (same building-panel
+             /upgrade logic, same lock gating) into the new markup below; the
+             backdrop and connecting path are static/decorative. -->
         <div id="screen-hub" class="screen active">
-            <div class="screen-title">🏕️ Camp</div>
+            <div class="hub-camp-scene">
+                <div id="hub-camp-backdrop"></div>
+                <div class="hub-camp-silhouette hub-camp-silhouette-mountains"></div>
+                <div class="hub-camp-silhouette hub-camp-silhouette-tents"></div>
+                <div class="hub-camp-silhouette hub-camp-silhouette-banner"></div>
 
-            <div class="hub-nav">
-                <div class="hub-nav-btn" onclick="showScreen('gacha')">
-                    <span class="nav-emoji">🎲</span> Summon Units
+                <div class="hub-camp-topline">
+                    <div class="screen-title" style="margin:0;">🏕️ Camp</div>
                 </div>
-                <div class="hub-nav-btn" onclick="showScreen('roster')">
-                    <span class="nav-emoji">📋</span> Collection
+
+                <!-- Equipment Inventory Overlay (unchanged behavior -- js/ui-items.js) -->
+                <div id="item-bench-overlay" class="sv-panel" style="position:relative; z-index:1; display:none; padding:12px; margin-top:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <div class="section-title" style="margin:0;">🎒 Equipment Inventory</div>
+                        <button class="sv-btn" onclick="uiToggleItemBench()" style="font-size:11px; padding:4px 10px;">Close</button>
+                    </div>
+                    <div id="item-bench-info" style="font-size:12px; color:var(--sv-text-3); margin-bottom:6px;"></div>
+                    <div style="margin-bottom:6px;">
+                        <button class="sv-btn" onclick="uiShowCodex()" style="font-size:11px; padding:4px 10px;">📖 Codex</button>
+                    </div>
+                    <div id="item-bench-grid" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:4px;"></div>
+                    <div id="item-detail-panel" style="display:none; margin-top:8px; padding:8px; background:var(--sv-bg-2); border-radius:6px; font-size:12px;"></div>
+                    <div id="codex-panel" style="display:none; margin-top:8px; padding:10px; background:var(--sv-bg-0); border-radius:6px; font-size:12px; max-height:300px; overflow-y:auto;"></div>
                 </div>
-                <div class="hub-nav-btn" onclick="uiOpenTeamBuilderStandalone()">
-                    <span class="nav-emoji">⚔️</span> Team Builder
-                </div>
-                <div class="hub-nav-btn" onclick="uiToggleItemBench()">
-                    <span class="nav-emoji">🎒</span> Equipment
-                </div>
-                <div class="hub-nav-btn" onclick="showScreen('heroes')">
-                    <span class="nav-emoji">👑</span> Heroes
-                </div>
-                <div class="hub-nav-btn" onclick="showLoreCodex()">
-                    <span class="nav-emoji">📜</span> Codex
-                </div>
+
+                <!-- Faint curved path motif connecting the building cards -- purely
+                     decorative, sits behind the grid (z-index 0 vs the grid's 1). -->
+                <svg class="hub-camp-path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    <path d="M 5 15 C 30 5, 40 30, 55 20 S 80 5, 95 18 S 70 45, 50 42 S 15 55, 30 70 S 60 80, 85 68 S 95 90, 70 92"
+                        fill="none" stroke="var(--sv-gold)" stroke-width="0.6" stroke-dasharray="2 3" opacity="0.4" vector-effect="non-scaling-stroke" />
+                </svg>
+
+                <div class="hub-camp-grid" id="buildings-grid"></div>
+
+                <!-- Prompt 64: endless mode (The Abyss) + challenge modes entry buttons.
+                     Populated by renderHubScreen() -> renderEndlessChallengesNav() in
+                     ui-hub.js so lock state stays in sync with save data. -->
+                <div class="hub-camp-beyond" id="endless-challenges-nav"></div>
             </div>
 
-            <!-- Equipment Inventory Overlay -->
-            <div id="item-bench-overlay" style="display:none; background:#1a1a2e; border:1px solid #333; border-radius:8px; padding:12px; margin-top:10px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <div class="section-title" style="margin:0;">🎒 Equipment Inventory</div>
-                    <button class="btn-secondary" onclick="uiToggleItemBench()" style="font-size:11px; padding:2px 8px;">Close</button>
+            <!-- Docked bottom nav (Prompt 77, Task 2): Summon / Collection / Team /
+                 Missions / Heroes / Codex / Item Bench. Every handler below is the
+                 exact same function the pre-redesign hub-nav buttons called --
+                 only the container markup/classes changed. Heroes is kept here
+                 (not listed in the prompt's example nav set) since it was a
+                 reachable hub route before this redesign and nothing elsewhere
+                 replaces it -- dropping it would be a functionality regression,
+                 not a presentation change. -->
+            <div class="hub-bottom-nav">
+                <div class="hub-bottom-nav-inner">
+                    <button class="hub-nav-dock-btn" onclick="showScreen('gacha')">
+                        <span class="nav-emoji">🎲</span> Summon
+                    </button>
+                    <button class="hub-nav-dock-btn" onclick="showScreen('roster')">
+                        <span class="nav-emoji">📋</span> Collection
+                    </button>
+                    <button class="hub-nav-dock-btn" onclick="uiOpenTeamBuilderStandalone()">
+                        <span class="nav-emoji">⚔️</span> Team
+                    </button>
+                    <button class="hub-nav-dock-btn" onclick="showScreen('mission-select')">
+                        <span class="nav-emoji">🗡️</span> Missions
+                    </button>
+                    <button class="hub-nav-dock-btn" onclick="showScreen('heroes')">
+                        <span class="nav-emoji">👑</span> Heroes
+                    </button>
+                    <button class="hub-nav-dock-btn" onclick="showLoreCodex()">
+                        <span class="nav-emoji">📜</span> Codex
+                    </button>
+                    <button class="hub-nav-dock-btn" onclick="uiToggleItemBench()">
+                        <span class="nav-emoji">🎒</span> Item Bench
+                    </button>
                 </div>
-                <div id="item-bench-info" style="font-size:12px; color:#888; margin-bottom:6px;"></div>
-                <div style="margin-bottom:6px;">
-                    <button onclick="uiShowCodex()" style="font-size:11px; padding:3px 10px; background:#2a3a5e; color:#e0e0e0; border:none; border-radius:4px; cursor:pointer;">📖 Codex</button>
-                </div>
-                <div id="item-bench-grid" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:4px;"></div>
-                <div id="item-detail-panel" style="display:none; margin-top:8px; padding:8px; background:#16213e; border-radius:6px; font-size:12px;"></div>
-                <div id="codex-panel" style="display:none; margin-top:8px; padding:10px; background:#0d1117; border-radius:6px; font-size:12px; max-height:300px; overflow-y:auto;"></div>
-            </div>
-
-            <div class="section-title mt-md">Buildings</div>
-            <div class="hub-grid" id="buildings-grid"></div>
-
-            <div class="hub-nav mt-md">
-                <div class="hub-nav-btn" onclick="showScreen('mission-select')" style="grid-column: 1 / -1;">
-                    <span class="nav-emoji">🗡️</span> Deploy to Mission
-                </div>
-            </div>
-
-            <!-- Prompt 64: endless mode (The Abyss) + challenge modes entry buttons.
-                 Populated by renderHubScreen() in ui-hub.js so lock state stays in
-                 sync with save data; static onclick handlers here would need no
-                 gating logic, so the content itself is rendered dynamically. -->
-            <div class="hub-nav mt-md" id="endless-challenges-nav" style="grid-template-columns: repeat(2, 1fr);"></div>
-
-            <div class="hub-nav mt-md" style="grid-template-columns: repeat(2, 1fr);">
-                <div class="hub-nav-btn" onclick="showAchievementPanel()">
-                    <span class="nav-emoji">🏆</span> Achievements
-                </div>
-                <div class="hub-nav-btn" onclick="showStatsPanel()">
-                    <span class="nav-emoji">📊</span> Stats
-                </div>
-            </div>
-
-            <div style="text-align:center; margin-top:20px;">
-                <button class="btn-secondary" onclick="uiResetGame()" style="font-size:12px; opacity:0.6;">Reset Game (Start Over)</button>
             </div>
         </div>
 
