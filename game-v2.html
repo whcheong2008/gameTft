@@ -1100,6 +1100,193 @@ body {
 .text-muted { color: var(--sv-text-3); }
 .mt-sm { margin-top: 6px; }
 .mt-md { margin-top: 12px; }
+
+/* ==== P78 GACHA ====
+   Prompt 78 (Phase 6.3): gacha summon ceremony. Owned exclusively by
+   js/ui-gacha.js -- the whole #screen-gacha subtree (altar scene, summon
+   circle, rates/pity panel, card-flip reveals) is built by that file at
+   runtime (file scope forbids touching <body> markup directly), styled
+   here. Reuses the pre-existing .gacha-card/.cost-1..5/.card-new-badge/
+   .card-evolved-badge rules above (untouched) via composition -- every
+   selector below is new, ceremony-specific, and additive.
+
+   No JS timers drive any of this: every reveal stage is a CSS transition
+   whose delay is set as an inline style per element by ui-gacha.js (mirrors
+   the file's pre-existing animationDelay stagger). Click-to-skip just adds
+   .gacha-skip-anim to the altar content wrapper, which zeroes every
+   transition/animation duration+delay below so whatever's mid-flight snaps
+   to its end state. Reduced-motion is the same "no animation defined
+   outside a `(prefers-reduced-motion: no-preference)` block, explicit
+   `(prefers-reduced-motion: reduce)` override for anything declared
+   unconditionally" convention game-v2.html already uses elsewhere (see the
+   .sv-screen-enter / .hub-settings-drawer comments above) -- this file
+   never needs to query matchMedia(). */
+
+.gacha-altar-scene {
+    position: relative;
+    padding: var(--sv-sp-4) var(--sv-sp-3) var(--sv-sp-3);
+    margin-top: 8px;
+    border-radius: var(--sv-radius-lg);
+    overflow: hidden;
+    isolation: isolate; /* keeps the backdrop's z-index:0 layer from bleeding above siblings */
+    text-align: center;
+}
+#gacha-altar-backdrop { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: var(--sv-bg-0); }
+.gacha-altar-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: var(--sv-sp-2); }
+
+/* ---- Summon circle centerpiece ---- */
+.gacha-summon-circle {
+    position: relative; z-index: 1; cursor: pointer;
+    width: 150px; height: 150px; margin: var(--sv-sp-2) auto 26px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+}
+.gacha-summon-circle-ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 2px solid var(--sv-gold); opacity: 0.6;
+    box-shadow: 0 0 18px rgba(226,183,20,0.35), inset 0 0 18px rgba(226,183,20,0.25);
+}
+.gacha-summon-circle-glyphs {
+    position: absolute; inset: 12%; border-radius: 50%;
+    border: 1px dashed rgba(179,136,255,0.6);
+}
+.gacha-summon-circle-core {
+    position: absolute; width: 46%; height: 46%; border-radius: 50%;
+    background: radial-gradient(circle, var(--sv-gold-bright), var(--sv-gold) 55%, transparent 75%);
+}
+.gacha-summon-hint {
+    position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; color: var(--sv-text-3); white-space: nowrap; display: none;
+}
+.gacha-summon-circle.is-charging .gacha-summon-hint { display: block; }
+@media (prefers-reduced-motion: no-preference) {
+    .gacha-summon-circle-ring { animation: gachaRingSpin 12s linear infinite; }
+    .gacha-summon-circle-glyphs { animation: gachaRingSpin 16s linear infinite reverse; }
+    .gacha-summon-circle-core { animation: gachaCorePulse 2.6s ease-in-out infinite; }
+    .gacha-summon-circle.is-charging .gacha-summon-circle-ring,
+    .gacha-summon-circle.is-charging .gacha-summon-circle-glyphs { animation-duration: 0.6s; }
+    .gacha-summon-circle.is-charging .gacha-summon-circle-core { animation: gachaCoreCharge 0.6s ease-out; }
+}
+@keyframes gachaRingSpin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes gachaCorePulse { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.08); opacity: 1; } }
+@keyframes gachaCoreCharge { 0% { transform: scale(0.7); opacity: 0.6; } 70% { transform: scale(1.35); opacity: 1; } 100% { transform: scale(1); opacity: 0.9; } }
+
+/* ---- Rite buttons: layered on top of the pre-existing .gacha-btn rule
+   above via the design-system sv-btn classes ui-gacha.js now also applies. ---- */
+.gacha-controls .gacha-btn.sv-btn { min-width: 150px; }
+
+/* ---- Collapsible rates/pity sv-panel ---- */
+.gacha-rates-panel { width: 100%; max-width: 420px; margin: var(--sv-sp-2) 0; text-align: left; overflow: hidden; }
+.gacha-rates-toggle {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; font-size: 13px; background: none; border: none;
+}
+.gacha-rates-caret { color: var(--sv-gold); transition: transform var(--sv-transition-fast); }
+.gacha-rates-panel.collapsed .gacha-rates-caret { transform: rotate(-90deg); }
+.gacha-rates-panel.collapsed .gacha-rates-body { display: none; }
+.gacha-pity-wrap { margin-top: var(--sv-sp-2); }
+.gacha-pity-label { font-size: 12px; color: var(--sv-text-3); margin-bottom: 4px; }
+.gacha-pity-bar { height: 10px; }
+.gacha-pity-marker {
+    position: absolute; top: 50%; right: 0; width: 3px; height: 14px;
+    transform: translateY(-50%); background: var(--sv-gold-bright);
+    box-shadow: 0 0 6px rgba(240,200,48,0.8); border-radius: 2px;
+}
+.gacha-pity-bar.is-near .sv-bar-fill { box-shadow: 0 0 10px rgba(226,183,20,0.65); }
+
+/* ---- Card-flip reveal (single + multi share this) ---- */
+.gacha-card-slot { position: relative; display: flex; align-items: center; justify-content: center; perspective: 800px; }
+.gacha-single-slot { min-height: 172px; margin: var(--sv-sp-2) 0; }
+.gacha-multi-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--sv-sp-2);
+    width: 100%; margin-top: var(--sv-sp-2);
+}
+@media (max-width: 640px) {
+    .gacha-multi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.gacha-burst {
+    position: absolute; top: 50%; left: 50%; width: 120px; height: 120px;
+    margin: -60px 0 0 -60px; border-radius: 50%; filter: blur(16px);
+    opacity: 0; transform: scale(0.5); pointer-events: none; z-index: 0;
+}
+.gacha-burst-tier-1 { background: radial-gradient(circle, var(--sv-tier-1), transparent 70%); }
+.gacha-burst-tier-2 { background: radial-gradient(circle, var(--sv-tier-2), transparent 70%); }
+.gacha-burst-tier-3 { background: radial-gradient(circle, var(--sv-tier-3), transparent 70%); width: 152px; height: 152px; margin: -76px 0 0 -76px; }
+.gacha-burst-tier-4 { background: radial-gradient(circle, var(--sv-tier-4), transparent 70%); width: 172px; height: 172px; margin: -86px 0 0 -86px; }
+.gacha-burst-tier-5 { background: radial-gradient(circle, var(--sv-tier-5), transparent 70%); width: 194px; height: 194px; margin: -97px 0 0 -97px; }
+.gacha-burst.is-active { opacity: 0.55; transform: scale(1); }
+.gacha-burst-tier-3.is-active { opacity: 0.7; transform: scale(1.15); }
+.gacha-burst-tier-4.is-active { opacity: 0.85; transform: scale(1.25); }
+.gacha-burst-tier-5.is-active { opacity: 1; transform: scale(1.4); }
+
+/* .gacha-flip-card is layered on top of the pre-existing .gacha-card rule
+   above -- its own unconditional `animation: cardReveal ...` is neutralized
+   here (higher specificity via the compound selector) in favor of the
+   transition-based flip this block owns end-to-end. */
+.gacha-card.gacha-flip-card { animation: none; position: relative; z-index: 1; transform-style: preserve-3d; }
+.gacha-flip-card.is-facedown { transform: rotateY(180deg) scale(0.92); }
+.gacha-flip-card.is-facedown::before {
+    content: '✦'; position: absolute; inset: 0; border-radius: inherit;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; color: var(--sv-gold);
+    background: linear-gradient(135deg, var(--sv-bg-2) 0%, #1a2744 100%);
+    transform: rotateY(180deg); z-index: 2;
+}
+@media (prefers-reduced-motion: no-preference) {
+    .gacha-burst { transition: opacity 320ms ease, transform 320ms ease; }
+    .gacha-flip-card { transition: transform 340ms ease; }
+}
+
+/* NEW-unit badge reads as a corner ribbon on ceremony cards specifically
+   (higher specificity than the plain .gacha-card .card-new-badge rule
+   above, which stays as-is for anything else that ever reuses it). */
+.gacha-flip-card .card-new-badge {
+    top: 9px; right: -28px; transform: rotate(35deg);
+    padding: 2px 30px; font-size: 9px; letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+
+/* ---- Multi-roll summary row (new/dupes/highest tier) ---- */
+.gacha-multi-summary {
+    width: 100%; display: flex; justify-content: center; gap: var(--sv-sp-2);
+    flex-wrap: wrap; margin-top: var(--sv-sp-3); padding-top: var(--sv-sp-2);
+    border-top: 1px solid var(--sv-border);
+}
+.gacha-summary-chip {
+    font-size: 12px; padding: 4px 10px; border-radius: var(--sv-radius-sm);
+    background: var(--sv-bg-2); border: 1px solid var(--sv-border); color: var(--sv-text-2);
+}
+.gacha-summary-new { border-color: var(--sv-green); color: var(--sv-green); }
+.gacha-summary-highest { border-color: var(--sv-gold); color: var(--sv-gold); }
+
+/* ---- Click-to-skip: zero every transition/animation this block declares
+   the instant .gacha-skip-anim lands on the altar content wrapper. ---- */
+.gacha-skip-anim .gacha-flip-card,
+.gacha-skip-anim .gacha-burst,
+.gacha-skip-anim .gacha-summon-circle-ring,
+.gacha-skip-anim .gacha-summon-circle-glyphs,
+.gacha-skip-anim .gacha-summon-circle-core {
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    animation-duration: 0.01s !important;
+    animation-delay: 0s !important;
+}
+
+/* ---- Reduced motion: collapse every animated declaration above to an
+   instant final state (no JS branching -- ui-gacha.js never queries
+   matchMedia(), same convention as the rest of this file). ---- */
+@media (prefers-reduced-motion: reduce) {
+    .gacha-summon-circle-ring, .gacha-summon-circle-glyphs, .gacha-summon-circle-core,
+    .gacha-flip-card, .gacha-burst {
+        animation: none !important; transition: none !important;
+    }
+    .gacha-flip-card.is-facedown { transform: none !important; }
+    .gacha-flip-card.is-facedown::before { display: none !important; }
+    .gacha-burst { opacity: 0 !important; transform: scale(1) !important; }
+    .gacha-burst.is-active { opacity: 0.6 !important; }
+    .gacha-burst-tier-3.is-active, .gacha-burst-tier-4.is-active, .gacha-burst-tier-5.is-active { opacity: 0.85 !important; }
+}
     </style>
 </head>
 <body>
