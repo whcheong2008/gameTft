@@ -7,11 +7,33 @@
 var SCREENS = ['hub', 'gacha', 'roster', 'team-builder', 'mission-select', 'combat', 'heroes'];
 var currentScreen = 'hub';
 
+// Prompt 77 (Phase 6.1, Task 1): screen-transition framework hooked centrally
+// here -- a 180ms fade/slide-in on whichever screen becomes active. The
+// visibility logic itself (inline display:block/none) is unchanged; the only
+// addition is toggling the 'active' class (which the CSS already declared but
+// never actually used, since the inline style already won the cascade) and
+// re-triggering the '.sv-screen-enter' entrance animation via a forced
+// reflow. Reduced-motion is handled entirely in CSS (the animation itself is
+// wrapped in an `@media (prefers-reduced-motion: no-preference)` block in
+// game-v2.html) so this function never needs to branch on it -- also what
+// keeps this safe to call headlessly (tests/harness.js's element stub has no
+// real layout, so classList.toggle()/offsetWidth are simply harmless no-ops).
 function showScreen(screenId) {
     for (var i = 0; i < SCREENS.length; i++) {
         var el = document.getElementById('screen-' + SCREENS[i]);
         if (el) {
-            el.style.display = (SCREENS[i] === screenId) ? 'block' : 'none';
+            var isTarget = (SCREENS[i] === screenId);
+            el.style.display = isTarget ? 'block' : 'none';
+            if (el.classList) {
+                el.classList.toggle('active', isTarget);
+                if (isTarget) {
+                    el.classList.remove('sv-screen-enter');
+                    // Force a reflow so re-adding the class restarts the CSS
+                    // animation even when re-entering the same screen twice in a row.
+                    if (typeof el.offsetWidth !== 'undefined') { void el.offsetWidth; }
+                    el.classList.add('sv-screen-enter');
+                }
+            }
         }
     }
     currentScreen = screenId;
