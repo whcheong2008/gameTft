@@ -1264,6 +1264,158 @@ body {
 .p79-modal-accent-purple { border-color: #b388ff; }
 .p79-lore-entry { margin-bottom: 10px; padding: 10px 12px; background: var(--sv-bg-2); border-radius: var(--sv-radius-sm); border: 1px solid var(--sv-border); }
 .p79-lore-entry.locked { background: var(--sv-bg-0); border-color: #222; }
+
+/* =============================================================================
+   ==== P80 HUD ====
+   Prompt 80 (Phase 6.5): combat HUD, results, mission select on the design
+   system. Presentation-only -- appended here (never edited in place above)
+   so this block's diff stays self-contained; every rule below either
+   introduces a new `.p80-*` class (for markup this prompt's two files -- js/
+   ui-missions.js and js/ui-combat.js -- now generate) or re-declares an
+   EXISTING selector (".speed-btn", "#enrage-timer", ".wave-info", etc.) --
+   CSS source order means these later declarations simply win the cascade
+   without touching the original rules above. Zero logic changes; every
+   custom animation below is wrapped in prefers-reduced-motion.
+   ============================================================================= */
+
+/* ---- Region map / stage select (js/ui-missions.js) ---- */
+.p80-region-card { overflow: hidden; }
+.p80-region-card.locked { opacity: 0.5; cursor: not-allowed; }
+.p80-region-card.completed { border-color: #2a5a3e; }
+.p80-region-header {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: var(--sv-sp-2); flex-wrap: wrap;
+}
+.p80-region-title { font-weight: bold; color: var(--sv-text-1); }
+.p80-region-body { display: flex; flex-direction: column; gap: 4px; }
+.p80-region-subtitle { color: var(--sv-text-3); font-size: 12px; }
+.p80-region-progress-row { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; gap: var(--sv-sp-2); }
+.p80-region-pips { display: flex; gap: 3px; flex-wrap: wrap; max-width: 60%; justify-content: flex-end; }
+.p80-region-pip { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.12); flex-shrink: 0; }
+.p80-region-pip-1 { background: rgba(226,183,20,0.35); }
+.p80-region-pip-2 { background: rgba(226,183,20,0.65); }
+.p80-region-pip-3 { background: var(--sv-gold); box-shadow: 0 0 4px rgba(226,183,20,0.6); }
+.p80-region-reward { margin-top: 2px; }
+.p80-region-lock-req { font-size: 11px; color: var(--sv-text-3); margin-top: 4px; }
+.p80-boss-chip { border-color: #884422; color: #ffb088; }
+.p80-boss-chip.cleared { border-color: var(--sv-green); color: var(--sv-green); }
+.p80-entry-card .p80-region-subtitle { padding-top: 2px; }
+
+.p80-stage-list-header { display: flex; align-items: center; gap: 10px; margin-bottom: var(--sv-sp-2); }
+.p80-stage-list-title { font-size: 16px; font-weight: bold; }
+
+.p80-stage-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: var(--sv-sp-3) var(--sv-sp-4); cursor: pointer;
+    transition: border-color var(--sv-transition-fast);
+}
+.p80-stage-row:hover { border-color: var(--sv-gold); }
+.p80-stage-row.locked { opacity: 0.5; cursor: not-allowed; }
+.p80-stage-row.completed { border-color: #2a5a3e; }
+.p80-stage-row.boss { border-width: 2px; border-color: #884422; }
+.p80-stage-row.boss.completed { border-color: #4a8a5e; }
+.p80-stage-main { flex: 1; min-width: 0; }
+.p80-stage-name-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.p80-stage-name { font-weight: bold; }
+.p80-stage-desc { color: var(--sv-text-3); font-size: 12px; margin-top: 2px; }
+.p80-stage-lore {
+    font-style: italic; color: #b8a8e0; font-size: 11px; margin-top: 4px;
+    border-left: 2px solid rgba(184,168,224,0.4); padding-left: 6px;
+}
+.p80-stage-reward { font-size: 12px; margin-top: 4px; }
+.p80-stage-lock-req { font-size: 11px; color: #ff8844; margin-top: 2px; }
+.p80-stage-stars { font-size: 18px; color: #ffd93d; flex-shrink: 0; }
+.p80-type-chip { text-transform: uppercase; font-size: 9px; letter-spacing: 0.5px; padding: 1px 6px; }
+.p80-grind-row { margin-top: 16px; text-align: center; }
+
+/* ---- Combat chrome: scoreboard / synergy sidebars / synergy bar / log
+   (js/ui-combat.js) -- these re-declare pre-existing selectors on purpose,
+   see the block header comment. Collapse behavior (.collapsed) is untouched. */
+.combat-scoreboard { background: var(--sv-bg-0); border: 1px solid var(--sv-border); }
+.combat-scoreboard .sb-header { border-bottom-color: var(--sv-border); }
+.combat-scoreboard .sb-unit { border-bottom-color: var(--sv-border); }
+.combat-scoreboard .sb-stats .dmg { color: var(--sv-el-fire); }
+.combat-scoreboard .sb-stats .taken { color: var(--sv-red); }
+.combat-scoreboard .sb-stats .heal { color: var(--sv-green); }
+#synergy-sidebar-left, #synergy-sidebar-right { border: 1px solid var(--sv-border); }
+.p80-drawer-header { font-size: 11px; font-weight: bold; color: var(--sv-text-3); cursor: pointer; user-select: none; }
+.p80-synergy-entry { padding: 3px 8px; border-radius: var(--sv-radius-sm); border-left: 3px solid; }
+.arena-drawer-body { display: flex; flex-direction: column; gap: 3px; }
+
+#combat-log { border: 1px solid var(--sv-border); }
+#combat-log.expanded { border-color: var(--sv-border-strong); }
+
+/* Speed control + enrage timer as pill buttons */
+.speed-btn {
+    border-radius: 999px; background: var(--sv-bg-2); border: 1px solid var(--sv-tier-5);
+    color: var(--sv-tier-5); padding: 4px 14px;
+}
+.speed-btn:hover { background: var(--sv-border-strong); }
+#enrage-timer {
+    display: inline-block; background: rgba(255,68,68,0.14); border: 1px solid #ff6644;
+    border-radius: 999px; padding: 2px 10px; font-weight: bold; color: #ff8866;
+}
+#enrage-timer:empty { display: none; }
+.wave-info { border-radius: 999px; border: 1px solid var(--sv-border); letter-spacing: 0.4px; }
+
+/* Wave / encounter banners -- typography alignment only */
+.wave-banner-sweep { font-family: 'Segoe UI', system-ui, sans-serif; letter-spacing: 3px; }
+.wave-info, #combat-controls, .combat-start-overlay .wave-text, .wave-transition .wave-text {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Reposition overlay instructions */
+.wave-transition .wave-text { letter-spacing: 1px; }
+.wave-transition .wave-subtext { color: var(--sv-text-3); }
+
+/* ---- Results screen: sequence sheet (js/ui-combat.js's showMissionResults()) ---- */
+#combat-results {
+    background: radial-gradient(ellipse at 50% 40%, rgba(22,33,62,0.95) 0%, rgba(5,7,12,0.97) 70%);
+    gap: var(--sv-sp-2); padding: var(--sv-sp-5);
+    transition: filter var(--sv-transition-med);
+}
+#combat-results.p80-results-defeat { filter: grayscale(0.6) brightness(0.85); }
+@media (prefers-reduced-motion: reduce) {
+    #combat-results { transition: none; }
+}
+.p80-results-title { letter-spacing: 1px; }
+#results-stars { display: flex; gap: 6px; justify-content: center; }
+.p80-star-pip {
+    display: inline-block; font-size: 34px; opacity: 0; transform: scale(0.4);
+    animation: p80StarPop 0.45s cubic-bezier(.2,1.4,.4,1) forwards;
+}
+@keyframes p80StarPop {
+    to { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .p80-star-pip { animation: none; opacity: 1; transform: none; }
+}
+#results-rewards {
+    display: flex; flex-direction: column; gap: 6px; align-items: stretch;
+    width: 100%; max-width: 420px; text-align: left;
+}
+.p80-reward-row {
+    background: rgba(255,255,255,0.04); border: 1px solid var(--sv-border);
+    border-radius: var(--sv-radius-sm); padding: 6px 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 6px; font-size: 13px;
+}
+.p80-reward-primary { font-size: 15px; font-weight: 600; }
+.p80-reward-label { color: var(--sv-text-3); font-size: 12px; margin-right: 8px; }
+.p80-reward-chips { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+.p80-reward-levelup { justify-content: center; font-size: 18px; font-weight: bold; border-color: var(--sv-green); }
+.p80-reward-empty { justify-content: center; }
+.p80-mvp-card {
+    margin-top: 4px; padding: 8px 12px; border-radius: var(--sv-radius-sm);
+    background: linear-gradient(90deg, rgba(226,183,20,0.16), transparent);
+    border: 1px solid var(--sv-gold); font-size: 13px; color: var(--sv-gold);
+    display: flex; align-items: center; gap: 8px;
+}
+.p80-mvp-badge {
+    background: var(--sv-gold); color: var(--sv-bg-1); font-weight: 800; font-size: 10px;
+    padding: 2px 6px; border-radius: 999px; letter-spacing: 0.5px;
+}
+.results-btn { box-shadow: var(--sv-shadow-sm); }
     </style>
 </head>
 <body>

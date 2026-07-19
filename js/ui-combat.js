@@ -143,8 +143,8 @@ function renderEncounterMechanicBanner() {
         banner = document.createElement('div');
         banner.id = 'encounter-mechanic-banner';
         banner.style.cssText = 'position:absolute; top:8px; left:50%; transform:translateX(-50%); ' +
-            'background:rgba(20,20,30,0.9); border:1px solid #e2b714; border-radius:8px; ' +
-            'padding:6px 14px; font-size:12px; color:#eee; z-index:20; text-align:center; max-width:80%;';
+            'background:rgba(20,20,30,0.9); border:1px solid var(--sv-gold); border-radius:var(--sv-radius-md); ' +
+            'padding:6px 14px; font-size:12px; color:var(--sv-text-2); z-index:20; text-align:center; max-width:80%;';
         var boardEl = document.getElementById('combat-board');
         if (boardEl && boardEl.appendChild) boardEl.appendChild(banner);
     }
@@ -218,8 +218,8 @@ function updateEncounterMechanicHud() {
         hud = document.createElement('div');
         hud.id = 'encounter-mechanic-hud';
         hud.style.cssText = 'position:absolute; top:40px; left:50%; transform:translateX(-50%); ' +
-            'background:rgba(20,20,30,0.85); border-radius:6px; padding:4px 10px; ' +
-            'font-size:11px; color:#e2b714; z-index:20; text-align:center;';
+            'background:rgba(20,20,30,0.85); border-radius:var(--sv-radius-sm); padding:4px 10px; ' +
+            'font-size:11px; color:var(--sv-gold); z-index:20; text-align:center;';
         var boardEl2 = document.getElementById('combat-board');
         if (boardEl2 && boardEl2.appendChild) boardEl2.appendChild(hud);
     }
@@ -900,6 +900,14 @@ function uiNextWave() {
     startWaveCombat();
 }
 
+// Prompt 80: wraps a piece of results content in one ".p80-reward-row" line
+// of the results sequence sheet. Pure markup helper -- every call site below
+// still decides WHETHER/WHEN to add a row exactly like the old `rewardHtml +=`
+// chain did, this just standardizes the wrapper.
+function p80ResultsRow(innerHtml, extraClass) {
+    return '<div class="p80-reward-row' + (extraClass ? ' ' + extraClass : '') + '">' + innerHtml + '</div>';
+}
+
 function showMissionResults(victory, stars) {
     // Hide wave transition overlay if still showing
     document.getElementById('wave-transition').className = 'wave-transition';
@@ -909,15 +917,19 @@ function showMissionResults(victory, stars) {
 
     var titleEl = document.getElementById('results-title');
     titleEl.textContent = victory ? 'Victory!' : 'Defeat';
-    titleEl.className = 'results-title ' + (victory ? 'victory' : 'defeat');
+    titleEl.className = 'results-title p80-results-title ' + (victory ? 'victory' : 'defeat');
 
+    // Prompt 80: star pips animate in one at a time (staggered animation-delay)
+    // instead of appearing as flat text -- same 0-3 `stars` value as before,
+    // and defeat still renders no pips at all (starsHtml stays '').
     var starsHtml = '';
     if (victory) {
         for (var i = 0; i < 3; i++) {
-            starsHtml += i < stars ? '⭐' : '☆';
+            var pipFilled = i < stars;
+            starsHtml += '<span class="p80-star-pip' + (pipFilled ? ' filled' : '') + '" style="animation-delay:' + (i * 0.12) + 's;">' + (pipFilled ? '⭐' : '☆') + '</span>';
         }
     }
-    document.getElementById('results-stars').textContent = starsHtml;
+    document.getElementById('results-stars').innerHTML = starsHtml;
 
     if (victory && activeMission) {
         // Prompt 64: Time Trial / Restricted Roster / Element Boss challenges
@@ -952,59 +964,68 @@ function showMissionResults(victory, stars) {
             xpBonusText = ' (+' + Math.round((xpMult - 1) * 100) + '% from Training Ground)';
         }
 
-        var rewardHtml =
-            '<span class="text-gold">+' + rewards.gold + ' VE' + goldBonusText + '</span> · ' +
-            '<span class="text-green">+' + rewards.xp + ' XP' + xpBonusText + '</span>';
+        // Prompt 80: rewards are now collected as an ordered array of
+        // ".p80-reward-row" strings, joined once at the end, instead of the
+        // old single `rewardHtml +=` chain -- every condition/order below is
+        // identical to before, only the markup shape changed.
+        var rewardRows = [];
+
+        rewardRows.push(p80ResultsRow(
+            '<span class="text-gold">✨ +' + rewards.gold + ' VE' + goldBonusText + '</span>' +
+            '<span class="text-green">📈 +' + rewards.xp + ' XP' + xpBonusText + '</span>',
+            'p80-reward-primary'
+        ));
 
         // Show unit copies earned
         if (rewards.unitCopies && rewards.unitCopies.length > 0) {
-            rewardHtml += '<br><span style="font-size:13px; color:#8bbcff;">Units earned:</span> ';
+            var unitChips = '';
             for (var ri = 0; ri < rewards.unitCopies.length; ri++) {
                 var rKey = rewards.unitCopies[ri];
                 var rTmpl = UNIT_TEMPLATES[rKey];
                 if (rTmpl) {
-                    rewardHtml += '<span style="font-size:12px;">' + ELEMENTS[rTmpl.element].emoji + ' ' + rTmpl.name + '</span>';
-                    if (ri < rewards.unitCopies.length - 1) rewardHtml += ', ';
+                    unitChips += '<span class="sv-chip tier-' + (rTmpl.cost || 1) + '">' + ELEMENTS[rTmpl.element].emoji + ' ' + rTmpl.name + '</span>';
                 }
             }
+            rewardRows.push(p80ResultsRow('<span class="p80-reward-label">Units earned</span><span class="p80-reward-chips">' + unitChips + '</span>'));
         }
 
         // Show equipment drops (new system)
         if (rewards.equipmentDrops && rewards.equipmentDrops.length > 0) {
-            rewardHtml += '<br><span style="font-size:13px; color:#e2b714;">Equipment found:</span> ';
+            var itemChips = '';
             for (var ii = 0; ii < rewards.equipmentDrops.length; ii++) {
                 var drop = rewards.equipmentDrops[ii];
                 var dropColor = getItemRarityColor(drop);
-                rewardHtml += '<span style="font-size:12px;">' + getItemEmoji(drop) + ' ' + getItemName(drop) +
-                    ' (<span style="color:' + dropColor + ';">T' + drop.tier + ' ' + getItemRarityName(drop) + '</span>)</span>';
-                if (ii < rewards.equipmentDrops.length - 1) rewardHtml += ' · ';
+                itemChips += '<span class="sv-chip" style="border-color:' + dropColor + ';">' + getItemEmoji(drop) + ' ' + getItemName(drop) +
+                    ' <span style="color:' + dropColor + ';">T' + drop.tier + ' ' + getItemRarityName(drop) + '</span></span>';
             }
+            rewardRows.push(p80ResultsRow('<span class="p80-reward-label">Equipment found</span><span class="p80-reward-chips">' + itemChips + '</span>'));
         }
 
         // Show essence drops
         if (rewards.essenceDropsNew) {
             var enKeys = Object.keys(rewards.essenceDropsNew);
             if (enKeys.length > 0) {
-                rewardHtml += '<br><span style="font-size:13px; color:#aa44ff;">Essences:</span> ';
+                var essChips = '';
                 for (var eid = 0; eid < enKeys.length; eid++) {
                     var essKey = enKeys[eid];
                     var essData = ESSENCES[essKey];
-                    rewardHtml += '<span style="font-size:12px; color:' + (essData ? essData.color : '#fff') + ';">' + (essData ? essData.emoji : '') + ' ' + essKey + ' x' + rewards.essenceDropsNew[essKey] + '</span>';
-                    if (eid < enKeys.length - 1) rewardHtml += ' · ';
+                    var essColor = essData ? essData.color : '#fff';
+                    essChips += '<span class="sv-chip" style="border-color:' + essColor + '; color:' + essColor + ';">' + (essData ? essData.emoji : '') + ' ' + essKey + ' x' + rewards.essenceDropsNew[essKey] + '</span>';
                 }
+                rewardRows.push(p80ResultsRow('<span class="p80-reward-label">Essences</span><span class="p80-reward-chips">' + essChips + '</span>'));
             }
         }
 
         // Show gem drops
         if (rewards.gemDrops && rewards.gemDrops.length > 0) {
-            rewardHtml += '<br><span style="font-size:13px; color:#4488ff;">Gems:</span> ';
+            var gemChips = '';
             for (var gdi = 0; gdi < rewards.gemDrops.length; gdi++) {
-                rewardHtml += '<span style="font-size:12px;">💎 ' + rewards.gemDrops[gdi] + '</span>';
-                if (gdi < rewards.gemDrops.length - 1) rewardHtml += ' · ';
+                gemChips += '<span class="sv-chip">💎 ' + rewards.gemDrops[gdi] + '</span>';
             }
+            rewardRows.push(p80ResultsRow('<span class="p80-reward-label">Gems</span><span class="p80-reward-chips">' + gemChips + '</span>'));
         }
 
-        document.getElementById('results-rewards').innerHTML = rewardHtml;
+        document.getElementById('results-rewards').innerHTML = rewardRows.join('');
 
         // Mark story mission complete FIRST (so boss clear raises level cap before XP is awarded)
         if (pendingMissionIsStory && pendingMissionIndex >= 0) {
@@ -1014,29 +1035,29 @@ function showMissionResults(victory, stars) {
         var leveled = applyMissionRewards(sd, rewards);
         if (leveled) {
             document.getElementById('results-rewards').innerHTML +=
-                '<br><span class="text-green" style="font-size:20px;">LEVEL UP!</span>';
+                p80ResultsRow('LEVEL UP!', 'p80-reward-levelup text-green');
         }
 
         // Show hero level-ups
         if (rewards.heroLevelUps && rewards.heroLevelUps.length > 0) {
-            var heroLvHtml = '<br><span style="font-size:13px; color:#e2b714;">Hero Level Ups:</span> ';
+            var heroLvChips = '';
             for (var hli = 0; hli < rewards.heroLevelUps.length; hli++) {
                 var hlvl = rewards.heroLevelUps[hli];
-                heroLvHtml += '<span style="font-size:12px;">' + hlvl.name + ' Lv.' + hlvl.oldLevel + ' \u2192 Lv.' + hlvl.newLevel + '</span>';
-                if (hli < rewards.heroLevelUps.length - 1) heroLvHtml += ', ';
+                heroLvChips += '<span class="sv-chip">' + hlvl.name + ' Lv.' + hlvl.oldLevel + ' \u2192 Lv.' + hlvl.newLevel + '</span>';
             }
-            document.getElementById('results-rewards').innerHTML += heroLvHtml;
+            document.getElementById('results-rewards').innerHTML +=
+                p80ResultsRow('<span class="p80-reward-label">Hero Level Ups</span><span class="p80-reward-chips">' + heroLvChips + '</span>');
         }
 
         // Show hero events (unlocks, deaths, departures)
         if (sd._pendingHeroEvents && sd._pendingHeroEvents.length > 0) {
             for (var hei = 0; hei < sd._pendingHeroEvents.length; hei++) {
                 var hevt = sd._pendingHeroEvents[hei];
-                var evtColor = hevt.type === 'death' ? '#ff4444' : (hevt.type === 'leave' ? '#ff8844' : '#44ff88');
+                var evtColor = hevt.type === 'death' ? 'var(--sv-red)' : (hevt.type === 'leave' ? '#ff8844' : 'var(--sv-green)');
                 var evtIcon = hevt.type === 'unlock' ? '🆕' : (hevt.type === 'death' ? '💀' : (hevt.type === 'leave' ? '👋' : (hevt.type === 'return' ? '🔙' : '👻')));
                 var evtMsg = hevt.message || (hevt.type === 'unlock' ? 'Hero ' + hevt.name + ' has joined!' : hevt.name);
                 document.getElementById('results-rewards').innerHTML +=
-                    '<br><span style="font-size:14px; color:' + evtColor + '; font-weight:bold;">' + evtIcon + ' ' + evtMsg + '</span>';
+                    p80ResultsRow('<span style="color:' + evtColor + '; font-weight:bold;">' + evtIcon + ' ' + evtMsg + '</span>');
             }
             sd._pendingHeroEvents = [];
             autoSave(sd);
@@ -1046,10 +1067,10 @@ function showMissionResults(victory, stars) {
         var missionAch = checkAchievements(sd);
         if (missionAch.length > 0) { autoSave(sd); showAchievementToasts(missionAch); }
     } else {
-        document.getElementById('results-rewards').textContent = 'No rewards earned.';
+        document.getElementById('results-rewards').innerHTML = p80ResultsRow('No rewards earned.', 'p80-reward-empty text-muted');
     }
 
-    // MVP line
+    // MVP card
     if (combatState && combatState.playerUnits) {
         var mvp = null;
         for (var mv = 0; mv < combatState.playerUnits.length; mv++) {
@@ -1063,7 +1084,7 @@ function showMissionResults(victory, stars) {
             if (mvp.element && typeof ELEMENTS !== 'undefined' && ELEMENTS[mvp.element]) {
                 mvpEmoji = ELEMENTS[mvp.element].emoji + ' ';
             }
-            var mvpHtml = '<div style="margin-top:8px; font-size:13px; color:#e2b714;">MVP: ' +
+            var mvpHtml = '<div class="p80-mvp-card"><span class="p80-mvp-badge">MVP</span>' +
                 mvpEmoji + (mvp.name || 'Unit') + ' — ' +
                 formatNum(mvp.combatStats.damageDealt) + ' damage' +
                 (mvp.combatStats.kills > 0 ? ', ' + mvp.combatStats.kills + ' kill' + (mvp.combatStats.kills > 1 ? 's' : '') : '') +
@@ -1081,8 +1102,15 @@ function showMissionResults(victory, stars) {
     // when pixiPlayResultSequence isn't available (js/render-pixi.js not
     // loaded) or no-ops internally (no live renderer/PIXI app, e.g. headless
     // tests) -- see that function's own early-out for the exact conditions.
+    //
+    // Prompt 80: the defeat variant gets an extra ".p80-results-defeat" class
+    // (desaturated sequence-sheet styling) alongside the pre-existing "show"
+    // toggle -- endless.js/challenges.js reuse this same #combat-results
+    // overlay for their own win/loss screens via their own direct className
+    // assignments, so this extra class only ever applies on the path this
+    // function itself owns.
     var revealResults = function() {
-        document.getElementById('combat-results').className = 'combat-results show';
+        document.getElementById('combat-results').className = 'combat-results show' + (victory ? '' : ' p80-results-defeat');
         renderTopBar();
     };
     if (typeof pixiPlayResultSequence === 'function') {
@@ -1169,7 +1197,7 @@ function renderCombatScoreboard() {
         return (b.combatStats ? b.combatStats.damageDealt : 0) - (a.combatStats ? a.combatStats.damageDealt : 0);
     });
 
-    html += '<div style="color:#4fc3f7; font-size:10px; padding:2px 4px; font-weight:bold;">Your Team</div>';
+    html += '<div style="color:var(--sv-blue); font-size:10px; padding:2px 4px; font-weight:bold;">Your Team</div>';
     for (var i = 0; i < pUnits.length; i++) {
         var u = pUnits[i];
         var stats = u.combatStats || {damageDealt:0, damageTaken:0, healingDone:0};
@@ -1177,7 +1205,7 @@ function renderCombatScoreboard() {
         html += '<div class="sb-unit' + deadClass + '">';
         html += '<div class="sb-name">' + (u.emoji || '') + ' ' + (u.name || 'Unit');
         if (u.maxMana && u.maxMana > 0 && u.hp > 0) {
-            html += ' <span style="color:#4488ff; font-size:9px;">\u26A1' + (u.currentMana || 0) + '/' + u.maxMana + '</span>';
+            html += ' <span style="color:var(--sv-blue); font-size:9px;">\u26A1' + (u.currentMana || 0) + '/' + u.maxMana + '</span>';
         }
         html += '</div>';
         html += '<div class="sb-stats">';
@@ -1198,7 +1226,7 @@ function renderCombatScoreboard() {
         return (b.combatStats ? b.combatStats.damageDealt : 0) - (a.combatStats ? a.combatStats.damageDealt : 0);
     });
 
-    html += '<div style="color:#ef5350; font-size:10px; padding:2px 4px; margin-top:4px; font-weight:bold;">Enemy Team</div>';
+    html += '<div style="color:var(--sv-red); font-size:10px; padding:2px 4px; margin-top:4px; font-weight:bold;">Enemy Team</div>';
     for (var j = 0; j < eUnits.length; j++) {
         var e = eUnits[j];
         var eStats = e.combatStats || {damageDealt:0, damageTaken:0, healingDone:0};
@@ -1207,14 +1235,14 @@ function renderCombatScoreboard() {
         if (e.isBoss) {
             // Boss-specific scoreboard entry
             html += '<div class="sb-unit boss-sb' + eDeadClass + '">';
-            html += '<div class="sb-name enemy" style="color:#ff4444;font-size:12px;">👑 ' + e.name + '</div>';
+            html += '<div class="sb-name enemy" style="color:var(--sv-red);font-size:12px;">👑 ' + e.name + '</div>';
             html += '<div class="sb-stats" style="font-size:10px;">';
-            html += '<span style="color:#ff9999;">Phase ' + (e.currentPhase + 1) + '</span>';
+            html += '<span style="color:var(--sv-red);">Phase ' + (e.currentPhase + 1) + '</span>';
             html += '<span class="dmg">' + formatNum(eStats.damageDealt) + ' dmg</span>';
             html += '</div>';
             if (e.hp > 0) {
                 var bossHpPct = Math.floor(e.hp / e.maxHp * 100);
-                html += '<div class="sb-stats"><span style="color:#ff6666;">' + formatNum(e.hp) + '/' + formatNum(e.maxHp) + ' HP (' + bossHpPct + '%)</span></div>';
+                html += '<div class="sb-stats"><span style="color:var(--sv-red);">' + formatNum(e.hp) + '/' + formatNum(e.maxHp) + ' HP (' + bossHpPct + '%)</span></div>';
             }
             html += '<div class="sb-stats"><span class="taken">' + formatNum(eStats.damageTaken) + ' taken</span></div>';
             html += '</div>';
@@ -1222,7 +1250,7 @@ function renderCombatScoreboard() {
             html += '<div class="sb-unit' + eDeadClass + '">';
             html += '<div class="sb-name enemy">' + (e.emoji || '') + ' ' + (e.name || 'Enemy');
             if (e.maxMana && e.maxMana > 0 && e.hp > 0) {
-                html += ' <span style="color:#4488ff; font-size:9px;">\u26A1' + (e.currentMana || 0) + '/' + e.maxMana + '</span>';
+                html += ' <span style="color:var(--sv-blue); font-size:9px;">\u26A1' + (e.currentMana || 0) + '/' + e.maxMana + '</span>';
             }
             html += '</div>';
             html += '<div class="sb-stats">';
@@ -1270,12 +1298,12 @@ function renderCombatSynergyBar() {
             var archDesc = getSynergyArchBonusDesc(aKey, tierReached - 1);
             var thresholdStr = '';
             for (var th = 0; th < arch.thresholds.length; th++) {
-                thresholdStr += (th === tierReached - 1 ? '<b style="color:#e2b714;">' + arch.thresholds[th] + '</b>' : '<span style="color:#555;">' + arch.thresholds[th] + '</span>');
+                thresholdStr += (th === tierReached - 1 ? '<b style="color:var(--sv-gold);">' + arch.thresholds[th] + '</b>' : '<span style="color:var(--sv-border-strong);">' + arch.thresholds[th] + '</span>');
                 if (th < arch.thresholds.length - 1) thresholdStr += '/';
             }
-            bodyHtml += '<div style="background:#2a3a5e; padding:3px 8px; border-radius:4px; border-left:3px solid #e2b714;">' +
-                '<div style="font-size:11px;">' + arch.emoji + ' <b>' + arch.name + '</b> <span style="color:#e2b714;">' + count + '</span> (' + thresholdStr + ')</div>' +
-                '<div style="font-size:10px; color:#aaa; margin-top:1px;">' + archDesc + '</div></div>';
+            bodyHtml += '<div class="p80-synergy-entry" style="background:var(--sv-bg-2); border-left-color:var(--sv-gold);">' +
+                '<div style="font-size:11px;">' + arch.emoji + ' <b>' + arch.name + '</b> <span style="color:var(--sv-gold);">' + count + '</span> (' + thresholdStr + ')</div>' +
+                '<div style="font-size:10px; color:var(--sv-text-3); margin-top:1px;">' + archDesc + '</div></div>';
         }
     }
 
@@ -1288,8 +1316,8 @@ function renderCombatSynergyBar() {
         if (!elemSyn) continue;
         var eCount = (combatState.activeElements || {})[eKey] || 0;
         var isPrismatic = elemBonuses[eKey] && elemBonuses[eKey].isPrismatic;
-        var bgColor = isPrismatic ? '#5a4a2e' : '#1a2a4e';
-        var borderColor = isPrismatic ? '#e2b714' : (elemSyn.color || '#4a6a9e');
+        var bgColor = isPrismatic ? '#5a4a2e' : 'var(--sv-bg-2)';
+        var borderColor = isPrismatic ? 'var(--sv-gold)' : (elemSyn.color || 'var(--sv-border-strong)');
         var eTierReached = 0;
         for (var et = 0; et < elemSyn.thresholds.length; et++) {
             if (eCount >= elemSyn.thresholds[et]) eTierReached = et + 1;
@@ -1297,15 +1325,15 @@ function renderCombatSynergyBar() {
         var elemDesc = (eTierReached > 0 && elemSyn.bonuses[eTierReached - 1]) ? elemSyn.bonuses[eTierReached - 1].desc : '';
         var eThresholdStr = '';
         for (var eth = 0; eth < elemSyn.thresholds.length; eth++) {
-            eThresholdStr += (eth === eTierReached - 1 ? '<b style="color:' + (elemSyn.color || '#e2b714') + ';">' + elemSyn.thresholds[eth] + '</b>' : '<span style="color:#555;">' + elemSyn.thresholds[eth] + '</span>');
+            eThresholdStr += (eth === eTierReached - 1 ? '<b style="color:' + (elemSyn.color || 'var(--sv-gold)') + ';">' + elemSyn.thresholds[eth] + '</b>' : '<span style="color:var(--sv-border-strong);">' + elemSyn.thresholds[eth] + '</span>');
             if (eth < elemSyn.thresholds.length - 1) eThresholdStr += '/';
         }
-        bodyHtml += '<div style="background:' + bgColor + '; padding:3px 8px; border-radius:4px; border-left:3px solid ' + borderColor + ';">' +
-            '<div style="font-size:11px; color:' + (elemSyn.color || '#fff') + ';">' + elemSyn.emoji + ' <b>' + elemSyn.name + '</b> <span style="color:' + (elemSyn.color || '#e2b714') + ';">' + eCount + '</span> (' + eThresholdStr + ')</div>' +
-            '<div style="font-size:10px; color:#aaa; margin-top:1px;">' + elemDesc + '</div></div>';
+        bodyHtml += '<div class="p80-synergy-entry" style="background:' + bgColor + '; border-left-color:' + borderColor + ';">' +
+            '<div style="font-size:11px; color:' + (elemSyn.color || 'var(--sv-text-1)') + ';">' + elemSyn.emoji + ' <b>' + elemSyn.name + '</b> <span style="color:' + (elemSyn.color || 'var(--sv-gold)') + ';">' + eCount + '</span> (' + eThresholdStr + ')</div>' +
+            '<div style="font-size:10px; color:var(--sv-text-3); margin-top:1px;">' + elemDesc + '</div></div>';
     }
 
-    var header = '<div class="arena-drawer-header" style="font-size:11px; font-weight:bold; color:#888; cursor:pointer; user-select:none;" onclick="toggleCombatSynergyBar()">Synergies</div>';
+    var header = '<div class="arena-drawer-header p80-drawer-header" onclick="toggleCombatSynergyBar()">Synergies</div>';
     bar.innerHTML = header + '<div class="arena-drawer-body" style="display:flex; flex-direction:column; gap:3px;">' +
         (bodyHtml || '<span class="text-muted">No active synergies</span>') + '</div>';
 }
@@ -1367,7 +1395,7 @@ function renderCombatSynergySidebar(side, synergies, label) {
     if (!container) {
         container = document.createElement('div');
         container.id = containerId;
-        container.style.cssText = 'font-size:10px; padding:4px; background:#16213e; border-radius:4px; min-width:80px;';
+        container.style.cssText = 'font-size:10px; padding:4px; background:var(--sv-bg-2); border-radius:var(--sv-radius-sm); min-width:80px;';
         var combatMain = document.getElementById('combat-main');
         if (combatMain) {
             if (side === 'left') {
@@ -1383,7 +1411,7 @@ function renderCombatSynergySidebar(side, synergies, label) {
     // -- the inline cssText above only pins cosmetic fill/padding/font, so it
     // can't clobber those. The label header doubles as the collapse toggle.
     container.classList.toggle('collapsed', combatDrawerCollapsed[side === 'left' ? 'synergyLeft' : 'synergyRight']);
-    container.innerHTML = '<div style="font-weight:bold; color:#888; margin-bottom:2px; cursor:pointer; user-select:none;" onclick="toggleSynergySidebar(\'' + side + '\')">' + label + '</div>';
+    container.innerHTML = '<div class="p80-drawer-header" style="margin-bottom:2px;" onclick="toggleSynergySidebar(\'' + side + '\')">' + label + '</div>';
 
     // Elements
     var allElements = Object.keys(ELEMENTS);
@@ -1393,13 +1421,13 @@ function renderCombatSynergySidebar(side, synergies, label) {
         if (count === 0) continue;
 
         var item = document.createElement('div');
-        item.style.cssText = 'padding:1px 0;' + (count >= 2 ? ' color:#e2b714;' : ' color:#666;');
+        item.style.cssText = 'padding:1px 0;' + (count >= 2 ? ' color:var(--sv-gold);' : ' color:var(--sv-text-3);');
 
         var thresholdMarkers = '';
         var thresholds = [2, 4, 7, 10];
         for (var t = 0; t < thresholds.length; t++) {
             var lit = count >= thresholds[t];
-            thresholdMarkers += '<span style="color:' + (lit ? '#e2b714' : '#333') + ';">●</span>';
+            thresholdMarkers += '<span style="color:' + (lit ? 'var(--sv-gold)' : 'var(--sv-border)') + ';">●</span>';
         }
 
         item.innerHTML = getElementEmoji(element) + count + ' ' + thresholdMarkers;
@@ -1416,7 +1444,7 @@ function renderCombatSynergySidebar(side, synergies, label) {
         var aItem = document.createElement('div');
         var archData = ARCHETYPES[archetype];
         var isActive = archData && archData.thresholds && archData.thresholds.length > 0 && aCount >= archData.thresholds[0];
-        aItem.style.cssText = 'padding:1px 0;' + (isActive ? ' color:#e2b714;' : ' color:#666;');
+        aItem.style.cssText = 'padding:1px 0;' + (isActive ? ' color:var(--sv-gold);' : ' color:var(--sv-text-3);');
         aItem.textContent = archData.emoji + ' ' + aCount;
         container.appendChild(aItem);
     }
