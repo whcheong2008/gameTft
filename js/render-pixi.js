@@ -178,6 +178,31 @@ function boardToScreen(row, col, rs) {
 
 function pixiLerp(a, b, t) { return a + (b - a) * t; }
 
+// Prompt 82 (Phase 8.1): text/glyph re-render guards -- every PIXI.Text
+// object rasterizes its content to a canvas and re-uploads it as a GPU
+// texture whenever `.text` or a style property that affects layout (here,
+// only fontSize) is assigned, even if the assigned value is unchanged from
+// last frame. pixiRedrawToken/pixiRedrawBuilderToken reassign both every
+// single frame for every on-board unit (emoji/name/pips/status/flag), but in
+// steady state (no resize, no HP/status/name change) the actual VALUES are
+// almost always identical frame-to-frame -- these two helpers cache the last
+// value written directly on the PIXI.Text instance and skip the
+// assignment (and the rasterization it triggers) when nothing changed.
+// "cache by glyph+size" per the Prompt 82 spec: the cache key IS the
+// glyph/size pair already implicitly, since a Text object never draws
+// anything else.
+function pixiSetTextIfChanged(textObj, value) {
+    if (!textObj || textObj._pixiLastText === value) return;
+    textObj._pixiLastText = value;
+    textObj.text = value;
+}
+
+function pixiSetFontSizeIfChanged(textObj, size) {
+    if (!textObj || !textObj.style || textObj._pixiLastFontSize === size) return;
+    textObj._pixiLastFontSize = size;
+    textObj.style.fontSize = size;
+}
+
 // Detaches AND destroys every child of a container (removeChildren() alone
 // only detaches -- Text/Graphics objects hold GPU-side texture allocations
 // that leak if not explicitly destroy()'d). Used at wave transitions and
@@ -564,19 +589,19 @@ function pixiRedrawBuilderToken(vis, unitLike, row, col, rs, opts) {
         vis.base.roundRect(-w / 2 - 2, -h / 2 - 2, w + 4, h + 4, 5).stroke({ width: 2.5, color: 0xffffff, alpha: 0.95 });
     }
 
-    vis.emojiText.text = pixiUnitEmoji(unitLike);
-    vis.emojiText.style.fontSize = Math.floor(h * 0.4);
+    pixiSetTextIfChanged(vis.emojiText, pixiUnitEmoji(unitLike));
+    pixiSetFontSizeIfChanged(vis.emojiText, Math.floor(h * 0.4));
     vis.emojiText.y = -h * 0.12;
 
-    vis.nameText.text = (unitLike.name || '').split(' ')[0];
+    pixiSetTextIfChanged(vis.nameText, (unitLike.name || '').split(' ')[0]);
     vis.nameText.y = h * 0.02;
 
     if (vis.starsText) {
-        vis.starsText.text = unitLike.stars ? new Array(unitLike.stars + 1).join('★') : '';
+        pixiSetTextIfChanged(vis.starsText, unitLike.stars ? new Array(unitLike.stars + 1).join('★') : '');
         vis.starsText.y = h / 2 + 1;
     }
     if (vis.itemsText) {
-        vis.itemsText.text = (unitLike.combatItems && unitLike.combatItems.length) ? unitLike.combatItems.join('') : '';
+        pixiSetTextIfChanged(vis.itemsText, (unitLike.combatItems && unitLike.combatItems.length) ? unitLike.combatItems.join('') : '');
         vis.itemsText.y = -h / 2 - 2;
     }
 
@@ -971,11 +996,11 @@ function pixiRedrawToken(vis, unit, dtMs) {
         vis.base.roundRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, 6).stroke({ width: 3, color: 0xff2222, alpha: enrageAlpha });
     }
 
-    vis.emojiText.text = pixiUnitEmoji(unit);
-    vis.emojiText.style.fontSize = Math.floor(h * 0.4);
+    pixiSetTextIfChanged(vis.emojiText, pixiUnitEmoji(unit));
+    pixiSetFontSizeIfChanged(vis.emojiText, Math.floor(h * 0.4));
     vis.emojiText.y = -h * 0.18;
 
-    vis.nameText.text = (unit.name || '').split(' ')[0];
+    pixiSetTextIfChanged(vis.nameText, (unit.name || '').split(' ')[0]);
     vis.nameText.y = h * 0.02;
 
     // HP bar with a decaying "chunk" trail behind the live-value bar so
@@ -1016,7 +1041,7 @@ function pixiRedrawToken(vis, unit, dtMs) {
     }
 
     // Star/tier pips.
-    vis.pipsText.text = unit.stars ? new Array(unit.stars + 1).join('★') : '';
+    pixiSetTextIfChanged(vis.pipsText, unit.stars ? new Array(unit.stars + 1).join('★') : '');
     vis.pipsText.y = h / 2 + 1;
 
     // Prompt 76 (Task 1): the 7 "big" status types (frozen/stunned/burning/
@@ -1039,7 +1064,7 @@ function pixiRedrawToken(vis, unit, dtMs) {
         }
         if (uniqueTypes.length > 3) statusStr += '+' + (uniqueTypes.length - 3);
     }
-    vis.statusText.text = statusStr;
+    pixiSetTextIfChanged(vis.statusText, statusStr);
     vis.statusText.y = -h / 2 - 2;
 
     // Prompt 76 (Task 1): animated on-token overlays, driven fresh every
@@ -1054,7 +1079,7 @@ function pixiRedrawToken(vis, unit, dtMs) {
         if (unit.phaseTransitioning) flag = 'INVULNERABLE';
         else if (unit.enraged) flag = 'ENRAGED';
     }
-    vis.flagText.text = flag;
+    pixiSetTextIfChanged(vis.flagText, flag);
     vis.flagText.y = -h / 2 - 12;
 
     // Task 4: hit area sized to this frame's token box (w/h change with
@@ -1669,7 +1694,13 @@ function pixiEnsureApp() {
         backgroundAlpha: 0,
         antialias: true,
         autoDensity: true,
-        resolution: (typeof window !== 'undefined' && window.devicePixelRatio) || 1
+        // Prompt 82 (Phase 8.1): capped at 2 -- an uncapped devicePixelRatio
+        // on a 3x/4x-DPR device (common on phones/high-DPI monitors) roughly
+        // quadruples the canvas's actual pixel fill-rate cost for a visual
+        // difference nobody can see at this placeholder-art fidelity; 2x is
+        // already crisp and keeps the steady-60fps-at-4x-combat-speed budget
+        // (18 units + VFX) safe on mid-tier hardware.
+        resolution: Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1)
     }).then(function() {
         // Guards against destroy() tearing this exact app down while
         // app.init()'s promise was still pending (screen left mid-mount) --

@@ -43,6 +43,11 @@ function showScreen(screenId) {
     // (and skips 'combat', which gets its region/boss/endless-aware music
     // context from js/ui-combat.js's beginCombatScreen() instead).
     if (typeof AUDIO !== 'undefined' && AUDIO.onScreenChange) AUDIO.onScreenChange(screenId);
+    // Prompt 82 (Phase 8.2): first-session onboarding coachmark. Same
+    // one-line-hook convention as AUDIO above -- js/onboarding.js owns the
+    // actual step logic and is a safe no-op once the tutorial is
+    // completed/dismissed.
+    if (typeof onboardingOnScreenChange === 'function') onboardingOnScreenChange(screenId);
 }
 
 function renderCurrentScreen() {

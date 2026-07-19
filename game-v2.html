@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auto Battler V2</title>
+    <title>Shattered Veil</title>
+    <!-- PWA (Prompt 82, Phase 8.3): manifest + icons + theme color. Inert
+         until the site is actually deployed -- registering these here does
+         NOT publish anything; see DEPLOY.md for the one remaining
+         user-gated switch (enabling GitHub Pages). -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icons/icon-192.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/icon-192.svg">
+    <meta name="theme-color" content="#0d1117">
     <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -261,6 +269,43 @@ body {
 }
 .hub-settings-audio-mute { display: flex; align-items: center; gap: var(--sv-sp-2); font-size: 12px; cursor: pointer; user-select: none; }
 .hub-settings-audio-mute input { accent-color: var(--sv-gold); cursor: pointer; }
+
+/* Prompt 82 (Phase 8.3): save export/import + version display block, same
+   drawer, right above the Danger Zone. */
+.hub-settings-save { border-top: 1px solid var(--sv-border); padding-top: var(--sv-sp-3); margin-top: var(--sv-sp-1); }
+.hub-settings-save-row { display: flex; gap: var(--sv-sp-2); margin-bottom: var(--sv-sp-2); }
+.hub-settings-save-row .sv-btn { flex: 1; }
+.hub-settings-version { font-size: 11px; color: var(--sv-text-3); text-align: center; margin-top: var(--sv-sp-1); }
+
+/* Prompt 82 (Phase 8.2): first-session onboarding coachmark -- a small
+   fixed-position card, NEVER a full-screen backdrop, so it can never block
+   input to the game underneath. Docked bottom-center, above the hub's
+   bottom nav dock (z-index below the settings drawer/scrim so it always
+   yields to those). */
+.onboarding-coachmark {
+    display: none; position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%);
+    max-width: 340px; width: calc(100% - 32px);
+    background: var(--sv-panel); border: 1px solid var(--sv-gold); border-radius: var(--sv-radius-md);
+    box-shadow: var(--sv-shadow-lg); padding: var(--sv-sp-3); z-index: 1200;
+    align-items: center; gap: var(--sv-sp-2);
+}
+.onboarding-coachmark.show { display: flex; }
+.onboarding-coachmark-text { flex: 1; font-size: 12px; color: var(--sv-text-1); line-height: 1.4; }
+.onboarding-coachmark-skip {
+    flex: 0 0 auto; background: none; border: none; color: var(--sv-text-3); font-size: 11px;
+    text-decoration: underline; cursor: pointer; padding: 4px;
+}
+.onboarding-coachmark-skip:hover { color: var(--sv-text-1); }
+.onboarding-highlight {
+    outline: 2px solid var(--sv-gold); outline-offset: 2px; border-radius: var(--sv-radius-sm);
+}
+@media (prefers-reduced-motion: no-preference) {
+    .onboarding-highlight { animation: onboardingPulse 1.4s ease-in-out infinite; }
+}
+@keyframes onboardingPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(226,183,20,0.55); }
+    50% { box-shadow: 0 0 0 6px rgba(226,183,20,0); }
+}
 
 /* === Screens (common) === */
 .screen { display: none; }
@@ -1665,10 +1710,31 @@ body {
                     <input type="checkbox" id="audio-mute-toggle" onchange="uiSetAudioMuted(this.checked)"> Mute all audio
                 </label>
             </div>
+            <!-- Prompt 82 (Phase 8.3): save export/import + version display.
+                 js/ui-hub.js's uiExportSave()/uiImportSaveFile() own the
+                 logic; import always goes through the existing
+                 migrateSave()/validateSaveData() path plus a confirm dialog
+                 before it overwrites anything. -->
+            <div class="hub-settings-save">
+                <div class="hub-settings-save-row">
+                    <button class="sv-btn" onclick="uiExportSave()">⬇️ Export Save</button>
+                    <button class="sv-btn" onclick="document.getElementById('save-import-file').click()">⬆️ Import Save</button>
+                    <input type="file" id="save-import-file" accept="application/json" style="display:none" onchange="uiImportSaveFile(this.files[0])">
+                </div>
+                <div class="hub-settings-version" id="hub-settings-version"></div>
+            </div>
             <div class="hub-settings-danger">
                 <div class="hub-settings-danger-label">Danger Zone</div>
                 <button class="sv-btn sv-btn-block" onclick="uiResetGame()">Reset Game (Start Over)</button>
             </div>
+        </div>
+
+        <!-- Prompt 82 (Phase 8.2): first-session onboarding coachmark. Small
+             fixed card (see .onboarding-coachmark CSS) -- never a blocking
+             backdrop. js/onboarding.js owns all show/hide/advance logic. -->
+        <div class="onboarding-coachmark" id="onboarding-coachmark">
+            <div class="onboarding-coachmark-text" id="onboarding-coachmark-text"></div>
+            <button class="onboarding-coachmark-skip" onclick="onboardingDismiss()">Skip Tutorial ✕</button>
         </div>
 
         <!-- ============ HUB SCREEN ============
@@ -1729,7 +1795,7 @@ body {
                  not a presentation change. -->
             <div class="hub-bottom-nav">
                 <div class="hub-bottom-nav-inner">
-                    <button class="hub-nav-dock-btn" onclick="showScreen('gacha')">
+                    <button class="hub-nav-dock-btn" id="hub-nav-summon" onclick="showScreen('gacha')">
                         <span class="nav-emoji">🎲</span> Summon
                     </button>
                     <button class="hub-nav-dock-btn" onclick="showScreen('roster')">
@@ -1738,7 +1804,7 @@ body {
                     <button class="hub-nav-dock-btn" onclick="uiOpenTeamBuilderStandalone()">
                         <span class="nav-emoji">⚔️</span> Team
                     </button>
-                    <button class="hub-nav-dock-btn" onclick="showScreen('mission-select')">
+                    <button class="hub-nav-dock-btn" id="hub-nav-missions" onclick="showScreen('mission-select')">
                         <span class="nav-emoji">🗡️</span> Missions
                     </button>
                     <button class="hub-nav-dock-btn" onclick="showScreen('heroes')">
@@ -1874,64 +1940,86 @@ body {
         </div>
     </div>
 
-    <!-- Scripts: load order matters (global scope, no modules) -->
-    <script src="js/units-core.js"></script>
-    <script src="js/units-templates.js"></script>
-    <script src="js/units-abilities.js"></script>
-    <script src="js/units-bonds.js"></script>
-    <script src="js/units-ascension.js"></script>
-    <script src="js/heroes.js?v=2"></script>
+    <!-- Scripts: load order matters (global scope, no modules). Every tag below
+         carries `defer` (Prompt 82, Phase 8.1 load-time pass) -- since they're
+         already the very last thing in <body>, HTML parsing is complete the
+         instant the browser reaches them, so `defer` changes nothing about
+         WHEN they run relative to the page's DOM; what it buys is HOW they
+         fetch. Without `defer`, the browser fetches+executes each tag
+         one-at-a-time (fetch, block, execute, fetch next...) -- with ~44
+         separate files that's a fully serial network waterfall on a cold
+         cache. `defer` lets the browser fetch every deferred script in
+         parallel (bounded by the browser's per-origin connection limit) while
+         still executing them in this exact document order right before
+         DOMContentLoaded -- i.e. IDENTICAL relative execution order to today,
+         just fetched concurrently. Data files staying "synchronous" (the
+         spec's phrasing) means exactly this: nothing here changed to `async`
+         (which would let files race each other and execute out of order) --
+         only `defer`, which preserves order. js/main-v2.js's own
+         `window.addEventListener('DOMContentLoaded', ...)` still fires
+         correctly: deferred scripts are guaranteed to finish running before
+         the DOMContentLoaded event is dispatched, so registering that
+         listener from within a deferred script is safe by spec. Measured
+         impact: see the Prompt 82 report's load-milestone numbers. -->
+    <!-- version.js: GAME_VERSION/GAME_BUILD constants (Prompt 82). No deps -- loads first. -->
+    <script src="js/version.js" defer></script>
+    <script src="js/units-core.js" defer></script>
+    <script src="js/units-templates.js" defer></script>
+    <script src="js/units-abilities.js" defer></script>
+    <script src="js/units-bonds.js" defer></script>
+    <script src="js/units-ascension.js" defer></script>
+    <script src="js/heroes.js?v=2" defer></script>
     <!-- synergies.js not loaded — V2 handles synergies in main-v2.js and teams.js -->
-    <script src="js/save.js?v=2"></script>
-    <script src="js/gacha.js"></script>
-    <script src="js/teams.js"></script>
-    <script src="js/hub.js"></script>
-    <script src="js/items.js?v=2"></script>
-    <script src="js/missions.js?v=2"></script>
+    <script src="js/save.js?v=2" defer></script>
+    <script src="js/gacha.js" defer></script>
+    <script src="js/teams.js" defer></script>
+    <script src="js/hub.js" defer></script>
+    <script src="js/items.js?v=2" defer></script>
+    <script src="js/missions.js?v=2" defer></script>
     <!-- endless.js / challenges.js: The Abyss (endless mode) + 4 challenge modes (Prompt 64).
          Logic + UI for both live entirely in these two files; they call into missions.js/
          teams.js/save.js data and are called by ui-hub.js/ui-missions.js entry buttons and
          a handful of ui-combat.js mission-flow seams. -->
-    <script src="js/endless.js"></script>
-    <script src="js/challenges.js"></script>
+    <script src="js/endless.js" defer></script>
+    <script src="js/challenges.js" defer></script>
     <!-- lore-data.js: codex content (world/region/stage/unit/hero/bond text). Data-only, no deps (Prompt 63). -->
-    <script src="js/lore-data.js"></script>
+    <script src="js/lore-data.js" defer></script>
     <!-- V2 uses simplified combat in these files, not V1 combat.js. Split from main-v2.js (Prompt 58). -->
     <!-- grid.js: single source of truth for ALL spatial math (Prompt 69: hex grid
          migration). Loads before every combat-*.js file and before the pixi renderer
          and ui-builder.js (its builder-mode arena, Prompt 71), both of which call into it. -->
-    <script src="js/grid.js"></script>
+    <script src="js/grid.js" defer></script>
     <!-- combat-events.js: minimal event bus for hero skill combat hooks (Prompt 60). Must load first. -->
-    <script src="js/combat-events.js"></script>
+    <script src="js/combat-events.js" defer></script>
     <!-- combat-encounters.js: encounter mechanics (Prompt 62), used by combat-core.js's tick/init. -->
-    <script src="js/combat-encounters.js"></script>
-    <script src="js/combat-core.js"></script>
-    <script src="js/combat-status.js"></script>
-    <script src="js/combat-boss.js"></script>
-    <script src="js/combat-passives.js"></script>
-    <script src="js/combat-abilities.js"></script>
-    <script src="js/combat-legendary.js"></script>
-    <script src="js/combat-damage.js"></script>
+    <script src="js/combat-encounters.js" defer></script>
+    <script src="js/combat-core.js" defer></script>
+    <script src="js/combat-status.js" defer></script>
+    <script src="js/combat-boss.js" defer></script>
+    <script src="js/combat-passives.js" defer></script>
+    <script src="js/combat-abilities.js" defer></script>
+    <script src="js/combat-legendary.js" defer></script>
+    <script src="js/combat-damage.js" defer></script>
     <!-- vendor/pixi.min.js: PixiJS v8.19.0, vendored via `npm pack pixi.js@8`
          (Prompt 68). Loads before render-interface.js per the spec; exposes
          global PIXI. tests/harness.js's script loader skips everything under
          js/vendor/ (browser-only blobs, never executed in the Node vm
          sandbox) -- see js/render-pixi.js's header comment. -->
-    <script src="js/vendor/pixi.min.js"></script>
+    <script src="js/vendor/pixi.min.js" defer></script>
     <!-- render-interface.js: renderer registry + getActiveRenderer() (Prompt 67).
          Loads after every combat-*.js file, before any renderer registers itself. -->
-    <script src="js/render-interface.js"></script>
+    <script src="js/render-interface.js" defer></script>
     <!-- UI renderers. Split from ui-v2.js (Prompt 58); ui-shared.js loads first. -->
-    <script src="js/ui-shared.js"></script>
-    <script src="js/ui-lore.js"></script>
-    <script src="js/ui-hub.js"></script>
-    <script src="js/ui-gacha.js"></script>
-    <script src="js/ui-heroes.js"></script>
-    <script src="js/ui-roster.js"></script>
-    <script src="js/ui-builder.js"></script>
-    <script src="js/ui-missions.js"></script>
-    <script src="js/ui-combat.js"></script>
-    <script src="js/ui-items.js"></script>
+    <script src="js/ui-shared.js" defer></script>
+    <script src="js/ui-lore.js" defer></script>
+    <script src="js/ui-hub.js" defer></script>
+    <script src="js/ui-gacha.js" defer></script>
+    <script src="js/ui-heroes.js" defer></script>
+    <script src="js/ui-roster.js" defer></script>
+    <script src="js/ui-builder.js" defer></script>
+    <script src="js/ui-missions.js" defer></script>
+    <script src="js/ui-combat.js" defer></script>
+    <script src="js/ui-items.js" defer></script>
     <!-- render-pixi.js: the PixiJS combat renderer bootstrap (Prompt 68,
          Phase 3.2) and, since Prompt 71 (Phase 3.5), the ONLY registered
          renderer -- js/render-dom.js (the DOM combat renderer) was deleted;
@@ -1942,15 +2030,37 @@ body {
          Registration is guarded behind `typeof PIXI !== 'undefined'`, so
          this is a safe no-op wherever js/vendor/pixi.min.js didn't load/
          execute -- see js/render-pixi.js's pixiShowWebGLRequiredNotice(). -->
-    <script src="js/render-pixi.js"></script>
-    <script src="js/vfx.js"></script>
-    <script src="js/vfx-abilities.js"></script>
+    <script src="js/render-pixi.js" defer></script>
+    <script src="js/vfx.js" defer></script>
+    <script src="js/vfx-abilities.js" defer></script>
     <!-- audio.js: WebAudio engine, synthesized SFX + generative ambient music
          (Prompt 81, Phase 7). Loads after combat-events.js (registers combat
          cue wiring at script-load time, same convention as vfx.js above) and
          after save.js (settings persistence) -- placement mirrors vfx.js's
          own "systems layer, right before the entry point" spot. -->
-    <script src="js/audio.js"></script>
-    <script src="js/main-v2.js"></script>
+    <script src="js/audio.js" defer></script>
+    <!-- onboarding.js: first-session guided flow (Prompt 82, Phase 8.2). Hooked
+         from js/hub.js/ui-gacha.js/ui-builder.js/ui-combat.js via typeof-guarded
+         calls, so its own position only needs to be before main-v2.js. -->
+    <script src="js/onboarding.js" defer></script>
+    <script src="js/main-v2.js" defer></script>
+
+    <!-- Service worker registration (Prompt 82, Phase 8.3). Inline (not a
+         separate js/*.js file) since it has nothing to do with the game's
+         script load order above -- registration is fire-and-forget and safe
+         to run whenever the page loads. Silently no-ops under file:// or any
+         browser without SW support (the 'serviceWorker in navigator' guard),
+         and swallows a failed registration (e.g. running over plain http on
+         a host other than localhost, which service workers require https
+         for) rather than surfacing a console error on every page load. -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js').catch(function(err) {
+                    console.warn('Service worker registration skipped:', err);
+                });
+            });
+        }
+    </script>
 </body>
 </html>

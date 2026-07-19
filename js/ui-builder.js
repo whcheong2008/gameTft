@@ -88,6 +88,8 @@ function renderTeamBuilderScreen() {
 
     // Item bar
     renderTeamBuilderItemBar();
+
+    if (typeof onboardingOnTeamBuilderRender === 'function') onboardingOnTeamBuilderRender(team.slots.length); // Prompt 82
 }
 
 function builderRenderDeployButton() {
@@ -409,7 +411,9 @@ function builderEnsureApp() {
         backgroundAlpha: 0,
         antialias: true,
         autoDensity: true,
-        resolution: (typeof window !== 'undefined' && window.devicePixelRatio) || 1
+        // Prompt 82 (Phase 8.1): capped at 2, same rationale as
+        // js/render-pixi.js's pixiEnsureApp() (combat's own PIXI_R.app init).
+        resolution: Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1)
     }).then(function() {
         if (PIXI_BUILDER_R.app !== app) return; // torn down mid-mount
 
