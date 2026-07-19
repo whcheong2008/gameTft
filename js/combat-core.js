@@ -196,6 +196,23 @@ function initCombat(gs) {
             }
         }
 
+        // Prompt 75 (BUGS #12): getPassiveData() (combat-passives.js) branches
+        // on unit.isEvolved to pick EVOLVED_PASSIVE_DATA vs PASSIVE_DATA, but
+        // nothing in this combat-unit-prep loop ever SET that flag (only the
+        // roster/gacha-facing `.evolved` field exists on units, set by
+        // teams.js's createUnit()) -- so getPassiveData() unconditionally
+        // fell through to `PASSIVE_DATA[templateKey]`, which is undefined for
+        // every evolved key (PASSIVE_DATA only has the 66 base entries),
+        // silently returning null. This meant EVERY evolved unit's innate
+        // passive (not just this prompt's 6) was a dead no-op pre-existing
+        // this fix -- confirmed empirically (hurricane_blade, an unrelated
+        // T3 evolved unit, also had getPassiveData() return null before this
+        // line existed). Blocking for 6 of this prompt's 12 new passives
+        // (phoenix_priest/hadal_colossus/worldroot_sentinel/stormweft_oracle/
+        // plasma_ravager/warforged_champion all resolve to EVOLVED_PASSIVE_DATA),
+        // so fixed here rather than flagged separately.
+        su.isEvolved = !!EVOLVED_TEMPLATES[su.templateKey];
+
         // Mana initialization
         var tmpl = UNIT_TEMPLATES[su.templateKey] || EVOLVED_TEMPLATES[su.templateKey];
         su.maxMana = tmpl ? (tmpl.maxMana || 0) : 0;

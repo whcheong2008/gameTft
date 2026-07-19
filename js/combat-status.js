@@ -108,6 +108,17 @@ function addStatus(unit, type, duration, value, source) {
         return;
     }
 
+    // --- Burn immunity window (Prompt 75, BUGS #12: ashen_watcher/
+    // phoenix_priest's Ember Shroud -- "if ally Burning, shield grants 2s
+    // Burn immunity when applied"). Mirrors the ccImmuneUntil idiom above:
+    // a plain elapsed-time window set directly on the unit by
+    // combat-passives.js, checked here since addStatus() is the single choke
+    // point every Burn application (ability casts, on_attack passives, etc.)
+    // already goes through.
+    if (type === 'burn' && unit.burnImmuneUntil && combatState && combatState.elapsed < unit.burnImmuneUntil) {
+        return;
+    }
+
     // --- Stacking types: burn, poison, bleed (max 3 stacks each) ---
     var stackingTypes = ['burn', 'poison', 'bleed'];
     var stackCount = 0;

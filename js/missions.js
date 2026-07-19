@@ -893,11 +893,19 @@ var STAGES = [
         description: 'Reinforcement spawns plus an escalating elite. Two overlapping pressure sources.',
         requiredLevel: 29, lock: null,
         encounterMechanic: ['reinforcement_pressure', 'escalating_threat'], isBoss: false, canRetry: true,
+        // Prompt 75: +2 enemy count/wave (BUGS #12 freewin fallout -- same
+        // lever/reasoning as Prompt 74's r8_s1/s5/s7 comment: implementing the
+        // 6 units' innate PASSIVE_DATA on top of Prompt 74's ability fix made
+        // buildReferenceTeam()'s R8 picks (abyssal_guardian, ashen_watcher,
+        // etc.) meaningfully stronger again, flipping this stage from its
+        // prior tuned margin into a 0-loss freewin. `budget` remains a no-op
+        // lever here for the same reason Prompt 74 found (generateMissionWave()
+        // is bounded by `count`, not spent budget).
         waves: [
-            { budget: 25, maxCost: 5, count: 6, enemySynergies: true, enemyEvolutions: true },
-            { budget: 30, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 38, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true },
-            { budget: 43, maxCost: 5, count: 7, enemySynergies: true, enemyEvolutions: true }
+            { budget: 25, maxCost: 5, count: 8, enemySynergies: true, enemyEvolutions: true },
+            { budget: 30, maxCost: 5, count: 9, enemySynergies: true, enemyEvolutions: true },
+            { budget: 38, maxCost: 5, count: 9, enemySynergies: true, enemyEvolutions: true },
+            { budget: 43, maxCost: 5, count: 9, enemySynergies: true, enemyEvolutions: true }
         ],
         rewards: { ve: 2000, xp: 800, unitDrops: 4 },
         dropWeights: { t3: 15, t4: 45, t5: 40 }
@@ -1695,6 +1703,13 @@ var BOSS_DATA = {
     // in steps) that restores a real (non-zero, non-all-seed) casualty count
     // while keeping a 100% clear rate across all 7 seeds -- boss mechanics
     // untouched, same as the original BUGS #10 fix.
+    // Prompt 75: atkScaling 0.95 -> 1.15. Same drift, second cause: this
+    // prompt's 12 innate passives (BUGS #12) on top of Prompt 74's ability
+    // fix made the reference team's abyssal_guardian/ashen_watcher/etc. picks
+    // stronger again (Pressure Depths DR, Ember Shroud shields, Challenge
+    // Protocol ATK/DR, ...), re-flipping this fight to a 0-loss freewin.
+    // 1.15 is the smallest bump (tested 0.95-1.5 in steps) that restores a
+    // real casualty count at a 100% clear rate -- mechanics untouched.
     void_sovereign: {
         name: 'The Void Sovereign',
         emoji: '👿✨',
@@ -1703,7 +1718,7 @@ var BOSS_DATA = {
         baseHp: 65000,
         hpScaling: 2.2,
         baseAtk: 0,
-        atkScaling: 0.95,
+        atkScaling: 1.15,
         dr: 0.20,
         attackSpd: 1.0,
         range: 3,

@@ -30,6 +30,41 @@ function getPassiveData(unit) {
 }
 
 function initUnitPassiveState(unit) {
+    // Prompt 75 (BUGS #12): grove_warden/worldroot_sentinel's Deep Roots
+    // mutates unit.range directly (a persistent field with no per-wave reset
+    // anywhere else in the engine -- healBoardUnits() resets hp/shield/mana/
+    // statusEffects between waves but not .range), while the customData that
+    // tracks WHETHER that mutation is currently applied lives in
+    // passiveState.customData, which IS wiped every wave by this function.
+    // Left alone, a unit that ends a wave stationary/rooted would have its
+    // +1/+2 Range re-granted on top of the still-applied previous grant at
+    // the start of the next wave, compounding forever. Undo any outstanding
+    // grant here, before passiveState.customData is reset below, so each
+    // wave starts from a clean, correctly-based unit.range.
+    if (unit._deepRootsRangeBonus) {
+        unit.range -= unit._deepRootsRangeBonus;
+        unit._deepRootsRangeBonus = 0;
+    }
+    // Same class of bug, same fix: hadal_colossus's Pressure Depths Enhanced
+    // lifesteal delta-tracks against unit.lifesteal (also persistent, also
+    // never reset by healBoardUnits()) using a passiveState.customData
+    // field as its "how much did I already add" bookkeeping. Undo any
+    // outstanding grant before that bookkeeping is wiped below.
+    if (unit._pdLifestealBonus) {
+        unit.lifesteal = Math.max(0, (unit.lifesteal || 0) - unit._pdLifestealBonus);
+        unit._pdLifestealBonus = 0;
+    }
+    // burnImmuneUntil (Ember Shroud's Burn-immunity window) is an absolute
+    // combatState.elapsed timestamp from combat-status.js's addStatus() gate.
+    // ui-combat.js's healBoardUnits() already resets the equivalent
+    // ccImmuneUntil field between waves but is out of this prompt's file
+    // scope to extend for a field it doesn't know about -- reset here
+    // instead (this function already runs once per unit at the top of every
+    // wave, alongside the two resets above), so a stale timestamp from a
+    // previous wave's (higher) combatState.elapsed can't leave a unit
+    // incorrectly immune for the opening stretch of the next wave.
+    unit.burnImmuneUntil = 0;
+
     unit.passiveState = {
         attackCount: 0,
         stacks: 0,
@@ -49,6 +84,40 @@ function processCombatStartPassives(allUnits) {
         if (!passiveData || passiveData.trigger !== 'combat_start') continue;
         executeCombatStartPassive(unit, passiveData, allUnits);
     }
+    // Prompt 75: register the combatEvents subscribers backing the new
+    // on_heal/on_crit/on_ability_cast trigger types. Called from here (not
+    // combat-core.js) so the whole trigger-dispatch machinery -- registration
+    // included -- lives inside this file, matching the Prompt 75 file scope.
+    // Fresh every wave: this runs once per initCombat() call, right after
+    // combatEvents.reset() (see combat-core.js), matching the exact
+    // registration lifecycle every other per-wave combatEvents.on() consumer
+    // already uses (hero skill nodes, achievement stat tracking).
+    registerPassiveTriggerListeners(allUnits);
+}
+
+// Prompt 75: on_heal / on_crit / on_ability_cast are dispatched off
+// combatEvents (unitHealed / unitDamaged.isCrit / abilityCast) rather than a
+// direct call from the damage/heal/ability pipeline, per the prompt's
+// "implement as combatEvents subscribers" instruction. allUnits is closed
+// over from the registration call (mirrors combat-core.js's own per-wave
+// combatEvents.on() listeners, which close over combatState the same way).
+function registerPassiveTriggerListeners(allUnits) {
+    if (typeof combatEvents === 'undefined') return;
+
+    combatEvents.on('unitHealed', function(payload) {
+        if (!payload || !payload.target || payload.amount <= 0) return;
+        processOnHealPassive(payload.target, payload.source, payload.amount, allUnits);
+    });
+
+    combatEvents.on('unitDamaged', function(payload) {
+        if (!payload || !payload.isCrit || !payload.source) return;
+        processOnCritPassive(payload.source, payload.target, payload.amount, allUnits);
+    });
+
+    combatEvents.on('abilityCast', function(payload) {
+        if (!payload || !payload.caster) return;
+        processOnAbilityCastPassive(payload.caster, payload.key, allUnits);
+    });
 }
 
 function processTickPassives(allUnits, dt) {
@@ -63,13 +132,39 @@ function processTickPassives(allUnits, dt) {
         } else if (passiveData.trigger === 'aura') {
             processAuraPassive(unit, passiveData, allUnits);
         }
+
+        // Prompt 75: a few of the 12 new T4 passives declare a single
+        // "primary" trigger (combat_start / on_ability_cast) but describe an
+        // effect that only makes sense evaluated continuously (Rival
+        // engagement/death tracking for iron_duelist/warforged_champion;
+        // Vortex damage-tick/expiry for tempest_weaver/stormweft_oracle).
+        // Rather than changing their declared `trigger` field (that's
+        // canonical PASSIVE_DATA, not mine to redefine) or broadening the
+        // periodic/aura dispatch above for every combat_start unit (which
+        // would silently change behavior for pre-existing units whose
+        // periodic/on_attack switch cases were written defensively but never
+        // actually reachable -- e.g. mud_stalker/quake_reaper/ancient_treant/
+        // titan_lord all have such dead cases already in this file; left
+        // untouched, out of this prompt's scope), these two companion
+        // functions are called unconditionally per-unit and early-return
+        // for every templateKey except the specific ones that need them.
+        processRivalTrackingPassive(unit, passiveData, dt);
+        processVortexPassive(unit, dt);
     }
 }
 
 function processOnAttackPassive(attacker, target, allUnits) {
     if (attacker._processingPassive) return;
     var passiveData = getPassiveData(attacker);
-    if (!passiveData || passiveData.trigger !== 'on_attack') return;
+    if (!passiveData) return;
+    // Prompt 75: grove_warden/worldroot_sentinel's Deep Roots is declared
+    // trigger: 'periodic' (the stationary-tracking half, handled in
+    // processPeriodicPassive) but the passive text also has an on-attack
+    // component ("auto-attacks from rooted position have 20% chance to
+    // apply Root") -- an explicit key whitelist here lets that second half
+    // through without loosening the on_attack gate for anyone else.
+    var isCombinedTrigger = (attacker.templateKey === 'grove_warden' || attacker.templateKey === 'worldroot_sentinel');
+    if (passiveData.trigger !== 'on_attack' && !isCombinedTrigger) return;
     attacker._processingPassive = true;
     executeOnAttackPassive(attacker, target, passiveData, allUnits);
     attacker._processingPassive = false;
@@ -239,6 +334,23 @@ function executeCombatStartPassive(unit, passiveData, allUnits) {
         // +20% ATK, first attack guarantees crit
         addStatus(unit, 'atkBuff', 999, 0.20, unit);
         unit.passiveState.customData.firstAttackCrit = true;
+        break;
+
+    // Prompt 75 (BUGS #12): iron_duelist / warforged_champion -- Challenge
+    // Protocol. Only the "mark the initial Rival" half is a true combat_start
+    // action; "while fighting Rival"/"Rival death reassigns"/"no Rival in
+    // range" are ongoing conditions with no single instant to fire at, so
+    // they're evaluated every tick by processRivalTrackingPassive() (called
+    // unconditionally from processTickPassives, see that function's comment).
+    case 'iron_duelist':
+    case 'warforged_champion':
+        var idInitialPool = [];
+        for (var idi = 0; idi < enemies.length; idi++) {
+            if (enemies[idi].hp > 0) idInitialPool.push(enemies[idi]);
+        }
+        var idInitialRival = typeof getHighestAtkUnits === 'function' ? getHighestAtkUnits(idInitialPool, 1) : [];
+        unit.passiveState.customData.rivalRef = idInitialRival.length > 0 ? idInitialRival[0] : null;
+        unit.passiveState.customData.permanentAtkStacks = 0;
         break;
 
     // ===== T4 EVOLVED combat_start =====
@@ -796,6 +908,23 @@ function executeOnAttackPassive(attacker, target, passiveData, allUnits) {
     // ===== T4 BASE on_attack =====
     case 'storm_sovereign':
         // Already handled above (same key)
+        break;
+
+    // Prompt 75 (BUGS #12): grove_warden / worldroot_sentinel -- Deep Roots'
+    // on-attack half ("auto-attacks from rooted position have 20% chance to
+    // apply Root"). `rootedActive` is maintained by processPeriodicPassive's
+    // grove_warden case below (the stationary-tracking half of this same
+    // passive); reached here via processOnAttackPassive's isCombinedTrigger
+    // whitelist since this passive's declared trigger is 'periodic', not
+    // 'on_attack'.
+    case 'grove_warden':
+    case 'worldroot_sentinel':
+        if (attacker.passiveState.customData.rootedActive && target && target.hp > 0) {
+            var gwRootChance = params.rootChance || 0.20;
+            if (Math.random() < gwRootChance) {
+                addStatus(target, 'root', params.rootDuration || 1, 0, attacker);
+            }
+        }
         break;
 
     // ===== T4 EVOLVED on_attack =====
@@ -1475,6 +1604,51 @@ function processPeriodicPassive(unit, passiveData, dt) {
             }
         }
         break;
+
+    // Prompt 75 (BUGS #12): grove_warden / worldroot_sentinel -- Deep Roots'
+    // stationary-tracking half. Position-unchanged detection mirrors the
+    // ancient_treant/world_sentinel "lastMoveRow/lastMoveCol" idiom above.
+    // While stationary >= stationaryDuration: re-apply the ATK buff every
+    // tick (short-duration refresh, same idiom processAuraPassive uses
+    // throughout) and toggle `rootedActive` + unit.range exactly once on the
+    // rising/falling edge (avoids double-adding the range bonus every tick).
+    // The on-attack Root-chance proc that also depends on `rootedActive`
+    // lives in executeOnAttackPassive's grove_warden case (reached via
+    // processOnAttackPassive's isCombinedTrigger whitelist, since this
+    // passive's only declared trigger is 'periodic').
+    case 'grove_warden':
+    case 'worldroot_sentinel':
+        var gwCd = unit.passiveState.customData;
+        if (gwCd.lastMoveRow === undefined) {
+            gwCd.lastMoveRow = unit.gridRow;
+            gwCd.lastMoveCol = unit.gridCol;
+            gwCd.stationaryTimer = 0;
+            gwCd.rootedActive = false;
+        }
+        if (unit.gridRow !== gwCd.lastMoveRow || unit.gridCol !== gwCd.lastMoveCol) {
+            gwCd.lastMoveRow = unit.gridRow;
+            gwCd.lastMoveCol = unit.gridCol;
+            gwCd.stationaryTimer = 0;
+            if (gwCd.rootedActive) {
+                gwCd.rootedActive = false;
+                // _deepRootsRangeBonus (persistent, not passiveState) is the
+                // single source of truth for "how much range is currently
+                // granted" -- see initUnitPassiveState()'s comment for why.
+                unit.range -= (unit._deepRootsRangeBonus || 0);
+                unit._deepRootsRangeBonus = 0;
+            }
+        } else {
+            gwCd.stationaryTimer += dt;
+            if (gwCd.stationaryTimer >= (passiveData.params.stationaryDuration || 3)) {
+                if (!gwCd.rootedActive) {
+                    gwCd.rootedActive = true;
+                    unit.range += (passiveData.params.rangeBonus || 0);
+                    unit._deepRootsRangeBonus = passiveData.params.rangeBonus || 0;
+                }
+                addStatus(unit, 'atkBuff', 0.3, passiveData.params.atkBonus || 0, unit);
+            }
+        }
+        break;
     }
 }
 
@@ -1703,6 +1877,282 @@ function processAuraPassive(unit, passiveData, allUnits) {
             addStatus(tgLightningAllies[j], 'critBuff', 0.2, 0.25, unit);
         }
         break;
+
+    // Prompt 75 (BUGS #12): abyssal_guardian / hadal_colossus -- Pressure
+    // Depths. DR scaling with missing HP reads directly off the text ("every
+    // 10% max HP lost" -> Math.floor(missingPct*10) tiers, capped at drMax --
+    // at drMax/drPerTenPct tiers that's exactly the "at 1 HP" cap the text
+    // describes, so no separate near-death special case is needed).
+    // hadal_colossus's extra "+2% lifesteal per 10% lost" is delta-tracked
+    // against unit.lifesteal (a plain additive field also touched by items/
+    // hero skills elsewhere) so this passive only ever adds/removes the
+    // amount IT contributed, rather than clobbering other sources.
+    // JUDGMENT CALL: "attacks against this unit slowed 10%" reads like an
+    // on_hit reaction, but this passive's own PASSIVE_DATA declares
+    // trigger: 'aura' (not on_hit) -- implemented as a continuous Slow debuff
+    // on enemies within melee range (radius 1, matching the Guardian's own
+    // range: 1), refreshed every tick, mirroring ocean_sage's existing
+    // "debuff nearby enemies" aura idiom above rather than adding a fourth
+    // trigger-dispatch path for one unit.
+    case 'abyssal_guardian':
+    case 'hadal_colossus':
+        var agParams = passiveData.params || {};
+        var agMissingPct = 1 - (unit.hp / unit.maxHp);
+        var agTiers = Math.floor(agMissingPct * 10);
+        var agDrBonus = Math.min(agTiers * (agParams.drPerTenPct || 0.03), agParams.drMax || 0.30);
+        if (agDrBonus > 0) addStatus(unit, 'drMod', 0.3, agDrBonus, unit);
+        if (key === 'hadal_colossus' && agParams.lifestealPerTenPct) {
+            // _pdLifestealBonus lives on the unit directly (not
+            // passiveState.customData) because unit.lifesteal itself is a
+            // persistent, never-reset-between-waves field -- see
+            // initUnitPassiveState()'s comment for why the bookkeeping has to
+            // survive exactly as long as the mutation it tracks.
+            var agNewLifesteal = agTiers * agParams.lifestealPerTenPct;
+            var agOldLifesteal = unit._pdLifestealBonus || 0;
+            if (agNewLifesteal !== agOldLifesteal) {
+                unit.lifesteal = Math.max(0, (unit.lifesteal || 0) - agOldLifesteal + agNewLifesteal);
+                unit._pdLifestealBonus = agNewLifesteal;
+            }
+        }
+        var agNearbyEnemies = getUnitsInRadius(unit.gridRow, unit.gridCol, 1, enemies);
+        for (var agi = 0; agi < agNearbyEnemies.length; agi++) {
+            addStatus(agNearbyEnemies[agi], 'slow', 0.3, agParams.attackerSlowPct || 0.10, unit);
+        }
+        break;
+    }
+}
+
+// ---- Prompt 75 (BUGS #12): on_heal / on_crit / on_ability_cast dispatch ----
+// These three trigger types didn't exist anywhere in this file before
+// Prompt 75; combatEvents already carried the raw data (unitHealed /
+// unitDamaged.isCrit / abilityCast -- see js/combat-events.js), it just had
+// no passive-framework consumer. Wired as combatEvents subscribers
+// (registered once per wave by registerPassiveTriggerListeners(), called
+// from processCombatStartPassives() above) rather than direct calls from the
+// damage/heal/ability pipeline, per the prompt's instruction.
+
+function processOnHealPassive(target, source, amount, allUnits) {
+    // Ember Shroud (ashen_watcher/phoenix_priest) reacts to ANY heal landing
+    // on one of its allies (including itself), "from all sources (abilities,
+    // lifesteal, regen)" per the passive text -- so this loops every unit
+    // with an on_heal passive rather than gating on `source` at all.
+    if (!target || target.hp <= 0) return;
+    for (var i = 0; i < allUnits.length; i++) {
+        var unit = allUnits[i];
+        if (unit.hp <= 0) continue;
+        if (unit.side !== target.side) continue;
+        var passiveData = getPassiveData(unit);
+        if (!passiveData || passiveData.trigger !== 'on_heal') continue;
+        if (unit._processingPassive) continue;
+        unit._processingPassive = true;
+        executeOnHealPassive(unit, target, source, amount, passiveData);
+        unit._processingPassive = false;
+    }
+}
+
+function executeOnHealPassive(unit, target, source, amount, passiveData) {
+    var key = unit.templateKey;
+    var params = passiveData.params || {};
+
+    switch (key) {
+    case 'ashen_watcher':
+    case 'phoenix_priest':
+        // Shield "for 4s": no shield in this engine ever decays by time --
+        // every existing Shield grant (shell_knight, crystal_mage, sky_knight,
+        // ...) is permanent-until-absorbed, there's no timer/expiry primitive
+        // for `.shield`. Matches that existing precedent instead of inventing
+        // a decaying-shield mechanism for this one passive.
+        var eshShieldAmt = Math.floor(amount * (params.shieldPct || 0.15));
+        if (eshShieldAmt > 0) grantShield(unit, target, eshShieldAmt);
+        // "If ally Burning, shield grants 2s Burn immunity when applied" --
+        // a genuine forward-looking immunity window (does NOT strip the
+        // existing Burn, unlike the ability's own "consume Burn" clause).
+        // Gated in combat-status.js's addStatus() (burnImmuneUntil), mirroring
+        // the exact slowImmune/ccImmuneUntil idiom already used there.
+        if (params.burnImmunityDuration && hasStatus(target, 'burn') && combatState) {
+            target.burnImmuneUntil = combatState.elapsed + params.burnImmunityDuration;
+        }
+        // AMBIGUITY CALL: phoenix_priest's EVOLVED_PASSIVE_DATA.params also
+        // carries `areaMoveSpdBonus` (0.15), which T4-EXPANSION.md's prose
+        // actually attributes to Pyre of Renewal Enhanced's secondary healing
+        // zone, not to Ember Shroud itself -- the data file bundles it into
+        // this passive's params anyway. Rather than leave a declared param
+        // silently unused, it's granted here as a brief move-speed buff to
+        // the healed target alongside the shield (the same "fold the zone
+        // bonus into the passive's per-heal reaction" approximation as
+        // worldroot_sentinel's Seedling clause, which Prompt 74 already
+        // folded into its ability-level Root-on-hit).
+        if (key === 'phoenix_priest' && params.areaMoveSpdBonus) {
+            addStatus(target, 'moveSpeedBuff', 2, params.areaMoveSpdBonus, unit);
+        }
+        break;
+    }
+}
+
+function processOnCritPassive(attacker, target, amount, allUnits) {
+    if (!attacker || attacker.hp <= 0) return;
+    if (attacker._processingPassive) return;
+    var passiveData = getPassiveData(attacker);
+    if (!passiveData || passiveData.trigger !== 'on_crit') return;
+    attacker._processingPassive = true;
+    executeOnCritPassive(attacker, target, amount, passiveData, allUnits);
+    attacker._processingPassive = false;
+}
+
+function executeOnCritPassive(attacker, target, amount, passiveData, allUnits) {
+    var key = attacker.templateKey;
+    var params = passiveData.params || {};
+
+    switch (key) {
+    // JUDGMENT CALL: the text says "auto-attacks chain" once at max stacks
+    // (implying every subsequent auto-attack, crit or not), but this
+    // passive's only declared trigger is 'on_crit' -- there is no on_attack
+    // dispatch wired for these two keys to observe a non-crit hit. Chains on
+    // every CRIT while at max stacks instead (Lightning's kit is already
+    // crit-heavy by design -- "Lightning's crit bonus naturally fuels this
+    // passive" per T4-EXPANSION.md -- so this reads close to the intended
+    // accelerating curve without adding a second trigger path for one unit).
+    case 'voltfang_stalker':
+    case 'plasma_ravager':
+        var vfCd = attacker.passiveState.customData;
+        var vfMaxStacks = params.maxStacks || 5;
+        vfCd.overchargeStacks = Math.min((vfCd.overchargeStacks || 0) + 1, vfMaxStacks);
+        addStatus(attacker, 'spdMod', params.stackDuration || 4, vfCd.overchargeStacks * (params.atkSpdPerStack || 0.08), attacker);
+        if (vfCd.overchargeStacks >= vfMaxStacks && target && target.hp > 0 && combatState) {
+            var vfEnemyPool = attacker.side === 'player' ? combatState.enemyUnits : combatState.playerUnits;
+            var vfAdjacent = getUnitsInRadius(target.gridRow, target.gridCol, 1, vfEnemyPool);
+            for (var vfi = 0; vfi < vfAdjacent.length; vfi++) {
+                if (vfAdjacent[vfi] !== target && vfAdjacent[vfi].hp > 0) {
+                    dealDamage(attacker, vfAdjacent[vfi], Math.floor(attacker.attack * (params.chainDamage || 0.40)), {isTrueDamage: true, canCrit: false, canDodge: false, applyElement: false, triggerOnHit: false});
+                    break; // chainCount: 1
+                }
+            }
+        }
+        break;
+    }
+}
+
+function processOnAbilityCastPassive(caster, key, allUnits) {
+    if (!caster || caster.hp <= 0) return;
+    if (caster._processingPassive) return;
+    var passiveData = getPassiveData(caster);
+    if (!passiveData || passiveData.trigger !== 'on_ability_cast') return;
+    caster._processingPassive = true;
+    executeOnAbilityCastPassive(caster, passiveData);
+    caster._processingPassive = false;
+}
+
+function executeOnAbilityCastPassive(caster, passiveData) {
+    var key = caster.templateKey;
+    var params = passiveData.params || {};
+
+    switch (key) {
+    // JUDGMENT CALL: combatEvents fires 'abilityCast' BEFORE executeAbility()'s
+    // own switch runs (see combat-abilities.js's emit site comment: "fired
+    // before the switch below so listeners... can affect this same cast's
+    // damage synchronously") -- so at the moment this listener runs, Cyclone
+    // Barrage hasn't picked its target yet; the payload is {caster, key}
+    // only, with no resolved target cell. "Vortex remains on target cell" is
+    // approximated as caster-centered instead, matching the self-centered
+    // "slam ground" zone idiom abyssal_guardian/magma_knight/golem already
+    // use elsewhere in this engine for other zone effects, rather than
+    // plumbing a second post-resolution event through the ability switch.
+    case 'tempest_weaver':
+    case 'stormweft_oracle':
+        if (!caster.passiveState.customData.vortices) caster.passiveState.customData.vortices = [];
+        var twVortices = caster.passiveState.customData.vortices;
+        var twMaxVortices = params.maxVortices || 3;
+        if (twVortices.length >= twMaxVortices) twVortices.shift(); // oldest fades
+        twVortices.push({row: caster.gridRow, col: caster.gridCol, timer: params.vortexDuration || 6});
+        break;
+    }
+}
+
+// ---- Prompt 75 (BUGS #12): tick-time companions for passives whose only
+// declared trigger fires once (combat_start / on_ability_cast) but whose
+// effect needs continuous evaluation. Called unconditionally, per-unit,
+// every tick from processTickPassives() above; each early-returns for every
+// templateKey it doesn't own, so this never touches any of the other 120
+// units' passives. ----
+
+function processRivalTrackingPassive(unit, passiveData, dt) {
+    var key = unit.templateKey;
+    if (key !== 'iron_duelist' && key !== 'warforged_champion') return;
+    if (!unit.passiveState || !unit.passiveState.customData || !combatState) return;
+    var cd = unit.passiveState.customData;
+    var params = (passiveData && passiveData.params) || {};
+    var isEvolved = (key === 'warforged_champion');
+    var enemyPool = unit.side === 'player' ? combatState.enemyUnits : combatState.playerUnits;
+
+    // Reassign Rival on death (or if none was ever found -- e.g. combat_start
+    // fired before enemies were fully alive/placed).
+    if (!cd.rivalRef || cd.rivalRef.hp <= 0) {
+        if (cd.rivalRef && cd.rivalRef.hp <= 0 && isEvolved) {
+            // warforged_champion: "gain +10% permanent ATK for the rest of
+            // combat (stacks)" on Rival death.
+            cd.permanentAtkStacks = (cd.permanentAtkStacks || 0) + 1;
+        }
+        var rtAlive = [];
+        for (var i = 0; i < enemyPool.length; i++) {
+            if (enemyPool[i].hp > 0) rtAlive.push(enemyPool[i]);
+        }
+        var rtNewRival = typeof getHighestAtkUnits === 'function' ? getHighestAtkUnits(rtAlive, 1) : [];
+        cd.rivalRef = rtNewRival.length > 0 ? rtNewRival[0] : null;
+    }
+
+    // JUDGMENT CALL: "while fighting the Rival" / "if no Rival is in attack
+    // range" reads like literal melee attack range, but the passive's own
+    // params carry an explicit `rivalDiameter: 5` -- a much larger radius
+    // than iron_duelist's actual range: 1. Using the literal attack range
+    // would make this melee unit's signature mechanic barely ever trigger in
+    // a spread-out fight, undermining the "persistent threat" design intent
+    // (T4-EXPANSION.md). rivalDiameter is used as the engagement threshold
+    // instead, consistent with the data file's own stated params.
+    var permBonus = isEvolved ? (cd.permanentAtkStacks || 0) * (params.permanentAtkPerKill || 0.10) : 0;
+    var engaged = false;
+    if (cd.rivalRef && cd.rivalRef.hp > 0) {
+        var rtDist = hexDistance(unit.gridRow, unit.gridCol, cd.rivalRef.gridRow, cd.rivalRef.gridCol);
+        engaged = rtDist <= (params.rivalDiameter || 5);
+    }
+    // Combined into a single addStatus() call per status type: getStatusValue()
+    // takes the MAX of same-type entries (not a sum -- see combat-status.js),
+    // so issuing two separate atkBuff calls here would silently drop one
+    // bonus instead of adding them, unlike the intended stacking design.
+    var totalAtkBonus = permBonus + (engaged ? (params.rivalAtkBonus || 0.20) : 0);
+    if (totalAtkBonus > 0) addStatus(unit, 'atkBuff', 0.3, totalAtkBonus, unit);
+    if (engaged) {
+        addStatus(unit, 'drMod', 0.3, params.rivalDrBonus || 0.10, unit);
+    } else {
+        addStatus(unit, 'moveSpeedBuff', 0.3, params.moveSpdBonus || 0.15, unit);
+    }
+}
+
+function processVortexPassive(unit, dt) {
+    var key = unit.templateKey;
+    if (key !== 'tempest_weaver' && key !== 'stormweft_oracle') return;
+    if (!unit.passiveState || !unit.passiveState.customData || !unit.passiveState.customData.vortices || !combatState) return;
+    var vortices = unit.passiveState.customData.vortices;
+    if (vortices.length === 0) return;
+    var passiveData = getPassiveData(unit);
+    var params = (passiveData && passiveData.params) || {};
+    var enemyPool = unit.side === 'player' ? combatState.enemyUnits : combatState.playerUnits;
+    var allyPool = unit.side === 'player' ? combatState.playerUnits : combatState.enemyUnits;
+    var vortexDodgeBonus = params.vortexAllydodgeBonus || params.vortexAllyDodgeBonus || 0.15; // data typo: base vs evolved capitalization differs
+
+    for (var vi = vortices.length - 1; vi >= 0; vi--) {
+        vortices[vi].timer -= dt;
+        if (vortices[vi].timer <= 0) { vortices.splice(vi, 1); continue; }
+        var vRow = vortices[vi].row, vCol = vortices[vi].col;
+        for (var ei = 0; ei < enemyPool.length; ei++) {
+            if (enemyPool[ei].hp > 0 && enemyPool[ei].gridRow === vRow && enemyPool[ei].gridCol === vCol) {
+                dealDamage(unit, enemyPool[ei], Math.floor(unit.attack * (params.vortexDps || 0.20) * dt), {isTrueDamage: true, canCrit: false, canDodge: false, applyElement: false, triggerOnHit: false});
+            }
+        }
+        for (var ai = 0; ai < allyPool.length; ai++) {
+            if (allyPool[ai].hp > 0 && allyPool[ai].gridRow === vRow && allyPool[ai].gridCol === vCol) {
+                addStatus(allyPool[ai], 'dodgeBuff', 0.3, vortexDodgeBonus, unit);
+            }
+        }
     }
 }
 
