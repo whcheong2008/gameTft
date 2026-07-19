@@ -12,4 +12,4 @@
 // =============================================================================
 
 var GAME_VERSION = '0.14.0';
-var GAME_BUILD = 'v0.13.0-ship-ready-1-gcb44dd8';
+var GAME_BUILD = 'v0.13.0-ship-ready-6-gb67c4cd';
