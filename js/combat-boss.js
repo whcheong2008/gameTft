@@ -227,7 +227,11 @@ function startBossTelegraph(boss, ability, abilityIndex) {
         // renders pulsing groundDecals over `cells` for `duration`; nothing
         // else listens, so this cannot change combat behavior/goldens.
         if (typeof combatEvents !== 'undefined') {
-            combatEvents.emit('bossTelegraphStart', { boss: boss, cells: cells, duration: ability.telegraphTime });
+            // Prompt 73: `ability` added to the payload (already-computed
+            // reference, no new work) so js/vfx-abilities.js can look up a
+            // hand-tuned boss "signature moment" recipe by boss+ability name
+            // instead of the generic decal -- event DATA only.
+            combatEvents.emit('bossTelegraphStart', { boss: boss, cells: cells, duration: ability.telegraphTime, ability: ability });
         }
     } else if (ability.targetType === 'all_players') {
         boss.telegraphs.push({
@@ -239,7 +243,7 @@ function startBossTelegraph(boss, ability, abilityIndex) {
         });
         addCombatLog('⚠️ ' + boss.name + ' charges ' + ability.name + '!');
         if (typeof combatEvents !== 'undefined') {
-            combatEvents.emit('bossTelegraphStart', { boss: boss, cells: [], duration: ability.telegraphTime || 1.0, isTeamWide: true });
+            combatEvents.emit('bossTelegraphStart', { boss: boss, cells: [], duration: ability.telegraphTime || 1.0, isTeamWide: true, ability: ability });
         }
     }
 }
@@ -256,7 +260,8 @@ function processBossTelegraphs(boss, dt) {
                 combatEvents.emit('bossTelegraphDetonate', {
                     boss: boss, cells: boss.telegraphs[i].targetCells,
                     targetUnits: boss.telegraphs[i].targetUnits,
-                    isTeamWide: !!boss.telegraphs[i].isTeamWide
+                    isTeamWide: !!boss.telegraphs[i].isTeamWide,
+                    ability: boss.telegraphs[i].ability
                 });
             }
             executeBossAbility(boss, boss.telegraphs[i].ability, boss.telegraphs[i]);

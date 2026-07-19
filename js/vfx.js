@@ -775,11 +775,18 @@ if (typeof combatEvents !== 'undefined' && typeof combatEvents.onPersistent === 
         VFX.play('rise', { row: p.target.gridRow, col: p.target.gridCol, color: VFX_HEAL_COLOR, count: 6 });
     });
 
-    // ---- Casts (Task 2): generic aura pulse + beacon flicker (per-ability
-    // spectacular mapping is Prompt 73; this is the universal fallback it
-    // will replace/extend) ----
+    // ---- Casts (Task 2): generic aura pulse + beacon flicker, now the
+    // FALLBACK path -- Prompt 73 (js/vfx-abilities.js, loaded after this
+    // file) defines ABILITY_VFX_PLAY_CAST(p), which resolves the caster's
+    // ability to a per-ability recipe (explicit or element/archetype default)
+    // and returns true when it played one. Checked by NAME/typeof (not a
+    // direct reference) so load order between this file and
+    // js/vfx-abilities.js doesn't matter -- by the time any real abilityCast
+    // fires (mid-combat, long after script load), the function is defined
+    // either way. Zero behavior change: this is still pure VFX dispatch. ----
     combatEvents.onPersistent('abilityCast', function(p) {
         if (!p || !p.caster) return;
+        if (typeof ABILITY_VFX_PLAY_CAST === 'function' && ABILITY_VFX_PLAY_CAST(p)) return;
         VFX.play('aura', { unit: p.caster, element: p.caster.element, duration: 0.45 });
         VFX.play('beacon', { row: p.caster.gridRow, col: p.caster.gridCol, element: p.caster.element, duration: 0.45 });
     });
@@ -836,5 +843,11 @@ if (typeof combatEvents !== 'undefined' && typeof combatEvents.onPersistent === 
         if (p.cells.length > 0) {
             VFX.play('burst', { row: Math.round(cx / p.cells.length), col: Math.round(cy / p.cells.length), element: 'boss', big: true });
         }
+        // Prompt 73 (Task 2, signature moments): the 8 story bosses get an
+        // ADDITIONAL hand-tuned flourish layered on top of the generic
+        // nova+burst above (not a replacement -- bosses still get the
+        // baseline telegraph payoff even when unmapped). Same load-order-
+        // agnostic typeof check as the abilityCast hook above.
+        if (typeof ABILITY_VFX_PLAY_BOSS === 'function') ABILITY_VFX_PLAY_BOSS(p);
     });
 }
